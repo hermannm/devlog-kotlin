@@ -1,0 +1,15 @@
+/target/
+
+# Ignore all IntelliJ files
+.idea
+*.iml
+*.ipr
+*.iws
+
+# ...except some shared IntelliJ config
+!.idea/encodings.xml
+!.idea/externalDependencies.xml
+!.idea/jarRepositories.xml
+!.idea/kotlinc.xml
+!.idea/ktfmt.xml
+!.idea/vcs.xml

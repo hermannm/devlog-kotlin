@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>dev.hermannm</groupId>
+  <artifactId>devlog</artifactId>
+  <version>0.1.0</version>
+  <packaging>jar</packaging>
+  <description>Logging library for Kotlin JVM, that thinly wraps SLF4J and Logback to provide a more ergonomic API, and provides a
+    log encoder with a human-readable output format designed for development builds.</description>
+  <url>https://hermannm.dev/devlog</url>
+
+  <licenses>
+    <license>
+      <name>MIT</name>
+      <url>https://github.com/hermannm/devlog-kotlin/blob/main/LICENSE</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>hermannm</id>
+      <name>Hermann Mørkrid</name>
+      <url>https://hermannm.dev</url>
+    </developer>
+  </developers>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <kotlin.version>2.0.21</kotlin.version>
+    <java.version>17</java.version>
+    <kotlin.compiler.jvmTarget>${java.version}</kotlin.compiler.jvmTarget>
+    <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
+
+    <!-- Testing -->
+    <junit.version>4.13.1</junit.version>
+
+    <!-- Maven plugins -->
+    <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
+    <ktfmt.version>0.43</ktfmt.version>
+    <maven-enforcer.version>3.4.1</maven-enforcer.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.jetbrains.kotlin</groupId>
+      <artifactId>kotlin-stdlib</artifactId>
+      <version>${kotlin.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains.kotlin</groupId>
+      <artifactId>kotlin-test-junit</artifactId>
+      <version>${kotlin.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-maven-plugin</artifactId>
+        <version>${kotlin.version}</version>
+        <executions>
+          <execution>
+            <id>compile</id>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <phase>compile</phase>
+          </execution>
+          <execution>
+            <id>test-compile</id>
+            <goals>
+              <goal>test-compile</goal>
+            </goals>
+            <phase>test-compile</phase>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Formatting with ktfmt -->
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless-maven-plugin.version}</version>
+        <configuration>
+          <kotlin>
+            <toggleOffOn/>
+            <ktfmt>
+              <version>${ktfmt.version}</version>
+              <style>DEFAULT</style>
+            </ktfmt>
+          </kotlin>
+          <pom>
+            <includes>
+              <include>pom.xml</include>
+            </includes>
+            <sortPom>
+              <expandEmptyElements>false</expandEmptyElements>
+              <nrOfIndentSpace>2</nrOfIndentSpace>
+            </sortPom>
+          </pom>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>validate</phase>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Plugin for enforcing proper dependency management -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${maven-enforcer.version}</version>
+        <executions>
+          <execution>
+            <id>enforce</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <banDuplicatePomDependencyVersions/>
+                <dependencyConvergence/>
+                <requireUpperBoundDeps/>
+                <banDynamicVersions/>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+
+    <sourceDirectory>src/main/kotlin</sourceDirectory>
+    <testSourceDirectory>src/test/kotlin</testSourceDirectory>
+  </build>
+</project>
