@@ -1,13 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>dev.hermannm</groupId>
   <artifactId>devlog</artifactId>
   <version>0.1.0</version>
   <packaging>jar</packaging>
-  <description>Logging library for Kotlin JVM, that thinly wraps SLF4J and Logback to provide a more ergonomic API, and provides a
-    log encoder with a human-readable output format designed for development builds.</description>
+
+  <description>
+    Logging library for Kotlin JVM, that thinly wraps SLF4J and Logback to provide a more ergonomic API, and provides a
+    log encoder with a human-readable output format designed for development builds.
+  </description>
   <url>https://hermannm.dev/devlog</url>
 
   <licenses>
@@ -26,6 +30,11 @@
     </developer>
   </developers>
 
+  <scm>
+    <connection>scm:git:https://github.com/hermannm/devlog-kotlin.git</connection>
+    <url>https://github.com/hermannm/devlog-kotlin</url>
+  </scm>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -35,7 +44,15 @@
     <kotlin.compiler.jvmTarget>${java.version}</kotlin.compiler.jvmTarget>
     <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
 
+    <!-- Logging -->
+    <slf4j.version>2.0.16</slf4j.version>
+    <logstash-logback-encoder.version>8.0</logstash-logback-encoder.version>
+
+    <!-- Serialization -->
+    <kotlinx-serialization.version>1.7.3</kotlinx-serialization.version>
+
     <!-- Testing -->
+    <logback.version>1.5.12</logback.version>
     <junit.version>4.13.1</junit.version>
 
     <!-- Maven plugins -->
@@ -44,12 +61,46 @@
     <maven-enforcer.version>3.4.1</maven-enforcer.version>
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-bom</artifactId>
+        <version>${kotlin.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
+    <!-- Kotlin -->
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
       <artifactId>kotlin-stdlib</artifactId>
       <version>${kotlin.version}</version>
     </dependency>
+
+    <!-- Logging -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>net.logstash.logback</groupId>
+      <artifactId>logstash-logback-encoder</artifactId>
+      <version>${logstash-logback-encoder.version}</version>
+    </dependency>
+
+    <!-- Serialization -->
+    <dependency>
+      <groupId>org.jetbrains.kotlinx</groupId>
+      <artifactId>kotlinx-serialization-json</artifactId>
+      <version>${kotlinx-serialization.version}</version>
+    </dependency>
+
+    <!-- Testing -->
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
       <artifactId>kotlin-test-junit</artifactId>
@@ -62,14 +113,36 @@
       <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
+    <sourceDirectory>src/main/kotlin</sourceDirectory>
+    <testSourceDirectory>src/test/kotlin</testSourceDirectory>
+
     <plugins>
       <plugin>
         <groupId>org.jetbrains.kotlin</groupId>
         <artifactId>kotlin-maven-plugin</artifactId>
         <version>${kotlin.version}</version>
+        <configuration>
+          <jvmTarget>${java.version}</jvmTarget>
+          <compilerPlugins>
+            <plugin>kotlinx-serialization</plugin>
+          </compilerPlugins>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-maven-serialization</artifactId>
+            <version>${kotlin.version}</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <id>compile</id>
@@ -101,15 +174,6 @@
               <style>DEFAULT</style>
             </ktfmt>
           </kotlin>
-          <pom>
-            <includes>
-              <include>pom.xml</include>
-            </includes>
-            <sortPom>
-              <expandEmptyElements>false</expandEmptyElements>
-              <nrOfIndentSpace>2</nrOfIndentSpace>
-            </sortPom>
-          </pom>
         </configuration>
         <executions>
           <execution>
@@ -144,8 +208,5 @@
         </executions>
       </plugin>
     </plugins>
-
-    <sourceDirectory>src/main/kotlin</sourceDirectory>
-    <testSourceDirectory>src/test/kotlin</testSourceDirectory>
   </build>
 </project>
