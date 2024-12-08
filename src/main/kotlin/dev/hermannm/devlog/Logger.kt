@@ -3,9 +3,10 @@ package dev.hermannm.devlog
 import net.logstash.logback.marker.Markers
 import org.slf4j.Logger as Slf4jLogger
 import org.slf4j.LoggerFactory
-import org.slf4j.Marker
+import org.slf4j.Marker as Slf4jMarker
 import org.slf4j.event.Level as Slf4jLogLevel
 import org.slf4j.spi.LocationAwareLogger as Slf4jLocationAwareLogger
+import org.slf4j.spi.LoggingEventBuilder
 
 class Logger
 internal constructor(
@@ -49,7 +50,7 @@ internal constructor(
 
     if (isLocationAware) {
       (slf4jLogger as Slf4jLocationAwareLogger).log(
-          makeAggregateMarker(markers),
+          combineMarkers(markers),
           FULLY_QUALIFIED_CLASS_NAME,
           level.locationAwareLoggerLevel,
           message,
@@ -57,22 +58,51 @@ internal constructor(
           cause,
       )
     } else {
-      val log = slf4jLogger.atLevel(level.slf4jLevel).setMessage(message)
-      for (marker in markers) {
-        log.addMarker(marker.slf4jMarker)
-      }
-      if (cause != null) {
-        log.setCause(cause)
-      }
-      log.log()
+      slf4jLogger
+          .makeLoggingEventBuilder(level.slf4jLevel)
+          .setMessage(message)
+          .also { log ->
+            addMarkers(log, markers)
+            if (cause != null) {
+              log.setCause(cause)
+            }
+          }
+          .log()
     }
   }
 
-  private fun makeAggregateMarker(markers: Array<out LogMarker>): Marker? {
-    return when (markers.size) {
-      0 -> null
-      1 -> markers.first().slf4jMarker
-      else -> Markers.aggregate(markers.map { it.slf4jMarker })
+  private fun addMarkers(log: LoggingEventBuilder, markers: Array<out LogMarker>) {
+    markers.forEach { log.addMarker(it.slf4jMarker) }
+
+    val contextMarkers: ArrayList<LogMarker>? = loggingContext.get()
+    // Add context markers in reverse, so newest marker shows first
+    contextMarkers?.forEachReversed { log.addMarker(it.slf4jMarker) }
+  }
+
+  /**
+   * [Slf4jLocationAwareLogger.log] takes just a single log marker, so to pass multiple markers, we
+   * have to combine them using [Slf4jMarker.add].
+   */
+  private fun combineMarkers(markers: Array<out LogMarker>): Slf4jMarker? {
+    val contextMarkers: ArrayList<LogMarker>? = loggingContext.get()
+    val contextMarkersSize = contextMarkers?.size ?: 0
+
+    return when {
+      // We have to combine the markers for this log entry with the markers from the logging
+      // context. But we can avoid doing this combination if:
+      // - There are no log markers -> return null
+      // - Log entry has 1 marker, and the context is empty -> return log entry marker
+      // - Log entry has no markers, but context has 1 marker -> return context marker
+      markers.isEmpty() && contextMarkersSize == 0 -> null
+      markers.size == 1 && contextMarkersSize == 0 -> markers.first().slf4jMarker
+      markers.isEmpty() && contextMarkersSize == 1 -> contextMarkers?.first()?.slf4jMarker
+      else -> {
+        val combinedMarker = Markers.empty()
+        markers.forEach { combinedMarker.add(it.slf4jMarker) }
+        // Add context markers in reverse, so newest marker shows first
+        contextMarkers?.forEachReversed { combinedMarker.add(it.slf4jMarker) }
+        combinedMarker
+      }
     }
   }
 
