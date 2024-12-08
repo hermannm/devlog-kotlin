@@ -72,7 +72,7 @@ internal constructor(
     return when (markers.size) {
       0 -> null
       1 -> markers.first().slf4jMarker
-      else -> Markers.aggregate(*markers.mapArray { it.slf4jMarker })
+      else -> Markers.aggregate(markers.map { it.slf4jMarker })
     }
   }
 
