@@ -10,7 +10,7 @@ import org.slf4j.spi.LoggingEventBuilder
 
 class Logger
 internal constructor(
-    private val slf4jLogger: Slf4jLogger,
+    internal val slf4jLogger: Slf4jLogger,
 ) {
   constructor(name: String) : this(slf4jLogger = LoggerFactory.getLogger(name))
 
@@ -36,6 +36,17 @@ internal constructor(
     log(LogLevel.TRACE, message, markers, cause)
   }
 
+  /**
+   * SLF4J log backends may output file/line information of where in the source code a log occurred.
+   * If we just call the normal logger methods here, that would show this class (Logger) as where
+   * the logs occurred - but what we actually want is to show where in the user's code the log was
+   * made!
+   *
+   * To solve this problem, SLF4J provides a `LocationAwareLogger` interface, with a
+   * [Slf4jLocationAwareLogger.log] method that takes a fully qualified class name to omit from the
+   * file/line info. If [slf4jLogger] implements this interface, we want to call this method instead
+   * of the normal logger methods.
+   */
   private val isLocationAware = slf4jLogger is Slf4jLocationAwareLogger
 
   private fun log(
@@ -52,7 +63,7 @@ internal constructor(
       (slf4jLogger as Slf4jLocationAwareLogger).log(
           combineMarkers(markers),
           FULLY_QUALIFIED_CLASS_NAME,
-          level.locationAwareLoggerLevel,
+          level.intValue,
           message,
           null,
           cause,
@@ -112,7 +123,7 @@ internal constructor(
 
 internal enum class LogLevel(
     internal val slf4jLevel: Slf4jLogLevel,
-    internal val locationAwareLoggerLevel: Int,
+    internal val intValue: Int,
 ) {
   INFO(Slf4jLogLevel.INFO, Slf4jLocationAwareLogger.INFO_INT),
   WARN(Slf4jLogLevel.WARN, Slf4jLocationAwareLogger.WARN_INT),
