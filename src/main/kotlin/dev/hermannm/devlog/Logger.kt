@@ -74,9 +74,9 @@ internal constructor(
   private fun addMarkers(log: LoggingEventBuilder, markers: Array<out LogMarker>) {
     markers.forEach { log.addMarker(it.slf4jMarker) }
 
-    val contextMarkers: ArrayList<LogMarker>? = loggingContext.get()
+    val contextMarkers = getMarkersFromLoggingContext()
     // Add context markers in reverse, so newest marker shows first
-    contextMarkers?.forEachReversed { log.addMarker(it.slf4jMarker) }
+    contextMarkers.forEachReversed { log.addMarker(it.slf4jMarker) }
   }
 
   /**
@@ -84,8 +84,7 @@ internal constructor(
    * have to combine them using [Slf4jMarker.add].
    */
   private fun combineMarkers(markers: Array<out LogMarker>): Slf4jMarker? {
-    val contextMarkers: ArrayList<LogMarker>? = loggingContext.get()
-    val contextMarkersSize = contextMarkers?.size ?: 0
+    val contextMarkers = getMarkersFromLoggingContext()
 
     return when {
       // We have to combine the markers for this log entry with the markers from the logging
@@ -93,14 +92,14 @@ internal constructor(
       // - There are no log markers -> return null
       // - Log entry has 1 marker, and the context is empty -> return log entry marker
       // - Log entry has no markers, but context has 1 marker -> return context marker
-      markers.isEmpty() && contextMarkersSize == 0 -> null
-      markers.size == 1 && contextMarkersSize == 0 -> markers.first().slf4jMarker
-      markers.isEmpty() && contextMarkersSize == 1 -> contextMarkers?.first()?.slf4jMarker
+      markers.isEmpty() && contextMarkers.isEmpty() -> null
+      markers.size == 1 && contextMarkers.isEmpty() -> markers.first().slf4jMarker
+      markers.isEmpty() && contextMarkers.size == 1 -> contextMarkers.first().slf4jMarker
       else -> {
         val combinedMarker = Markers.empty()
         markers.forEach { combinedMarker.add(it.slf4jMarker) }
         // Add context markers in reverse, so newest marker shows first
-        contextMarkers?.forEachReversed { combinedMarker.add(it.slf4jMarker) }
+        contextMarkers.forEachReversed { combinedMarker.add(it.slf4jMarker) }
         combinedMarker
       }
     }
@@ -129,8 +128,8 @@ internal enum class LogLevel(
  * Licensed by Ohad Shai under
  * [Apache 2.0](https://github.com/oshai/kotlin-logging/blob/e9c6ec570cd503c626fca5878efcf1291d4125b7/LICENSE).
  */
-private fun getClassNameFromFunction(func: () -> Unit): String {
-  val name = func.javaClass.name
+internal fun getClassNameFromFunction(function: () -> Unit): String {
+  val name = function.javaClass.name
   return when {
     name.contains("Kt$") -> name.substringBefore("Kt$")
     name.contains("$") -> name.substringBefore("$")
