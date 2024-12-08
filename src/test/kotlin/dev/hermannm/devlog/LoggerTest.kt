@@ -98,6 +98,28 @@ internal class LoggerTest {
     testLogFunction(LogLevel.TRACE) { message -> locationUnawareLog.trace(message) }
   }
 
+  @Test
+  fun `Logger constructor with name parameter`() {
+    val testName = "LoggerWithCustomName"
+    val logger = Logger(name = testName)
+    logger.slf4jLogger.name shouldBe testName
+  }
+
+  private val loggerConstructedInsideClass = Logger {}
+
+  @Test
+  fun `Logger constructor with function parameter`() {
+    // All loggers in this file should have this name (since file name and class name here are the
+    // same), whether it's constructed inside the class, outside, or on a companion object.
+    val expectedName = "dev.hermannm.devlog.LoggerTest"
+    loggerConstructedInsideClass.slf4jLogger.name shouldBe expectedName
+    loggerConstructedOutsideClass.slf4jLogger.name shouldBe expectedName
+    loggerConstructedOnCompanionObject.slf4jLogger.name shouldBe expectedName
+
+    // Logger constructed in separate file should be named after that file.
+    loggerConstructedInOtherFile.slf4jLogger.name shouldBe "dev.hermannm.devlog.TestFile"
+  }
+
   private fun testLogFunction(logLevel: LogLevel, logFunction: (String) -> Unit) {
     val testMessage = "Test message"
     logFunction(testMessage)
@@ -108,7 +130,13 @@ internal class LoggerTest {
     log.message shouldBe testMessage
     log.loggerName shouldBe testLoggerName
   }
+
+  companion object {
+    private val loggerConstructedOnCompanionObject = Logger {}
+  }
 }
+
+private val loggerConstructedOutsideClass = Logger {}
 
 /**
  * Wraps an SLF4J logger and implements the SLF4J logger interface by interface delegation - this
