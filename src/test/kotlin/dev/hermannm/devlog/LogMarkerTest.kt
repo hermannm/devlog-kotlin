@@ -1,5 +1,6 @@
 package dev.hermannm.devlog
 
+import io.kotest.assertions.withClue
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldContainOnlyOnce
 import java.io.ByteArrayOutputStream
@@ -98,7 +99,7 @@ class LogMarkerTest {
           override val descriptor = String.serializer().descriptor
 
           override fun serialize(encoder: Encoder, value: String) {
-            encoder.encodeString("Prefix: $value")
+            encoder.encodeString("Prefix: ${value}")
           }
         }
 
@@ -131,6 +132,95 @@ class LogMarkerTest {
     output shouldContain
         """
           "user":"User(id=1, name=hermannm)"
+        """
+            .trimIndent()
+  }
+
+  @Test
+  fun `rawMarker works for valid JSON`() {
+    val userJson = """{"id":1,"name":"hermannm"}"""
+
+    // The above JSON should work both for validJson = true and validJson = false
+    for (assumeValidJson in listOf(true, false)) {
+      withClue({ "assumeValidJson = ${assumeValidJson}" }) {
+        val output = captureStdout {
+          log.info(
+              "Test",
+              rawMarker("user", userJson, validJson = assumeValidJson),
+          )
+        }
+
+        output shouldContain
+            """
+              "user":${userJson}
+            """
+                .trimIndent()
+      }
+    }
+  }
+
+  @Test
+  fun `rawMarker escapes invalid JSON by default`() {
+    val invalidJson = """{"id":1"""
+
+    val output = captureStdout {
+      log.info(
+          "Test",
+          rawMarker("user", invalidJson),
+      )
+    }
+
+    output shouldContain
+        """
+          "user":"{\"id\":1"
+        """
+            .trimIndent()
+  }
+
+  /**
+   * When the user sets validJson = true on rawMarker, they promise that the given JSON is valid, so
+   * it should be passed on as-is. We therefore verify here that no validity checks are made on the
+   * given JSON, although the user _should_ never pass invalid JSON to rawMarker like this.
+   */
+  @Test
+  fun `rawMarker does not escape invalid JSON when validJson is set to true`() {
+    val invalidJson = """{"id":1"""
+
+    val output = captureStdout {
+      log.info(
+          "Test",
+          rawMarker("user", invalidJson, validJson = true),
+      )
+    }
+
+    output shouldContain
+        """
+          "user":${invalidJson}
+        """
+            .trimIndent()
+  }
+
+  @Test
+  fun `rawMarker re-encodes JSON when it contains newlines`() {
+    val jsonWithNewlines =
+        """
+          {
+            "id": 1,
+            "name": "hermannm"
+          }
+        """
+            .trimIndent()
+
+    val output = captureStdout {
+      log.info(
+          "Test",
+          rawMarker("user", jsonWithNewlines),
+      )
+    }
+
+    output shouldContain
+        """
+          "user":{"id":1,"name":"hermannm"}
         """
             .trimIndent()
   }
