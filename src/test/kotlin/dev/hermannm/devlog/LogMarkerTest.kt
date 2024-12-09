@@ -115,8 +115,27 @@ class LogMarkerTest {
             .trimIndent()
   }
 
+  @Test
+  fun `non-serializable object falls back to toString`() {
+    data class User(val id: Int, val name: String)
+
+    val output = captureStdout {
+      val user = User(id = 1, name = "hermannm")
+      log.info(
+          "Test",
+          marker("user", user),
+      )
+    }
+
+    output shouldContain
+        """
+          "user":"User(id=1, name=hermannm)"
+        """
+            .trimIndent()
+  }
+
   /**
-   * Since we have configured logback in resources/logback-test.xml to use the Logback Logstash JSON
+   * Since we have configured Logback in resources/logback-test.xml to use the Logstash JSON
    * encoder, we can verify in our tests that markers have the expected JSON output.
    */
   private inline fun captureStdout(block: () -> Unit): String {
