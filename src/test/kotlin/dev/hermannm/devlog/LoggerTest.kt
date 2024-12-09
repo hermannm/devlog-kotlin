@@ -73,8 +73,6 @@ internal class LoggerTest {
     logger.logbackLogger.name shouldBe testName
   }
 
-  private val loggerConstructedInsideClass = Logger {}
-
   @Test
   fun `Logger constructor with function parameter`() {
     // All loggers in this file should have this name (since file name and class name here are the
@@ -86,6 +84,11 @@ internal class LoggerTest {
 
     // Logger constructed in separate file should be named after that file.
     loggerConstructedInOtherFile.logbackLogger.name shouldBe "dev.hermannm.devlog.TestFile"
+  }
+
+  @Test
+  fun `Logger fully qualified class name has expected value`() {
+    Logger.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.Logger"
   }
 
   private fun testLogFunction(
@@ -105,6 +108,8 @@ internal class LoggerTest {
     log.throwableProxy.message shouldBe testException.message
     log.loggerName shouldBe testLoggerName
   }
+
+  private val loggerConstructedInsideClass = Logger {}
 
   companion object {
     private val loggerConstructedOnCompanionObject = Logger {}
