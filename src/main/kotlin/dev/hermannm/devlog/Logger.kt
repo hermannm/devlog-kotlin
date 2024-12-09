@@ -70,7 +70,8 @@ internal constructor(
    * to combine them using [LogstashMarker.add].
    */
   private fun combineMarkers(markers: Array<out LogMarker>): LogstashMarker? {
-    val contextMarkers = getMarkersFromLoggingContext()
+    // loggingContext will be null if withLoggingContext has not been called in this thread
+    val contextMarkers = loggingContext.get() ?: emptyList()
 
     return when {
       // We have to combine the markers for this log entry with the markers from the logging

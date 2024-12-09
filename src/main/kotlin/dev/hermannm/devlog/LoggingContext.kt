@@ -25,11 +25,3 @@ inline fun <ReturnT> withLoggingContext(vararg markers: LogMarker, block: () -> 
     }
   }
 }
-
-/**
- * Internal utility function to get the log markers from [loggingContext] and falling back to
- * [emptyList] if the thread-local is not set, so we don't have to deal with nulls.
- */
-internal fun getMarkersFromLoggingContext(): List<LogMarker> {
-  return loggingContext.get() ?: emptyList()
-}
