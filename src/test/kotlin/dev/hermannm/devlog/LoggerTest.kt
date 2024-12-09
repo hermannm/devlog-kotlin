@@ -99,7 +99,7 @@ internal class LoggerTest {
     loggerConstructedOnCompanionObject.logbackLogger.name shouldBe expectedName
 
     // Logger constructed in separate file should be named after that file.
-    loggerConstructedInOtherFile.logbackLogger.name shouldBe "dev.hermannm.devlog.TestFile"
+    loggerConstructedInOtherFile.logbackLogger.name shouldBe "dev.hermannm.devlog.TestUtils"
   }
 
   @Test
