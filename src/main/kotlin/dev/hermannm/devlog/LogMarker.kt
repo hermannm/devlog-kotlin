@@ -5,6 +5,7 @@ import java.net.URI
 import java.net.URL
 import java.time.Instant
 import java.util.*
+import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -26,9 +27,18 @@ internal constructor(
   override fun hashCode() = logstashMarker.hashCode()
 }
 
-inline fun <reified ValueT> marker(name: String, value: ValueT): LogMarker {
+inline fun <reified ValueT> marker(
+    name: String,
+    value: ValueT,
+    serializer: SerializationStrategy<ValueT>? = null
+): LogMarker {
   val logstashMarker =
       try {
+        if (serializer != null) {
+          val serializedValue = markerJson.encodeToString(serializer, value)
+          return LogMarker(Markers.appendRaw(name, serializedValue))
+        }
+
         when (ValueT::class) {
           // Special case for String to avoid redundant serialization
           String::class -> Markers.append(name, value)
