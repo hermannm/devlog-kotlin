@@ -7,6 +7,8 @@
 *.iws
 
 # ...except some shared IntelliJ config
+!.idea/codeStyles/codeStyleConfig.xml
+!.idea/codeStyles/Project.xml
 !.idea/encodings.xml
 !.idea/externalDependencies.xml
 !.idea/jarRepositories.xml

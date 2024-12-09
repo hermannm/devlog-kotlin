@@ -6,7 +6,7 @@ import java.math.BigDecimal
 import java.net.URI
 import java.net.URL
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.builtins.serializer
