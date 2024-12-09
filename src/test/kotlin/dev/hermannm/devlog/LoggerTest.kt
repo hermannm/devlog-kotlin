@@ -5,6 +5,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
@@ -66,6 +67,21 @@ internal class LoggerTest {
     }
   }
 
+  /**
+   * We test logs with marker + cause exception above, but we also want to make sure that just
+   * logging a message by itself works.
+   */
+  @Test
+  fun `log with no markers or exceptions`() {
+    log.info("Test")
+
+    logAppender.list shouldHaveSize 1
+    val logEvent = logAppender.list.first()
+    logEvent.message shouldBe "Test"
+    logEvent.markerList.shouldBeNull()
+    logEvent.throwableProxy.shouldBeNull()
+  }
+
   @Test
   fun `Logger constructor with name parameter`() {
     val testName = "LoggerWithCustomName"
@@ -101,12 +117,12 @@ internal class LoggerTest {
     logFunction(testMessage, testMarker, testException)
 
     logAppender.list shouldHaveSize 1
-    val log = logAppender.list.first()
-    log.level.toString() shouldBe logLevel.slf4jLevel.toString()
-    log.message shouldBe testMessage
-    log.markerList shouldContain testMarker.logstashMarker
-    log.throwableProxy.message shouldBe testException.message
-    log.loggerName shouldBe testLoggerName
+    val logEvent = logAppender.list.first()
+    logEvent.level.toString() shouldBe logLevel.slf4jLevel.toString()
+    logEvent.message shouldBe testMessage
+    logEvent.markerList shouldContain testMarker.logstashMarker
+    logEvent.throwableProxy.message shouldBe testException.message
+    logEvent.loggerName shouldBe testLoggerName
   }
 
   private val loggerConstructedInsideClass = Logger {}
