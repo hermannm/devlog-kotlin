@@ -3,6 +3,7 @@ package dev.hermannm.devlog
 import ch.qos.logback.classic.Level as LogbackLevel
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.AfterEach
@@ -32,27 +33,37 @@ internal class LoggerTest {
 
   @Test
   fun `info log`() {
-    testLogFunction(LogLevel.INFO) { message -> log.info(message) }
+    testLogFunction(LogLevel.INFO) { message, marker, exception ->
+      log.info(message, marker, cause = exception)
+    }
   }
 
   @Test
   fun `warn log`() {
-    testLogFunction(LogLevel.WARN) { message -> log.warn(message) }
+    testLogFunction(LogLevel.WARN) { message, marker, exception ->
+      log.warn(message, marker, cause = exception)
+    }
   }
 
   @Test
   fun `error log`() {
-    testLogFunction(LogLevel.ERROR) { message -> log.error(message) }
+    testLogFunction(LogLevel.ERROR) { message, marker, exception ->
+      log.error(message, marker, cause = exception)
+    }
   }
 
   @Test
   fun `debug log`() {
-    testLogFunction(LogLevel.DEBUG) { message -> log.debug(message) }
+    testLogFunction(LogLevel.DEBUG) { message, marker, exception ->
+      log.debug(message, marker, cause = exception)
+    }
   }
 
   @Test
   fun `trace log`() {
-    testLogFunction(LogLevel.TRACE) { message -> log.trace(message) }
+    testLogFunction(LogLevel.TRACE) { message, marker, exception ->
+      log.trace(message, marker, cause = exception)
+    }
   }
 
   @Test
@@ -77,14 +88,21 @@ internal class LoggerTest {
     loggerConstructedInOtherFile.logbackLogger.name shouldBe "dev.hermannm.devlog.TestFile"
   }
 
-  private fun testLogFunction(logLevel: LogLevel, logFunction: (String) -> Unit) {
+  private fun testLogFunction(
+      logLevel: LogLevel,
+      logFunction: (String, LogMarker, Exception) -> Unit
+  ) {
     val testMessage = "Test message"
-    logFunction(testMessage)
+    val testMarker = marker("test", true)
+    val testException = Exception("Something went wrong")
+    logFunction(testMessage, testMarker, testException)
 
     logAppender.list shouldHaveSize 1
     val log = logAppender.list.first()
     log.level.toString() shouldBe logLevel.slf4jLevel.toString()
     log.message shouldBe testMessage
+    log.markerList shouldContain testMarker.slf4jMarker
+    log.throwableProxy.message shouldBe testException.message
     log.loggerName shouldBe testLoggerName
   }
 
