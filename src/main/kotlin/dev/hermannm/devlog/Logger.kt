@@ -1,9 +1,9 @@
 package dev.hermannm.devlog
 
 import ch.qos.logback.classic.Logger as LogbackLogger
+import net.logstash.logback.marker.LogstashMarker
 import net.logstash.logback.marker.Markers
 import org.slf4j.LoggerFactory
-import org.slf4j.Marker as Slf4jMarker
 import org.slf4j.event.Level as Slf4jLogLevel
 import org.slf4j.spi.LocationAwareLogger
 
@@ -46,10 +46,10 @@ internal constructor(
     }
 
     /**
-     * Logback may output file/line information of where in the source code a log occurred. But if
-     * we just call the normal SLF4J logger methods here, that would show this class (Logger) as
-     * where the logs occurred - but what we actually want is to show where in the user's code the
-     * log was made!
+     * Logback can be configured to output file/line information of where in the source code a log
+     * occurred. But if we just call the normal SLF4J logger methods here, that would show this
+     * class (Logger) as where the logs occurred - but what we actually want is to show where in the
+     * user's code the log was made!
      *
      * To solve this problem, SLF4J provides a [LocationAwareLogger] interface, which Logback
      * implements. The interface has a [LocationAwareLogger.log] method that takes a fully qualified
@@ -67,9 +67,9 @@ internal constructor(
 
   /**
    * [LocationAwareLogger.log] takes just a single log marker, so to pass multiple markers, we have
-   * to combine them using [Slf4jMarker.add].
+   * to combine them using [LogstashMarker.add].
    */
-  private fun combineMarkers(markers: Array<out LogMarker>): Slf4jMarker? {
+  private fun combineMarkers(markers: Array<out LogMarker>): LogstashMarker? {
     val contextMarkers = getMarkersFromLoggingContext()
 
     return when {
@@ -79,13 +79,13 @@ internal constructor(
       // - Log entry has 1 marker, and the context is empty -> return log entry marker
       // - Log entry has no markers, but context has 1 marker -> return context marker
       markers.isEmpty() && contextMarkers.isEmpty() -> null
-      markers.size == 1 && contextMarkers.isEmpty() -> markers.first().slf4jMarker
-      markers.isEmpty() && contextMarkers.size == 1 -> contextMarkers.first().slf4jMarker
+      markers.size == 1 && contextMarkers.isEmpty() -> markers.first().logstashMarker
+      markers.isEmpty() && contextMarkers.size == 1 -> contextMarkers.first().logstashMarker
       else -> {
         val combinedMarker = Markers.empty()
-        markers.forEach { combinedMarker.add(it.slf4jMarker) }
+        markers.forEach { combinedMarker.add(it.logstashMarker) }
         // Add context markers in reverse, so newest marker shows first
-        contextMarkers.forEachReversed { combinedMarker.add(it.slf4jMarker) }
+        contextMarkers.forEachReversed { combinedMarker.add(it.logstashMarker) }
         combinedMarker
       }
     }

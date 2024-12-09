@@ -8,25 +8,26 @@ import java.util.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import net.logstash.logback.marker.LogstashMarker
 import net.logstash.logback.marker.Markers
-import org.slf4j.Marker as Slf4jMarker
 
 class LogMarker
 @PublishedApi // PublishedApi so we can use the constructor in the inline `marker` function.
 internal constructor(
-    internal val slf4jMarker: Slf4jMarker,
+    internal val logstashMarker: LogstashMarker,
 ) {
   // We override toString, equals and hashCode manually here instead of using a data class, since we
   // don't want the data class copy/componentN methods to be part of our API.
-  override fun toString() = slf4jMarker.toString()
+  override fun toString() = logstashMarker.toString()
 
-  override fun equals(other: Any?) = other is LogMarker && other.slf4jMarker == this.slf4jMarker
+  override fun equals(other: Any?) =
+      other is LogMarker && other.logstashMarker == this.logstashMarker
 
-  override fun hashCode() = slf4jMarker.hashCode()
+  override fun hashCode() = logstashMarker.hashCode()
 }
 
 inline fun <reified ValueT> marker(name: String, value: ValueT): LogMarker {
-  val slf4jMarker =
+  val logstashMarker =
       try {
         when (ValueT::class) {
           // Special case for String to avoid redundant serialization
@@ -48,7 +49,7 @@ inline fun <reified ValueT> marker(name: String, value: ValueT): LogMarker {
         Markers.append(name, value.toString())
       }
 
-  return LogMarker(slf4jMarker)
+  return LogMarker(logstashMarker)
 }
 
 fun rawMarker(name: String, json: String, validJson: Boolean = false): LogMarker {

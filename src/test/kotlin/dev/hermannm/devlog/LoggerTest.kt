@@ -101,7 +101,7 @@ internal class LoggerTest {
     val log = logAppender.list.first()
     log.level.toString() shouldBe logLevel.slf4jLevel.toString()
     log.message shouldBe testMessage
-    log.markerList shouldContain testMarker.slf4jMarker
+    log.markerList shouldContain testMarker.logstashMarker
     log.throwableProxy.message shouldBe testException.message
     log.loggerName shouldBe testLoggerName
   }
