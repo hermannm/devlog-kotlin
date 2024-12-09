@@ -1,18 +1,17 @@
 package dev.hermannm.devlog
 
+import ch.qos.logback.classic.Logger as LogbackLogger
 import net.logstash.logback.marker.Markers
-import org.slf4j.Logger as Slf4jLogger
 import org.slf4j.LoggerFactory
 import org.slf4j.Marker as Slf4jMarker
 import org.slf4j.event.Level as Slf4jLogLevel
-import org.slf4j.spi.LocationAwareLogger as Slf4jLocationAwareLogger
-import org.slf4j.spi.LoggingEventBuilder
+import org.slf4j.spi.LocationAwareLogger
 
 class Logger
 internal constructor(
-    internal val slf4jLogger: Slf4jLogger,
+    internal val logbackLogger: LogbackLogger,
 ) {
-  constructor(name: String) : this(slf4jLogger = LoggerFactory.getLogger(name))
+  constructor(name: String) : this(getLogbackLogger(name))
 
   constructor(function: () -> Unit) : this(name = getClassNameFromFunction(function))
 
@@ -36,63 +35,39 @@ internal constructor(
     log(LogLevel.TRACE, message, markers, cause)
   }
 
-  /**
-   * SLF4J log backends may output file/line information of where in the source code a log occurred.
-   * If we just call the normal logger methods here, that would show this class (Logger) as where
-   * the logs occurred - but what we actually want is to show where in the user's code the log was
-   * made!
-   *
-   * To solve this problem, SLF4J provides a `LocationAwareLogger` interface, with a
-   * [Slf4jLocationAwareLogger.log] method that takes a fully qualified class name to omit from the
-   * file/line info. If [slf4jLogger] implements this interface, we want to call this method instead
-   * of the normal logger methods.
-   */
-  private val isLocationAware = slf4jLogger is Slf4jLocationAwareLogger
-
   private fun log(
       level: LogLevel,
       message: String,
       markers: Array<out LogMarker>,
       cause: Throwable?
   ) {
-    if (!slf4jLogger.isEnabledForLevel(level.slf4jLevel)) {
+    if (!logbackLogger.isEnabledForLevel(level.slf4jLevel)) {
       return
     }
 
-    if (isLocationAware) {
-      (slf4jLogger as Slf4jLocationAwareLogger).log(
-          combineMarkers(markers),
-          FULLY_QUALIFIED_CLASS_NAME,
-          level.intValue,
-          message,
-          null,
-          cause,
-      )
-    } else {
-      slf4jLogger
-          .makeLoggingEventBuilder(level.slf4jLevel)
-          .setMessage(message)
-          .also { log ->
-            addMarkers(log, markers)
-            if (cause != null) {
-              log.setCause(cause)
-            }
-          }
-          .log()
-    }
-  }
-
-  private fun addMarkers(log: LoggingEventBuilder, markers: Array<out LogMarker>) {
-    markers.forEach { log.addMarker(it.slf4jMarker) }
-
-    val contextMarkers = getMarkersFromLoggingContext()
-    // Add context markers in reverse, so newest marker shows first
-    contextMarkers.forEachReversed { log.addMarker(it.slf4jMarker) }
+    /**
+     * Logback may output file/line information of where in the source code a log occurred. But if
+     * we just call the normal SLF4J logger methods here, that would show this class (Logger) as
+     * where the logs occurred - but what we actually want is to show where in the user's code the
+     * log was made!
+     *
+     * To solve this problem, SLF4J provides a [LocationAwareLogger] interface, which Logback
+     * implements. The interface has a [LocationAwareLogger.log] method that takes a fully qualified
+     * class name, which Logback can then use to omit it from the file/line info.
+     */
+    logbackLogger.log(
+        combineMarkers(markers),
+        FULLY_QUALIFIED_CLASS_NAME,
+        level.intValue,
+        message,
+        null,
+        cause,
+    )
   }
 
   /**
-   * [Slf4jLocationAwareLogger.log] takes just a single log marker, so to pass multiple markers, we
-   * have to combine them using [Slf4jMarker.add].
+   * [LocationAwareLogger.log] takes just a single log marker, so to pass multiple markers, we have
+   * to combine them using [Slf4jMarker.add].
    */
   private fun combineMarkers(markers: Array<out LogMarker>): Slf4jMarker? {
     val contextMarkers = getMarkersFromLoggingContext()
@@ -125,11 +100,11 @@ internal enum class LogLevel(
     internal val slf4jLevel: Slf4jLogLevel,
     internal val intValue: Int,
 ) {
-  INFO(Slf4jLogLevel.INFO, Slf4jLocationAwareLogger.INFO_INT),
-  WARN(Slf4jLogLevel.WARN, Slf4jLocationAwareLogger.WARN_INT),
-  ERROR(Slf4jLogLevel.ERROR, Slf4jLocationAwareLogger.ERROR_INT),
-  DEBUG(Slf4jLogLevel.DEBUG, Slf4jLocationAwareLogger.DEBUG_INT),
-  TRACE(Slf4jLogLevel.TRACE, Slf4jLocationAwareLogger.TRACE_INT),
+  INFO(Slf4jLogLevel.INFO, LocationAwareLogger.INFO_INT),
+  WARN(Slf4jLogLevel.WARN, LocationAwareLogger.WARN_INT),
+  ERROR(Slf4jLogLevel.ERROR, LocationAwareLogger.ERROR_INT),
+  DEBUG(Slf4jLogLevel.DEBUG, LocationAwareLogger.DEBUG_INT),
+  TRACE(Slf4jLogLevel.TRACE, LocationAwareLogger.TRACE_INT),
 }
 
 /**
@@ -145,5 +120,21 @@ internal fun getClassNameFromFunction(function: () -> Unit): String {
     name.contains("Kt$") -> name.substringBefore("Kt$")
     name.contains("$") -> name.substringBefore("$")
     else -> name
+  }
+}
+
+/**
+ * @throws IllegalStateException If [LoggerFactory.getLogger] does not return a Logback logger. This
+ *   library is made to work with Logback only (since we use Logback-specific features such as raw
+ *   JSON markers), so we want to fail loudly if Logback is not configured.
+ */
+internal fun getLogbackLogger(name: String): LogbackLogger {
+  try {
+    return LoggerFactory.getLogger(name) as LogbackLogger
+  } catch (e: ClassCastException) {
+    throw IllegalStateException(
+        "Failed to get Logback logger - have you added logback-classic as a dependency?",
+        e,
+    )
   }
 }
