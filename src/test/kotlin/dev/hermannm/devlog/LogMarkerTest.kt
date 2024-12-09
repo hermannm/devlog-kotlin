@@ -1,6 +1,7 @@
 package dev.hermannm.devlog
 
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldContainOnlyOnce
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import java.math.BigDecimal
@@ -150,6 +151,10 @@ class LogMarkerTest {
       System.setOut(originalStdout)
     }
 
-    return outputStream.toString("UTF-8")
+    val output = outputStream.toString("UTF-8")
+    // We expect each call to captureStdout to capture just a single log line, so it only contain 1
+    // newline. If we get more, that is likely an error and should fail our tests.
+    output shouldContainOnlyOnce "\n"
+    return output
   }
 }
