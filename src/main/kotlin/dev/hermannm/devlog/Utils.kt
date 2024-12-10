@@ -4,19 +4,19 @@
 
 package dev.hermannm.devlog
 
-internal inline fun <T> List<T>.forEachReversed(untilIndex: Int = 0, action: (Int, T) -> Unit) {
+internal inline fun <T> List<T>.forEachReversed(action: (Int, T) -> Unit) {
   // downTo returns an empty range if first argument is less than the second, so we don't need to
   // check bounds here
-  for (index in (this.size - 1) downTo untilIndex) {
+  for (index in (this.size - 1) downTo 0) {
     action(index, this[index])
   }
 }
 
 @PublishedApi // PublishedApi to use this in inline `withLoggingContext` function.
-internal inline fun <T> Array<T>.forEachReversed(untilIndex: Int = 0, action: (Int, T) -> Unit) {
+internal inline fun <T> Array<T>.forEachReversed(action: (Int, T) -> Unit) {
   // downTo returns an empty range if first argument is less than the second, so we don't need to
   // check bounds here
-  for (index in (this.size - 1) downTo untilIndex) {
+  for (index in (this.size - 1) downTo 0) {
     action(index, this[index])
   }
 }
