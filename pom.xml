@@ -4,14 +4,13 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>dev.hermannm</groupId>
-  <artifactId>devlog</artifactId>
+  <artifactId>devlog-kotlin</artifactId>
   <version>0.1.0</version>
   <packaging>jar</packaging>
 
-  <name>devlog</name>
+  <name>devlog-kotlin</name>
   <description>
-    Logging library for Kotlin JVM, that thinly wraps SLF4J and Logback to provide a more ergonomic API, and provides a
-    log encoder with a human-readable output format designed for development builds.
+    Logging library for Kotlin JVM, that thinly wraps SLF4J and Logback to provide a more ergonomic API.
   </description>
   <url>https://hermannm.dev/devlog</url>
 
@@ -33,6 +32,7 @@
 
   <scm>
     <connection>scm:git:https://github.com/hermannm/devlog-kotlin.git</connection>
+    <developerConnection>scm:git:https://github.com/hermannm/devlog-kotlin.git</developerConnection>
     <url>https://github.com/hermannm/devlog-kotlin</url>
   </scm>
 
