@@ -40,7 +40,7 @@ inline fun <reified ValueT> marker(
 ): LogMarker {
   try {
     if (serializer != null) {
-      val serializedValue = markerJson.encodeToString(serializer, value)
+      val serializedValue = logMarkerJson.encodeToString(serializer, value)
       return LogMarker(RawJsonAppendingMarker(key, serializedValue))
     }
 
@@ -55,7 +55,7 @@ inline fun <reified ValueT> marker(
           UUID::class,
           BigDecimal::class -> ObjectAppendingMarker(key, value.toString())
           else -> {
-            val serializedValue = markerJson.encodeToString(value)
+            val serializedValue = logMarkerJson.encodeToString(value)
             RawJsonAppendingMarker(key, serializedValue)
           }
         }
@@ -80,7 +80,7 @@ fun rawJsonMarker(key: String, json: String, validJson: Boolean = false): LogMar
     }
 
     // If we do not assume that the JSON is valid, we must try to decode it.
-    val decoded = markerJson.parseToJsonElement(json)
+    val decoded = logMarkerJson.parseToJsonElement(json)
 
     // If we successfully decoded the JSON, and it does not contain unescaped newlines, we can
     // return it as-is.
@@ -89,7 +89,7 @@ fun rawJsonMarker(key: String, json: String, validJson: Boolean = false): LogMar
     }
 
     // If the JSON did contain unescaped newlines, then we need to re-encode to escape them.
-    val encoded = markerJson.encodeToString(JsonElement.serializer(), decoded)
+    val encoded = logMarkerJson.encodeToString(JsonElement.serializer(), decoded)
     return LogMarker(RawJsonAppendingMarker(key, encoded))
   } catch (_: Exception) {
     // If we failed to decode/re-encode the JSON string, we return it as a non-JSON string.
@@ -98,4 +98,4 @@ fun rawJsonMarker(key: String, json: String, validJson: Boolean = false): LogMar
 }
 
 @PublishedApi // PublishedApi so we can use this in the inline `marker` function.
-internal val markerJson = Json { encodeDefaults = true }
+internal val logMarkerJson = Json { encodeDefaults = true }
