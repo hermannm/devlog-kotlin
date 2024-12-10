@@ -8,6 +8,7 @@
   <version>0.1.0</version>
   <packaging>jar</packaging>
 
+  <name>devlog</name>
   <description>
     Logging library for Kotlin JVM, that thinly wraps SLF4J and Logback to provide a more ergonomic API, and provides a
     log encoder with a human-readable output format designed for development builds.
