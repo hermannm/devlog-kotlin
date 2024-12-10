@@ -1,6 +1,7 @@
 package dev.hermannm.devlog
 
 import io.kotest.assertions.withClue
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import java.math.BigDecimal
 import java.net.URI
@@ -13,19 +14,19 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encoding.Encoder
 import org.junit.jupiter.api.Test
 
-val log = Logger {}
+private val log = Logger {}
 
 class LogMarkerTest {
   @Test
   fun `basic log marker test`() {
-    val output = captureStdout {
+    val markers = captureLogMarkers {
       log.info(
           "Test",
           marker("testMarker", "value"),
       )
     }
 
-    output shouldContain
+    markers shouldBe
         """
           "testMarker":"value"
         """
@@ -36,15 +37,16 @@ class LogMarkerTest {
   fun `log marker with Serializable object`() {
     @Serializable data class User(val id: Int, val name: String)
 
-    val output = captureStdout {
-      val user = User(id = 1, name = "hermannm")
+    val user = User(id = 1, name = "hermannm")
+
+    val markers = captureLogMarkers {
       log.info(
           "Test",
           marker("user", user),
       )
     }
 
-    output shouldContain
+    markers shouldBe
         """
           "user":{"id":1,"name":"hermannm"}
         """
@@ -53,7 +55,7 @@ class LogMarkerTest {
 
   @Test
   fun `multiple log markers`() {
-    val output = captureStdout {
+    val markers = captureLogMarkers {
       log.info(
           "Test",
           marker("first", true),
@@ -62,7 +64,7 @@ class LogMarkerTest {
       )
     }
 
-    output shouldContain
+    markers shouldBe
         """
           "first":true,"second":["value1","value2"],"third":10
         """
@@ -71,7 +73,7 @@ class LogMarkerTest {
 
   @Test
   fun `special-case types`() {
-    val output = captureStdout {
+    val markers = captureLogMarkers {
       log.info(
           "Test",
           marker("instant", Instant.parse("2024-12-09T16:38:23Z")),
@@ -82,11 +84,11 @@ class LogMarkerTest {
       )
     }
 
-    output shouldContain """"instant":"2024-12-09T16:38:23Z""""
-    output shouldContain """"uri":"https://example.com""""
-    output shouldContain """"url":"https://example.com""""
-    output shouldContain """"uuid":"3638dd04-d196-41ad-8b15-5188a22a6ba4""""
-    output shouldContain """"bigDecimal":"100.0""""
+    markers shouldContain """"instant":"2024-12-09T16:38:23Z""""
+    markers shouldContain """"uri":"https://example.com""""
+    markers shouldContain """"url":"https://example.com""""
+    markers shouldContain """"uuid":"3638dd04-d196-41ad-8b15-5188a22a6ba4""""
+    markers shouldContain """"bigDecimal":"100.0""""
   }
 
   @Test
@@ -100,16 +102,16 @@ class LogMarkerTest {
           }
         }
 
-    val output = captureStdout {
+    val markers = captureLogMarkers {
       log.info(
           "Test",
-          marker("key", "value", serializer = prefixSerializer),
+          marker("name", "value", serializer = prefixSerializer),
       )
     }
 
-    output shouldContain
+    markers shouldBe
         """
-          "key":"Prefix: value"
+          "name":"Prefix: value"
         """
             .trimIndent()
   }
@@ -118,15 +120,16 @@ class LogMarkerTest {
   fun `non-serializable object falls back to toString`() {
     data class User(val id: Int, val name: String)
 
-    val output = captureStdout {
-      val user = User(id = 1, name = "hermannm")
+    val user = User(id = 1, name = "hermannm")
+
+    val markers = captureLogMarkers {
       log.info(
           "Test",
           marker("user", user),
       )
     }
 
-    output shouldContain
+    markers shouldBe
         """
           "user":"User(id=1, name=hermannm)"
         """
@@ -140,14 +143,14 @@ class LogMarkerTest {
     // The above JSON should work both for validJson = true and validJson = false
     for (assumeValidJson in listOf(true, false)) {
       withClue({ "assumeValidJson = ${assumeValidJson}" }) {
-        val output = captureStdout {
+        val markers = captureLogMarkers {
           log.info(
               "Test",
               rawMarker("user", userJson, validJson = assumeValidJson),
           )
         }
 
-        output shouldContain
+        markers shouldBe
             """
               "user":${userJson}
             """
@@ -160,14 +163,14 @@ class LogMarkerTest {
   fun `rawMarker escapes invalid JSON by default`() {
     val invalidJson = """{"id":1"""
 
-    val output = captureStdout {
+    val markers = captureLogMarkers {
       log.info(
           "Test",
           rawMarker("user", invalidJson),
       )
     }
 
-    output shouldContain
+    markers shouldBe
         """
           "user":"{\"id\":1"
         """
@@ -183,14 +186,14 @@ class LogMarkerTest {
   fun `rawMarker does not escape invalid JSON when validJson is set to true`() {
     val invalidJson = """{"id":1"""
 
-    val output = captureStdout {
+    val markers = captureLogMarkers {
       log.info(
           "Test",
           rawMarker("user", invalidJson, validJson = true),
       )
     }
 
-    output shouldContain
+    markers shouldBe
         """
           "user":${invalidJson}
         """
@@ -208,14 +211,14 @@ class LogMarkerTest {
         """
             .trimIndent()
 
-    val output = captureStdout {
+    val markers = captureLogMarkers {
       log.info(
           "Test",
           rawMarker("user", jsonWithNewlines),
       )
     }
 
-    output shouldContain
+    markers shouldBe
         """
           "user":{"id":1,"name":"hermannm"}
         """
