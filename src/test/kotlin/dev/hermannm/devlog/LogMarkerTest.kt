@@ -141,15 +141,15 @@ class LogMarkerTest {
     val markers = captureLogMarkers {
       log.info(
           "Test",
-          marker("duplicate", "value1"),
-          marker("duplicate", "value2"),
-          marker("duplicate", "value3"),
+          marker("duplicateKey", "value1"),
+          marker("duplicateKey", "value2"),
+          marker("duplicateKey", "value3"),
       )
     }
 
     markers shouldBe
         """
-          "duplicate":"value1"
+          "duplicateKey":"value1"
         """
             .trimIndent()
   }

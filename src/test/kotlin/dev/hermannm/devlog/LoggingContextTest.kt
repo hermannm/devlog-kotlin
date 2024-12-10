@@ -46,22 +46,33 @@ class LoggingContextTest {
 
   @Test
   fun `duplicate context marker keys only includes the newest marker`() {
-    val markers = captureLogMarkers {
+    var markersFromInnerContext: String? = null
+    // We want to verify that after exiting the inner logging context, the markers from the outer
+    // context are used again
+    var markersFromOuterContext: String? = null
+
+    withLoggingContext(
+        marker("duplicateKey", "outer"),
+    ) {
       withLoggingContext(
-          marker("duplicate", "old"),
+          marker("duplicateKey", "inner1"),
+          marker("duplicateKey", "inner2"),
       ) {
-        withLoggingContext(
-            marker("duplicate", "newest"),
-            marker("duplicate", "newer"),
-        ) {
-          log.info("Test")
-        }
+        markersFromInnerContext = captureLogMarkers { log.info("Test") }
       }
+
+      markersFromOuterContext = captureLogMarkers { log.info("Test") }
     }
 
-    markers shouldBe
+    markersFromInnerContext shouldBe
         """
-          "duplicate":"newest"
+          "duplicateKey":"inner1"
+        """
+            .trimIndent()
+
+    markersFromOuterContext shouldBe
+        """
+          "duplicateKey":"outer"
         """
             .trimIndent()
   }
