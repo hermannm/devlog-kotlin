@@ -147,7 +147,8 @@ internal constructor(
    *       varargs into a new array for each vararg function, so if `Logger.info` calls
    *       `Logger.log`, and both take varargs, we would allocate 2 arrays instead of just one. When
    *       `Logger.log` takes an array instead, the vararg array from `Logger.info` can be passed
-   *       directly.
+   *       directly. See
+   *       [issue KT-17043](https://youtrack.jetbrains.com/issue/KT-17043/Do-not-create-new-arrays-for-pass-through-vararg-parameters).
    */
   private fun log(
       level: LogLevel,
