@@ -64,7 +64,7 @@ fun processEvent(event: Event) {
 
 ...giving the following output:
 
-```json
+```jsonc
 { "message": "Started processing event", "event": { /* ... */ } }
 { "message": "Finished processing event", "event": { /* ... */ } }
 ```
