@@ -13,6 +13,49 @@ import net.logstash.logback.marker.ObjectAppendingMarker
 import net.logstash.logback.marker.RawJsonAppendingMarker
 import net.logstash.logback.marker.SingleFieldAppendingMarker
 
+/**
+ * A log marker is a key-value pair to add structured context to a log event.
+ *
+ * If you output logs as JSON (e.g. using
+ * [logstash-logback-encoder](https://github.com/logfellow/logstash-logback-encoder)), each marker
+ * will be its own field in the resulting JSON. This allows you to filter and query on these fields
+ * in the log analysis tool of your choice, in a more structured manner than if you were to just use
+ * string concatenation.
+ *
+ * You can construct a log marker using the [marker] function, which will serialize the value using
+ * `kotlinx.serialization`. Alternatively, if you have a value that is already serialized, you can
+ * use [rawJsonMarker]. You can then pass the marker to the various logging methods on [Logger].
+ *
+ * **Example:**
+ *
+ * ```
+ * import dev.hermannm.devlog.Logger
+ * import dev.hermannm.devlog.marker
+ * import kotlinx.serialization.Serializable
+ *
+ * private val log = Logger {}
+ *
+ * fun example() {
+ *   val user = User(id = 1, name = "John Doe")
+ *
+ *   log.info("Registered new user", marker("user", user))
+ * }
+ *
+ * @Serializable data class User(val id: Long, val name: String)
+ * ```
+ *
+ * This would give the following output using `logstash-logback-encoder`:
+ * ```json
+ * {
+ *   "message": "Registered new user",
+ *   "user": {
+ *     "id": "1",
+ *     "name": "John Doe"
+ *   },
+ *   // ...timestamp etc.
+ * }
+ * ```
+ */
 class LogMarker
 @PublishedApi // PublishedApi so we can use the constructor in the inline `marker` function.
 internal constructor(
@@ -33,6 +76,54 @@ internal constructor(
   override fun hashCode() = logstashMarker.hashCode()
 }
 
+/**
+ * Constructs a [LogMarker], a key-value pair to add structured context to a log event. You can pass
+ * the marker to the various logging methods on [Logger].
+ *
+ * The value is serialized using `kotlinx.serialization`, so if you pass an object here, you should
+ * make sure it is annotated with `@Serializable`. Alternatively, you can pass your own [serializer]
+ * for the value. If serialization fails, we fall back to calling `toString()` on the value.
+ *
+ * If you have a value that is already serialized, you should use [rawJsonMarker] instead.
+ *
+ * Certain types that `kotlinx.serialization` doesn't support natively have special-case handling
+ * here, using their `toString()` representation instead:
+ * - [java.time.Instant]
+ * - [java.util.UUID]
+ * - [java.net.URI]
+ * - [java.net.URL]
+ * - [java.math.BigDecimal]
+ *
+ * **Example:**
+ *
+ * ```
+ * import dev.hermannm.devlog.Logger
+ * import dev.hermannm.devlog.marker
+ * import kotlinx.serialization.Serializable
+ *
+ * private val log = Logger {}
+ *
+ * fun example() {
+ *   val user = User(id = 1, name = "John Doe")
+ *
+ *   log.info("Registered new user", marker("user", user))
+ * }
+ *
+ * @Serializable data class User(val id: Long, val name: String)
+ * ```
+ *
+ * This would give the following output using `logstash-logback-encoder`:
+ * ```json
+ * {
+ *   "message": "Registered new user",
+ *   "user": {
+ *     "id": 1,
+ *     "name": "John Doe"
+ *   },
+ *   // ...timestamp etc.
+ * }
+ * ```
+ */
 inline fun <reified ValueT> marker(
     key: String,
     value: ValueT,
@@ -48,11 +139,12 @@ inline fun <reified ValueT> marker(
         when (ValueT::class) {
           // Special case for String to avoid redundant serialization
           String::class -> ObjectAppendingMarker(key, value)
-          // Special cases for common types that kotlinx.serialization doesn't handle by default
+          // Special cases for common types that kotlinx.serialization doesn't handle by default.
+          // If more cases are added here, you should also add them to the list in the docstring.
           Instant::class,
+          UUID::class,
           URI::class,
           URL::class,
-          UUID::class,
           BigDecimal::class -> ObjectAppendingMarker(key, value.toString())
           else -> {
             val serializedValue = logMarkerJson.encodeToString(value)
@@ -68,6 +160,43 @@ inline fun <reified ValueT> marker(
   }
 }
 
+/**
+ * Constructs a [LogMarker], a key-value pair to add structured context to a log event, with the
+ * given pre-serialized JSON string. You can pass the marker to the various logging methods on
+ * [Logger].
+ *
+ * By default, this function checks that the given JSON string is actually valid JSON. The reason
+ * for this is that giving raw JSON to our log encoder when it is not in fact valid JSON can break
+ * our logs. So if the given JSON string is not valid JSON, we escape it as a string. If you are
+ * 100% sure that the given JSON string is valid, you can set [validJson] to true.
+ *
+ * **Example:**
+ *
+ * ```
+ * import dev.hermannm.devlog.Logger
+ * import dev.hermannm.devlog.rawJsonMarker
+ *
+ * private val log = Logger {}
+ *
+ * fun example() {
+ *   val userJson = """{"id":1,"name":"John Doe"}"""
+ *
+ *   log.info("Registered new user", rawJsonMarker("user", userJson))
+ * }
+ * ```
+ *
+ * This would give the following output using `logstash-logback-encoder`:
+ * ```json
+ * {
+ *   "message": "Registered new user",
+ *   "user": {
+ *     "id": 1,
+ *     "name": "John Doe"
+ *   },
+ *   // ...timestamp etc.
+ * }
+ * ```
+ */
 fun rawJsonMarker(key: String, json: String, validJson: Boolean = false): LogMarker {
   try {
     // Some log platforms (e.g. AWS CloudWatch) use newlines as the separator between log messages.
