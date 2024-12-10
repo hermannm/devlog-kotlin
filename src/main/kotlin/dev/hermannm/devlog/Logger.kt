@@ -236,10 +236,10 @@ internal fun combineLogMarkers(markers: Array<out LogMarker>, cause: Throwable?)
   val contextMarkers = getLogMarkersFromContext()
   val exceptionMarkers = getLogMarkersFromException(cause)
 
-  // We have to combine the markers for this log entry with the markers from the logging
+  // We have to combine the markers for this log event with the markers from the logging
   // context, and the cause exception if it implements WithLogMarkers. But we can avoid doing
   // this combination if there are no log markers, or if there is only 1 log marker among the
-  // log entry/context/exception markers.
+  // log event/context/exception markers.
   return when {
     markers.isEmpty() && contextMarkers.isEmpty() && exceptionMarkers.isEmpty() -> {
       null
@@ -257,7 +257,7 @@ internal fun combineLogMarkers(markers: Array<out LogMarker>, cause: Throwable?)
       /**
        * This is how [Markers.aggregate] combines markers: create an empty marker, then add to it.
        * But that function takes a vararg or a Collection, which would require an additional
-       * allocation from us here, since we want to add both the log entry markers and the context
+       * allocation from us here, since we want to add both the log event markers and the context
        * markers. So instead we make the empty marker and add to it ourselves.
        */
       val combinedMarker = Markers.empty()

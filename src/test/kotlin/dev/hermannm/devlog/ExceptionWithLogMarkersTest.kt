@@ -20,14 +20,14 @@ class ExceptionWithLogMarkersTest {
   }
 
   @Test
-  fun `log markers from WithLogMarkers are placed between context and log entry markers`() {
+  fun `exception markers are placed between context and log event markers`() {
     val markers = captureLogMarkers {
       withLoggingContext(
           marker("contextMarker", "value"),
       ) {
         log.error(
             "Test",
-            marker("logEntryMarker", "value"),
+            marker("logEventMarker", "value"),
             cause = exceptionWithLogMarker(marker("exceptionMarker", "value")),
         )
       }
@@ -35,27 +35,27 @@ class ExceptionWithLogMarkersTest {
 
     markers shouldBe
         """
-          "logEntryMarker":"value","exceptionMarker":"value","contextMarker":"value"
+          "logEventMarker":"value","exceptionMarker":"value","contextMarker":"value"
         """
             .trimIndent()
   }
 
   @Test
-  fun `nested exception that implements WithLogMarkers`() {
+  fun `child exception that implements WithLogMarkers`() {
     val markers = captureLogMarkers {
       log.error(
           "Test",
           cause =
               Exception(
                   "Parent exception",
-                  exceptionWithLogMarker(marker("nestedException", true)),
+                  exceptionWithLogMarker(marker("childException", true)),
               ),
       )
     }
 
     markers shouldBe
         """
-          "nestedException":true
+          "childException":true
         """
             .trimIndent()
   }
@@ -94,61 +94,62 @@ class ExceptionWithLogMarkersTest {
               ExceptionWithLogMarkers(
                   "Test",
                   listOf(
-                      marker("duplicate", "value1"),
+                      marker("duplicateKey", "value1"),
+                      marker("duplicateKey", "value2"),
                   ),
-                  cause = exceptionWithLogMarker(marker("duplicate", "value2")),
+                  cause = exceptionWithLogMarker(marker("duplicateKey", "value3")),
               ),
       )
     }
 
     markers shouldBe
         """
-          "duplicate":"value1"
+          "duplicateKey":"value1"
         """
             .trimIndent()
   }
 
   /**
-   * Priority for duplicate keys in log markers is Log entry -> Exception -> Context, so log entry
-   * marker should override exception marker
+   * Priority for duplicate keys in log markers is Log event -> Exception -> Context, so log event
+   * marker should override exception marker.
    */
   @Test
-  fun `exception marker does not override duplicate log entry marker`() {
+  fun `exception marker does not override duplicate log event marker`() {
     val markers = captureLogMarkers {
       log.error(
           "Test",
-          marker("duplicate", "from log entry"),
-          cause = exceptionWithLogMarker(marker("duplicate", "from exception")),
+          marker("duplicateKey", "from log event"),
+          cause = exceptionWithLogMarker(marker("duplicateKey", "from exception")),
       )
     }
 
     markers shouldBe
         """
-          "duplicate":"from log entry"
+          "duplicateKey":"from log event"
         """
             .trimIndent()
   }
 
   /**
-   * Priority for duplicate keys in log markers is Log entry -> Exception -> Context, so log entry
-   * marker should override exception marker
+   * Priority for duplicate keys in log markers is Log event -> Exception -> Context, so log event
+   * marker should override exception marker.
    */
   @Test
   fun `exception marker overrides duplicate context marker`() {
     val markers = captureLogMarkers {
       withLoggingContext(
-          marker("duplicate", "from context"),
+          marker("duplicateKey", "from context"),
       ) {
         log.error(
             "Test",
-            cause = exceptionWithLogMarker(marker("duplicate", "from exception")),
+            cause = exceptionWithLogMarker(marker("duplicateKey", "from exception")),
         )
       }
     }
 
     markers shouldBe
         """
-          "duplicate":"from exception"
+          "duplicateKey":"from exception"
         """
             .trimIndent()
   }

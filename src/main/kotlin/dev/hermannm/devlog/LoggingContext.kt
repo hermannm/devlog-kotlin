@@ -45,7 +45,7 @@ inline fun <ReturnT> withLoggingContext(
     block: () -> ReturnT
 ): ReturnT {
   val contextMarkers = loggingContext.getOrSet { ArrayList(logMarkers.size) }
-  // We add context markers in reverse when adding them to log entries, to show the newest marker
+  // We add context markers in reverse when adding them to log events, to show the newest marker
   // first. But if we called `withLoggingContext` with multiple markers, this would cause these
   // markers to show in reverse order to how they were passed. So to counteract that, we add the
   // markers to the logging context here in reverse order.

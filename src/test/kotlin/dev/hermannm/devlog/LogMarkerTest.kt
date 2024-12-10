@@ -137,7 +137,7 @@ class LogMarkerTest {
   }
 
   @Test
-  fun `duplicate marker keys only includes the first marker`() {
+  fun `duplicate markers only includes the first marker`() {
     val markers = captureLogMarkers {
       log.info(
           "Test",
