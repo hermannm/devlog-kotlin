@@ -37,7 +37,7 @@ class LogMarkerTest {
   fun `log marker with Serializable object`() {
     @Serializable data class User(val id: Int, val name: String)
 
-    val user = User(id = 1, name = "hermannm")
+    val user = User(id = 1, name = "John Doe")
 
     val markers = captureLogMarkers {
       log.info(
@@ -48,7 +48,7 @@ class LogMarkerTest {
 
     markers shouldBe
         """
-          "user":{"id":1,"name":"hermannm"}
+          "user":{"id":1,"name":"John Doe"}
         """
             .trimIndent()
   }
@@ -120,7 +120,7 @@ class LogMarkerTest {
   fun `non-serializable object falls back to toString`() {
     data class User(val id: Int, val name: String)
 
-    val user = User(id = 1, name = "hermannm")
+    val user = User(id = 1, name = "John Doe")
 
     val markers = captureLogMarkers {
       log.info(
@@ -131,7 +131,7 @@ class LogMarkerTest {
 
     markers shouldBe
         """
-          "user":"User(id=1, name=hermannm)"
+          "user":"User(id=1, name=John Doe)"
         """
             .trimIndent()
   }
@@ -156,7 +156,7 @@ class LogMarkerTest {
 
   @Test
   fun `rawJsonMarker works for valid JSON`() {
-    val userJson = """{"id":1,"name":"hermannm"}"""
+    val userJson = """{"id":1,"name":"John Doe"}"""
 
     // The above JSON should work both for validJson = true and validJson = false
     for (assumeValidJson in listOf(true, false)) {
@@ -225,7 +225,7 @@ class LogMarkerTest {
         """
           {
             "id": 1,
-            "name": "hermannm"
+            "name": "John Doe"
           }
         """
             .trimIndent()
@@ -239,7 +239,7 @@ class LogMarkerTest {
 
     markers shouldBe
         """
-          "user":{"id":1,"name":"hermannm"}
+          "user":{"id":1,"name":"John Doe"}
         """
             .trimIndent()
   }
