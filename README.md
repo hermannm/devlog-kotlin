@@ -44,7 +44,7 @@ data class User(val id: Long, val name: String)
 This will give the following log output (if outputting logs as JSON with
 `logstash-logback-encoder`):
 
-```json
+```jsonc
 { "message": "Registered new user", "user": { "id": 1, "name": "John Doe" } }
 ```
 
