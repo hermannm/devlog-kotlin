@@ -24,6 +24,38 @@ class LoggingContextTest {
   }
 
   @Test
+  fun `logging context applies to all logs in scope`() {
+    val markers = arrayOfNulls<String>(2)
+
+    withLoggingContext(
+        marker("key", "value"),
+    ) {
+      markers[0] = captureLogMarkers { log.info("Test") }
+      markers[1] = captureLogMarkers { log.info("Test 2") }
+    }
+
+    markers.forEach {
+      it shouldBe
+          """
+            "key":"value"
+          """
+              .trimIndent()
+    }
+  }
+
+  @Test
+  fun `logging context does not apply to logs outside scope`() {
+    withLoggingContext(
+        marker("key", "value"),
+    ) {
+      log.info("Inside scope")
+    }
+
+    val markers = captureLogMarkers { log.info("Outside scope") }
+    markers shouldBe ""
+  }
+
+  @Test
   fun `multiple context markers combined with log marker have expected order`() {
     val markers = captureLogMarkers {
       withLoggingContext(
@@ -45,7 +77,7 @@ class LoggingContextTest {
   }
 
   @Test
-  fun `duplicate context marker keys only includes the newest marker`() {
+  fun `duplicate context markers only includes the newest marker`() {
     var markersFromInnerContext: String? = null
     // We want to verify that after exiting the inner logging context, the markers from the outer
     // context are used again
@@ -73,6 +105,30 @@ class LoggingContextTest {
     markersFromOuterContext shouldBe
         """
           "duplicateKey":"outer"
+        """
+            .trimIndent()
+  }
+
+  /**
+   * Priority for duplicate keys in log markers is Log event -> Exception -> Context, so log event
+   * marker should override context marker.
+   */
+  @Test
+  fun `context marker does not override duplicate log event marker`() {
+    val markers = captureLogMarkers {
+      withLoggingContext(
+          marker("duplicateKey", "from context"),
+      ) {
+        log.info(
+            "Test",
+            marker("duplicateKey", "from log event"),
+        )
+      }
+    }
+
+    markers shouldBe
+        """
+          "duplicateKey":"from log event"
         """
             .trimIndent()
   }

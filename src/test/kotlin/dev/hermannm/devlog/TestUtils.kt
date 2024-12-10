@@ -28,42 +28,71 @@ internal inline fun captureLogMarkers(block: () -> Unit): String {
   // contain 1 newline. If we get more, that is likely an error and should fail our tests.
   logOutput shouldContainOnlyOnce "\n"
 
-  var indexOfLastComma: Int? = null
+  var markerStartIndex: Int? = null
 
-  // Markers are included at the end of the log entry, and the last field before the markers is
+  // Markers are included at the end of the log line, and the last field before the markers is
   // either "level_value" or "stack_trace". We want our tests to assert on the contents of all
   // markers, so we strip away the non-marker fields here.
   val indexOfStackTrace = logOutput.indexOf("\"stack_trace\"")
-  if (indexOfStackTrace == -1) {
-    val indexOfLevelValue = logOutput.indexOf("\"level_value\"")
-    indexOfLevelValue shouldNotBe -1 // -1 = not found
-    indexOfLastComma = logOutput.indexOf(',', startIndex = indexOfLevelValue)
-  } else {
-    // We want to iterate past "stack_trace" and its string value, meaning we want to iterate until
-    // we've passed 4 unescaped quotes
-    var quoteCount = 0
-    for (i in indexOfStackTrace until logOutput.length) {
-      if (logOutput[i] == '"' && logOutput[i - 1] != '\\') {
-        quoteCount++
-      }
+  if (indexOfStackTrace != -1) {
+    markerStartIndex = indexAfterJsonStringField(logOutput, startIndex = indexOfStackTrace)
+  }
+  if (markerStartIndex == null) {
+    val indexOfLevelValue = logOutput.indexOf("\"level_value\"") shouldNotBe -1 // -1 = not found
+    markerStartIndex = indexAfterJsonNumberField(logOutput, startIndex = indexOfLevelValue)
+  }
 
-      if (quoteCount == 4) {
-        indexOfLastComma = i + 1
-        break
-      }
+  markerStartIndex.shouldNotBeNull() shouldNotBe -1
+
+  val start = markerStartIndex + 1 // Omit the comma before markers
+  val end = logOutput.length - 2 // // We want to drop the final }\n
+  // If there are no markers (which we want to test sometimes), start will be greater than end
+  if (start > end) {
+    return ""
+  }
+  return logOutput.substring(start, end)
+}
+
+private fun indexAfterJsonStringField(json: String, startIndex: Int): Int? {
+  // We want to iterate past the key and the value, meaning we want to iterate until we've passed 4
+  // unescaped quotes
+  var quoteCount = 0
+  for (i in startIndex until json.length) {
+    if (json[i] == '"' && json[i - 1] != '\\') {
+      quoteCount++
+    }
+
+    if (quoteCount == 4) {
+      return i + 1
     }
   }
 
-  indexOfLastComma.shouldNotBeNull() shouldNotBe -1
+  return null
+}
 
-  val markers =
-      logOutput.substring(
-          // Markers start after the comma after level_value
-          startIndex = indexOfLastComma + 1,
-          // We want to drop the final }\n
-          endIndex = logOutput.length - 2,
-      )
-  return markers
+private fun indexAfterJsonNumberField(json: String, startIndex: Int): Int? {
+  // We first want to iterate past the key (2 quotes), then the number value
+  var quoteCount = 0
+  var numberBegun = false
+  for (i in startIndex until json.length) {
+    if (json[i] == '"' && json[i - 1] != '\\') {
+      quoteCount++
+    }
+
+    // The number starts after the 2 quotes from the keys and the following colon, and it either
+    // starts with a digit or a minus sign
+    if (quoteCount == 2 && json[i - 1] == ':' && (json[i].isDigit() || json[i] == '-')) {
+      numberBegun = true
+      continue
+    }
+
+    // If we have started the number, it ends when we find a non-digit character
+    if (numberBegun && !json[i].isDigit()) {
+      return i
+    }
+  }
+
+  return null
 }
 
 /**
