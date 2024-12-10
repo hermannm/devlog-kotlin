@@ -11,7 +11,7 @@ inline fun <ReturnT> withLoggingContext(vararg markers: LogMarker, block: () -> 
   // first. But if we called `withLoggingContext` with multiple markers, this would cause these
   // markers to show in reverse order to how they were passed. So to counteract that, we add the
   // markers to the logging context here in reverse order.
-  markers.forEachReversed { contextMarkers.add(it) }
+  markers.forEachReversed { _, marker -> contextMarkers.add(marker) }
 
   try {
     return block()

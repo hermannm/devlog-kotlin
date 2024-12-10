@@ -84,9 +84,27 @@ internal constructor(
       markers.isEmpty() && contextMarkers.size == 1 -> contextMarkers.first().logstashMarker
       else -> {
         val combinedMarker = Markers.empty()
-        markers.forEach { combinedMarker.add(it.logstashMarker) }
+
+        markers.forEachIndexed { index, marker ->
+          // If there are duplicate markers, we only include the first one in the log - otherwise we
+          // would produce invalid JSON
+          if (markers.anyBefore(index) { it.key == marker.key }) {
+            return@forEachIndexed
+          }
+
+          combinedMarker.add(marker.logstashMarker)
+        }
+
         // Add context markers in reverse, so newest marker shows first
-        contextMarkers.forEachReversed { combinedMarker.add(it.logstashMarker) }
+        contextMarkers.forEachReversed { index, marker ->
+          // If there are duplicate context markers, we only include the newest one in the log
+          if (contextMarkers.anyBefore(index, reverse = true) { it.key == marker.key }) {
+            return@forEachReversed
+          }
+
+          combinedMarker.add(marker.logstashMarker)
+        }
+
         combinedMarker
       }
     }

@@ -105,13 +105,13 @@ class LogMarkerTest {
     val markers = captureLogMarkers {
       log.info(
           "Test",
-          marker("name", "value", serializer = prefixSerializer),
+          marker("key", "value", serializer = prefixSerializer),
       )
     }
 
     markers shouldBe
         """
-          "name":"Prefix: value"
+          "key":"Prefix: value"
         """
             .trimIndent()
   }
@@ -132,6 +132,24 @@ class LogMarkerTest {
     markers shouldBe
         """
           "user":"User(id=1, name=hermannm)"
+        """
+            .trimIndent()
+  }
+
+  @Test
+  fun `duplicate marker names only includes the first marker`() {
+    val markers = captureLogMarkers {
+      log.info(
+          "Test",
+          marker("duplicate", "value1"),
+          marker("duplicate", "value2"),
+          marker("duplicate", "value3"),
+      )
+    }
+
+    markers shouldBe
+        """
+          "duplicate":"value1"
         """
             .trimIndent()
   }
