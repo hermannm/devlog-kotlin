@@ -45,6 +45,11 @@ internal fun getLogMarkersFromException(exception: Throwable?): List<LogMarker> 
       }
     }
 
+    // Avoid infinite loop from cyclic cause exceptions
+    if (e.cause === e) {
+      break
+    }
+
     e = e.cause
   }
 
