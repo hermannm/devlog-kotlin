@@ -1,5 +1,6 @@
 package dev.hermannm.devlog
 
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContainOnlyOnce
 import java.io.ByteArrayOutputStream
@@ -27,17 +28,38 @@ internal inline fun captureLogMarkers(block: () -> Unit): String {
   // contain 1 newline. If we get more, that is likely an error and should fail our tests.
   logOutput shouldContainOnlyOnce "\n"
 
+  var indexOfLastComma: Int? = null
+
   // Markers are included at the end of the log entry, and the last field before the markers is
-  // "level_value". We want our tests to assert on the contents of all markers, so we strip away
-  // the non-marker fields here.
-  val indexOfLevelValue = logOutput.indexOf("\"level_value\"")
-  indexOfLevelValue shouldNotBe -1 // -1 = not found
-  val indexOfCommaAfterLevelValue = logOutput.indexOf(',', startIndex = indexOfLevelValue)
-  indexOfCommaAfterLevelValue shouldNotBe -1
+  // either "level_value" or "stack_trace". We want our tests to assert on the contents of all
+  // markers, so we strip away the non-marker fields here.
+  val indexOfStackTrace = logOutput.indexOf("\"stack_trace\"")
+  if (indexOfStackTrace == -1) {
+    val indexOfLevelValue = logOutput.indexOf("\"level_value\"")
+    indexOfLevelValue shouldNotBe -1 // -1 = not found
+    indexOfLastComma = logOutput.indexOf(',', startIndex = indexOfLevelValue)
+  } else {
+    // We want to iterate past "stack_trace" and its string value, meaning we want to iterate until
+    // we've passed 4 unescaped quotes
+    var quoteCount = 0
+    for (i in indexOfStackTrace until logOutput.length) {
+      if (logOutput[i] == '"' && logOutput[i - 1] != '\\') {
+        quoteCount++
+      }
+
+      if (quoteCount == 4) {
+        indexOfLastComma = i + 1
+        break
+      }
+    }
+  }
+
+  indexOfLastComma.shouldNotBeNull() shouldNotBe -1
+
   val markers =
       logOutput.substring(
           // Markers start after the comma after level_value
-          startIndex = indexOfCommaAfterLevelValue + 1,
+          startIndex = indexOfLastComma + 1,
           // We want to drop the final }\n
           endIndex = logOutput.length - 2,
       )
