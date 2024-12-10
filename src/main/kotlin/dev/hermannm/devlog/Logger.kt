@@ -170,7 +170,7 @@ internal constructor(
      * class name, which Logback can then use to omit it from the file/line info.
      */
     logbackLogger.log(
-        combineMarkers(markers),
+        combineMarkers(markers, cause),
         FULLY_QUALIFIED_CLASS_NAME,
         level.intValue,
         message,
@@ -183,19 +183,27 @@ internal constructor(
    * [LocationAwareLogger.log] takes just a single log marker, so to pass multiple markers, we have
    * to combine them using [LogstashMarker.add].
    */
-  private fun combineMarkers(markers: Array<out LogMarker>): LogstashMarker? {
-    // loggingContext will be null if withLoggingContext has not been called in this thread
-    val contextMarkers = loggingContext.get() ?: emptyList()
+  private fun combineMarkers(markers: Array<out LogMarker>, cause: Throwable?): LogstashMarker? {
+    val contextMarkers = getLogMarkersFromContext()
+    val exceptionMarkers = getLogMarkersFromException(cause)
 
+    // We have to combine the markers for this log entry with the markers from the logging
+    // context, and the cause exception if it implements WithLogMarkers. But we can avoid doing
+    // this combination if there are no log markers, or if there is only 1 log marker among the
+    // log entry/context/exception markers.
     return when {
-      // We have to combine the markers for this log entry with the markers from the logging
-      // context. But we can avoid doing this combination if:
-      // - There are no log markers -> return null
-      // - Log entry has 1 marker, and the context is empty -> return log entry marker
-      // - Log entry has no markers, but context has 1 marker -> return context marker
-      markers.isEmpty() && contextMarkers.isEmpty() -> null
-      markers.size == 1 && contextMarkers.isEmpty() -> markers.first().logstashMarker
-      markers.isEmpty() && contextMarkers.size == 1 -> contextMarkers.first().logstashMarker
+      markers.isEmpty() && contextMarkers.isEmpty() && exceptionMarkers.isEmpty() -> {
+        null
+      }
+      markers.size == 1 && contextMarkers.isEmpty() && exceptionMarkers.isEmpty() -> {
+        markers.first().logstashMarker
+      }
+      markers.isEmpty() && contextMarkers.size == 1 && exceptionMarkers.isEmpty() -> {
+        contextMarkers.first().logstashMarker
+      }
+      markers.isEmpty() && contextMarkers.isEmpty() && exceptionMarkers.size == 1 -> {
+        exceptionMarkers.first().logstashMarker
+      }
       else -> {
         /**
          * This is how [Markers.aggregate] combines markers: create an empty marker, then add to it.
@@ -215,10 +223,22 @@ internal constructor(
           combinedMarker.add(marker.logstashMarker)
         }
 
+        exceptionMarkers.forEachIndexed { index, marker ->
+          // Don't add marker keys that have already been added
+          if (markers.any { it.key == marker.key } ||
+              exceptionMarkers.anyBefore(index) { it.key == marker.key }) {
+            return@forEachIndexed
+          }
+
+          combinedMarker.add(marker.logstashMarker)
+        }
+
         // Add context markers in reverse, so newest marker shows first
         contextMarkers.forEachReversed { index, marker ->
-          // If there are duplicate context markers, we only include the newest one in the log
-          if (contextMarkers.anyBefore(index, reverse = true) { it.key == marker.key }) {
+          // Don't add marker keys that have already been added
+          if (markers.any { it.key == marker.key } ||
+              exceptionMarkers.any { it.key == marker.key } ||
+              contextMarkers.anyBefore(index, reverse = true) { it.key == marker.key }) {
             return@forEachReversed
           }
 
