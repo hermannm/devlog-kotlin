@@ -68,24 +68,24 @@ inline fun <reified ValueT> marker(
   }
 }
 
-fun rawMarker(key: String, jsonValue: String, validJson: Boolean = false): LogMarker {
+fun rawJsonMarker(key: String, json: String, validJson: Boolean = false): LogMarker {
   try {
     // Some log platforms (e.g. AWS CloudWatch) use newlines as the separator between log messages.
     // So if the JSON string has unescaped newlines, we must re-parse the JSON.
-    val containsNewlines = jsonValue.contains('\n')
+    val containsNewlines = json.contains('\n')
 
     // If we assume the JSON is valid, and there are no unescaped newlines, we can return it as-is.
     if (validJson && !containsNewlines) {
-      return LogMarker(RawJsonAppendingMarker(key, jsonValue))
+      return LogMarker(RawJsonAppendingMarker(key, json))
     }
 
     // If we do not assume that the JSON is valid, we must try to decode it.
-    val decoded = markerJson.parseToJsonElement(jsonValue)
+    val decoded = markerJson.parseToJsonElement(json)
 
     // If we successfully decoded the JSON, and it does not contain unescaped newlines, we can
     // return it as-is.
     if (!containsNewlines) {
-      return LogMarker(RawJsonAppendingMarker(key, jsonValue))
+      return LogMarker(RawJsonAppendingMarker(key, json))
     }
 
     // If the JSON did contain unescaped newlines, then we need to re-encode to escape them.
@@ -93,7 +93,7 @@ fun rawMarker(key: String, jsonValue: String, validJson: Boolean = false): LogMa
     return LogMarker(RawJsonAppendingMarker(key, encoded))
   } catch (_: Exception) {
     // If we failed to decode/re-encode the JSON string, we return it as a non-JSON string.
-    return LogMarker(ObjectAppendingMarker(key, jsonValue))
+    return LogMarker(ObjectAppendingMarker(key, json))
   }
 }
 

@@ -137,7 +137,7 @@ class LogMarkerTest {
   }
 
   @Test
-  fun `duplicate marker names only includes the first marker`() {
+  fun `duplicate marker keys only includes the first marker`() {
     val markers = captureLogMarkers {
       log.info(
           "Test",
@@ -155,7 +155,7 @@ class LogMarkerTest {
   }
 
   @Test
-  fun `rawMarker works for valid JSON`() {
+  fun `rawJsonMarker works for valid JSON`() {
     val userJson = """{"id":1,"name":"hermannm"}"""
 
     // The above JSON should work both for validJson = true and validJson = false
@@ -164,7 +164,7 @@ class LogMarkerTest {
         val markers = captureLogMarkers {
           log.info(
               "Test",
-              rawMarker("user", userJson, validJson = assumeValidJson),
+              rawJsonMarker("user", userJson, validJson = assumeValidJson),
           )
         }
 
@@ -178,13 +178,13 @@ class LogMarkerTest {
   }
 
   @Test
-  fun `rawMarker escapes invalid JSON by default`() {
+  fun `rawJsonMarker escapes invalid JSON by default`() {
     val invalidJson = """{"id":1"""
 
     val markers = captureLogMarkers {
       log.info(
           "Test",
-          rawMarker("user", invalidJson),
+          rawJsonMarker("user", invalidJson),
       )
     }
 
@@ -196,18 +196,19 @@ class LogMarkerTest {
   }
 
   /**
-   * When the user sets validJson = true on rawMarker, they promise that the given JSON is valid, so
-   * it should be passed on as-is. We therefore verify here that no validity checks are made on the
-   * given JSON, although the user _should_ never pass invalid JSON to rawMarker like this.
+   * When the user sets validJson = true on rawJsonMarker, they promise that the given JSON is
+   * valid, so it should be passed on as-is. We therefore verify here that no validity checks are
+   * made on the given JSON, although the user _should_ never pass invalid JSON to rawJsonMarker
+   * like this.
    */
   @Test
-  fun `rawMarker does not escape invalid JSON when validJson is set to true`() {
+  fun `rawJsonMarker does not escape invalid JSON when validJson is set to true`() {
     val invalidJson = """{"id":1"""
 
     val markers = captureLogMarkers {
       log.info(
           "Test",
-          rawMarker("user", invalidJson, validJson = true),
+          rawJsonMarker("user", invalidJson, validJson = true),
       )
     }
 
@@ -219,7 +220,7 @@ class LogMarkerTest {
   }
 
   @Test
-  fun `rawMarker re-encodes JSON when it contains newlines`() {
+  fun `rawJsonMarker re-encodes JSON when it contains newlines`() {
     val jsonWithNewlines =
         """
           {
@@ -232,7 +233,7 @@ class LogMarkerTest {
     val markers = captureLogMarkers {
       log.info(
           "Test",
-          rawMarker("user", jsonWithNewlines),
+          rawJsonMarker("user", jsonWithNewlines),
       )
     }
 
