@@ -24,7 +24,7 @@ fun example() {
 }
 ```
 
-You can add "log markers" to add structured key-value data to your logs. The `marker` function uses
+You can also add "log markers" (structured key-value data) to your logs. The `marker` function uses
 `kotlinx.serialization` to serialize the value.
 
 ```kotlin
