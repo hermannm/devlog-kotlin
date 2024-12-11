@@ -5,6 +5,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.AfterEach
@@ -176,6 +177,41 @@ internal class LoggerTest {
   @Test
   fun `Logger fully qualified class name has expected value`() {
     Logger.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.Logger"
+  }
+
+  @Test
+  fun `log has expected file location`() {
+    log.info("Test")
+
+    logAppender.list shouldHaveSize 1
+    val logEvent = logAppender.list.first()
+    val callerData = logEvent.callerData
+    callerData.shouldNotBeEmpty()
+    val caller = callerData.first()
+
+    caller.fileName shouldBe "LoggerTest.kt"
+    caller.className shouldBe "dev.hermannm.devlog.LoggerTest"
+    caller.methodName shouldBe "log has expected file location"
+    caller.lineNumber shouldBe 184
+  }
+
+  @Test
+  fun `lazy log has expected file location`() {
+    log.infoLazy { "Test" }
+
+    logAppender.list shouldHaveSize 1
+    val logEvent = logAppender.list.first()
+    val callerData = logEvent.callerData
+    callerData.shouldNotBeEmpty()
+    val caller = callerData.first()
+
+    /**
+     * We don't test line number here, as the lazy logger methods will have wrong line numbers due
+     * to being inline functions (see [Logger.infoLazy]).
+     */
+    caller.fileName shouldBe "LoggerTest.kt"
+    caller.className shouldBe "dev.hermannm.devlog.LoggerTest"
+    caller.methodName shouldBe "lazy log has expected file location"
   }
 
   private fun testLogFunction(

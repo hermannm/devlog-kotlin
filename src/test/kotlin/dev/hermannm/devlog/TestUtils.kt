@@ -30,9 +30,8 @@ internal inline fun captureLogMarkers(block: () -> Unit): String {
 
   var markerStartIndex: Int? = null
 
-  // Markers are included at the end of the log line, and the last field before the markers is
-  // either "level_value" or "stack_trace". We want our tests to assert on the contents of all
-  // markers, so we strip away the non-marker fields here.
+  // The last log event field before markers is either "level_value" or "stack_trace". We want our
+  // tests to assert on the contents of all markers, so we strip away the non-marker fields here.
   val indexOfStackTrace = logOutput.indexOf("\"stack_trace\"")
   if (indexOfStackTrace != -1) {
     markerStartIndex = indexAfterJsonStringField(logOutput, startIndex = indexOfStackTrace)
@@ -44,8 +43,12 @@ internal inline fun captureLogMarkers(block: () -> Unit): String {
 
   markerStartIndex.shouldNotBeNull() shouldNotBe -1
 
-  val start = markerStartIndex + 1 // Omit the comma before markers
-  val end = logOutput.length - 2 // // We want to drop the final }\n
+  // After markers come caller info fields, since includeCallerData=true in logback-test.xml
+  val markerEndIndex = logOutput.indexOf("\"caller_class_name\"") shouldNotBe -1
+
+  // Omit comma before and after markers
+  val start = markerStartIndex + 1
+  val end = markerEndIndex - 1
   // If there are no markers (which we want to test sometimes), start will be greater than end
   if (start > end) {
     return ""
