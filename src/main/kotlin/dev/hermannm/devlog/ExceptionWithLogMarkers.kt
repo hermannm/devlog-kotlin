@@ -6,9 +6,52 @@ package dev.hermannm.devlog
  * interface, and if it does, these log markers will be attached to the log.
  *
  * This is useful when you are throwing an exception from somewhere down in the stack, but do
- * logging further up the stack, and you have structured data that you want to attach to the log of
- * the exception. In this case, one may resort to string concatenation, but this interface allows
- * you to have the benefits of structured logging for exceptions as well.
+ * logging further up the stack, and you have structured data that you want to attach to the logged
+ * exception. In this case, one may typically resort to string concatenation, but this interface
+ * allows you to have the benefits of structured logging for exceptions as well.
+ *
+ * **Example:**
+ *
+ * ```
+ * import dev.hermannm.devlog.Logger
+ * import dev.hermannm.devlog.WithLogMarkers
+ * import dev.hermannm.devlog.marker
+ *
+ * class InvalidUserData(user: User) : RuntimeException(), WithLogMarkers {
+ *   override val message = "Invalid user data"
+ *   override val logMarkers = listOf(marker("user", user))
+ * }
+ *
+ * fun storeUser(user: User) {
+ *   if (!user.isValid()) {
+ *     throw InvalidUserData(user)
+ *   }
+ * }
+ *
+ * private val log = Logger {}
+ *
+ * fun example(user: User) {
+ *   try {
+ *     storeUser(user)
+ *   } catch (e: Exception) {
+ *     log.error("Failed to store user", cause = e)
+ *   }
+ * }
+ * ```
+ *
+ * The `log.error` would then give the following log output (using `logstash-logback-encoder`), with
+ * the `user` log marker from `InvalidUserData` attached:
+ * ```
+ * {
+ *   "message": "Failed to store user",
+ *   "user": {
+ *     "id": 1,
+ *     "name": "John Doe"
+ *   },
+ *   "stack_trace": "...",
+ *   // ...timestamp etc.
+ * }
+ * ```
  */
 interface WithLogMarkers {
   /** Will be attached to a log if this is passed through a `cause` parameter to [Logger]. */
