@@ -1,10 +1,10 @@
 package dev.hermannm.devlog
 
 import ch.qos.logback.classic.Logger as LogbackLogger
-import org.slf4j.event.Level as Slf4jLogLevel
 import net.logstash.logback.marker.LogstashMarker
 import net.logstash.logback.marker.Markers
 import org.slf4j.LoggerFactory
+import org.slf4j.event.Level as Slf4jLogLevel
 import org.slf4j.spi.LocationAwareLogger
 
 /**
@@ -151,6 +151,11 @@ internal constructor(
    * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and
    * [setCause][LogBuilder.setCause] on the [LogBuilder] function receiver.
    *
+   * Note that if you include file location information in your log encoder (such as enabling
+   * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
+   * wrong line number. This is because we use an inline function, to avoid allocating an object for
+   * the given function. We prioritize this performance gain over correct line numbers.
+   *
    * ### Example
    *
    * ```
@@ -176,6 +181,11 @@ internal constructor(
    * The log message is the string returned by the function. You can add [log markers][LogMarker]
    * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and
    * [setCause][LogBuilder.setCause] on the [LogBuilder] function receiver.
+   *
+   * Note that if you include file location information in your log encoder (such as enabling
+   * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
+   * wrong line number. This is because we use an inline function, to avoid allocating an object for
+   * the given function. We prioritize this performance gain over correct line numbers.
    *
    * ### Example
    *
@@ -208,6 +218,11 @@ internal constructor(
    * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and
    * [setCause][LogBuilder.setCause] on the [LogBuilder] function receiver.
    *
+   * Note that if you include file location information in your log encoder (such as enabling
+   * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
+   * wrong line number. This is because we use an inline function, to avoid allocating an object for
+   * the given function. We prioritize this performance gain over correct line numbers.
+   *
    * ### Example
    *
    * ```
@@ -239,6 +254,11 @@ internal constructor(
    * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and
    * [setCause][LogBuilder.setCause] on the [LogBuilder] function receiver.
    *
+   * Note that if you include file location information in your log encoder (such as enabling
+   * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
+   * wrong line number. This is because we use an inline function, to avoid allocating an object for
+   * the given function. We prioritize this performance gain over correct line numbers.
+   *
    * ### Example
    *
    * ```
@@ -264,6 +284,11 @@ internal constructor(
    * The log message is the string returned by the function. You can add [log markers][LogMarker]
    * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and
    * [setCause][LogBuilder.setCause] on the [LogBuilder] function receiver.
+   *
+   * Note that if you include file location information in your log encoder (such as enabling
+   * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
+   * wrong line number. This is because we use an inline function, to avoid allocating an object for
+   * the given function. We prioritize this performance gain over correct line numbers.
    *
    * ### Example
    *
