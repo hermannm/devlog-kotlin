@@ -8,10 +8,10 @@ import org.slf4j.event.Level as Slf4jLogLevel
 import org.slf4j.spi.LocationAwareLogger
 
 /**
- * A logger provides methods for logging at various log levels ([infoLazy], [warnLazy], [errorLazy],
- * [debugLazy] and [traceLazy]). It has a given logger name, typically the same as the class that
- * the logger is attached to (e.g. `com.example.ExampleClass`), which is added to the log so you can
- * see where it originated from.
+ * A logger provides methods for logging at various log levels ([info], [warn], [error], [debug] and
+ * [trace]). It has a given logger name, typically the same as the class that the logger is attached
+ * to (e.g. `com.example.ExampleClass`), which is added to the log so you can see where it
+ * originated from.
  *
  * The easiest way to construct a logger is by providing an empty lambda argument:
  * ```
