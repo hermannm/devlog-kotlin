@@ -83,6 +83,77 @@ internal class LoggerTest {
   }
 
   @Test
+  fun `lazy info log`() {
+    testLogFunction(LogLevel.INFO) { message, marker, exception ->
+      log.infoLazy {
+        setCause(exception)
+        addExistingMarker(marker)
+        message
+      }
+    }
+  }
+
+  @Test
+  fun `lazy warn log`() {
+    testLogFunction(LogLevel.WARN) { message, marker, exception ->
+      log.warnLazy {
+        setCause(exception)
+        addExistingMarker(marker)
+        message
+      }
+    }
+  }
+
+  @Test
+  fun `lazy error log`() {
+    testLogFunction(LogLevel.ERROR) { message, marker, exception ->
+      log.errorLazy {
+        setCause(exception)
+        addExistingMarker(marker)
+        message
+      }
+    }
+  }
+
+  @Test
+  fun `lazy debug log`() {
+    testLogFunction(LogLevel.DEBUG) { message, marker, exception ->
+      log.debugLazy {
+        setCause(exception)
+        addExistingMarker(marker)
+        message
+      }
+    }
+  }
+
+  @Test
+  fun `lazy trace log`() {
+    testLogFunction(LogLevel.TRACE) { message, marker, exception ->
+      log.traceLazy {
+        setCause(exception)
+        addExistingMarker(marker)
+        message
+      }
+    }
+  }
+
+  @Test
+  fun `lazy log functions do not get called if log level is disabled`() {
+    // We have configured logback-test.xml to disable loggers with this prefix
+    val disabledLogger = Logger(name = "com.example.disabled.Logger")
+
+    val failingLogBuilder: LogBuilder.() -> String = {
+      throw Exception("This function should not get called when log level is disabled")
+    }
+
+    disabledLogger.infoLazy(failingLogBuilder)
+    disabledLogger.warnLazy(failingLogBuilder)
+    disabledLogger.errorLazy(failingLogBuilder)
+    disabledLogger.debugLazy(failingLogBuilder)
+    disabledLogger.traceLazy(failingLogBuilder)
+  }
+
+  @Test
   fun `Logger constructor with name parameter`() {
     val testName = "LoggerWithCustomName"
     val logger = Logger(name = testName)
