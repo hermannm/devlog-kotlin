@@ -10,7 +10,7 @@ package dev.hermannm.devlog
  * exception. In this case, one may typically resort to string concatenation, but this interface
  * allows you to have the benefits of structured logging for exceptions as well.
  *
- * **Example:**
+ * ### Example
  *
  * ```
  * import dev.hermannm.devlog.Logger

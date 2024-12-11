@@ -2,7 +2,7 @@ package dev.hermannm.devlog
 
 import kotlin.concurrent.getOrSet
 
-@PublishedApi // PublishedApi to use this in inline `withLoggingContext` function.
+@PublishedApi // For use in inline functions
 internal val loggingContext = ThreadLocal<ArrayList<LogMarker>>()
 
 /**
@@ -14,7 +14,7 @@ internal val loggingContext = ThreadLocal<ArrayList<LogMarker>>()
  * you can wrap the event processing in `withLoggingContext` with the event as a log marker, and
  * then all logs inside that context will include the event.
  *
- * **Example:**
+ * ### Example
  *
  * ```
  * import dev.hermannm.devlog.Logger
@@ -49,7 +49,7 @@ inline fun <ReturnT> withLoggingContext(
   // first. But if we called `withLoggingContext` with multiple markers, this would cause these
   // markers to show in reverse order to how they were passed. So to counteract that, we add the
   // markers to the logging context here in reverse order.
-  logMarkers.forEachReversed { _, marker -> contextMarkers.add(marker) }
+  logMarkers.asList().forEachReversed { _, marker -> contextMarkers.add(marker) }
 
   try {
     return block()

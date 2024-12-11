@@ -26,7 +26,7 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
  * `kotlinx.serialization`. Alternatively, if you have a value that is already serialized, you can
  * use [rawJsonMarker]. You can then pass the marker to the various logging methods on [Logger].
  *
- * **Example:**
+ * ### Example
  *
  * ```
  * import dev.hermannm.devlog.Logger
@@ -57,12 +57,12 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
  * ```
  */
 class LogMarker
-@PublishedApi // PublishedApi so we can use the constructor in the inline `marker` function.
+@PublishedApi // For use in inline functions
 internal constructor(
     internal val logstashMarker: SingleFieldAppendingMarker,
 ) {
-  @PublishedApi // PublishedApi so we can use this in the inline `withLoggingContext` function.
-  // For now, we don't make this public, as we don't necessarily want to bind ourselves to this API.
+  @PublishedApi // For use in inline functions
+  // For now, we don't make this public, as we don't necessarily want to bind ourselves to this API
   internal val key
     get() = logstashMarker.fieldName
 
@@ -81,8 +81,9 @@ internal constructor(
  * the marker to the various logging methods on [Logger].
  *
  * The value is serialized using `kotlinx.serialization`, so if you pass an object here, you should
- * make sure it is annotated with `@Serializable`. Alternatively, you can pass your own [serializer]
- * for the value. If serialization fails, we fall back to calling `toString()` on the value.
+ * make sure it is annotated with [@Serializable][kotlinx.serialization.Serializable].
+ * Alternatively, you can pass your own [serializer] for the value. If serialization fails, we fall
+ * back to calling `toString()` on the value.
  *
  * If you have a value that is already serialized, you should use [rawJsonMarker] instead.
  *
@@ -94,7 +95,7 @@ internal constructor(
  * - [java.net.URL]
  * - [java.math.BigDecimal]
  *
- * **Example:**
+ * ### Example
  *
  * ```
  * import dev.hermannm.devlog.Logger
@@ -170,7 +171,7 @@ inline fun <reified ValueT> marker(
  * our logs. So if the given JSON string is not valid JSON, we escape it as a string. If you are
  * 100% sure that the given JSON string is valid, you can set [validJson] to true.
  *
- * **Example:**
+ * ### Example
  *
  * ```
  * import dev.hermannm.devlog.Logger
@@ -226,5 +227,5 @@ fun rawJsonMarker(key: String, json: String, validJson: Boolean = false): LogMar
   }
 }
 
-@PublishedApi // PublishedApi so we can use this in the inline `marker` function.
+@PublishedApi // For use in inline functions
 internal val logMarkerJson = Json { encodeDefaults = true }
