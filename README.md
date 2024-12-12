@@ -20,25 +20,26 @@ private val log = Logger {}
 
 ```kotlin
 fun example() {
-  log.info("Example message")
+  log.info { "Example message" }
 }
 ```
 
-You can also add "log markers" (structured key-value data) to your logs. The `marker` function uses
-`kotlinx.serialization` to serialize the value.
+You can also add "log markers" (structured key-value data) to your logs. The `addMarker` function
+uses `kotlinx.serialization` to serialize the value.
 
 ```kotlin
-import dev.hermannm.devlog.marker
 import kotlinx.serialization.Serializable
+
+@Serializable data class User(val id: Long, val name: String)
 
 fun example() {
   val user = User(id = 1, name = "John Doe")
 
-  log.info("Registered new user", marker("user", user))
+  log.info {
+    addMarker("user", user)
+    "Registered new user"
+  }
 }
-
-@Serializable
-data class User(val id: Long, val name: String)
 ```
 
 This will give the following log output (if outputting logs as JSON with
@@ -51,13 +52,16 @@ This will give the following log output (if outputting logs as JSON with
 You can also use `withLoggingContext` to add markers to all logs within a given scope:
 
 ```kotlin
+import dev.hermannm.devlog.marker
+import dev.hermannm.devlog.withLoggingContext
+
 fun processEvent(event: Event) {
   withLoggingContext(
-    marker("event", event),
+      marker("event", event),
   ) {
-    log.debug("Started processing event")
+    log.debug { "Started processing event" }
     // ...
-    log.debug("Finished processing event")
+    log.debug { "Finished processing event" }
   }
 }
 ```
@@ -76,11 +80,11 @@ fun example(user: User) {
   try {
     storeUser(user)
   } catch (e: Exception) {
-    log.error(
-        "Failed to store user in database",
-        marker("user", user),
-        cause = e,
-    )
+    log.error {
+      cause = e
+      addMarker("user", user)
+      "Failed to store user in database"
+    }
   }
 }
 ```
