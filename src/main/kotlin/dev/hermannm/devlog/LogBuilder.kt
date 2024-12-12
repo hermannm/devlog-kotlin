@@ -73,9 +73,9 @@ internal constructor(
     }
 
     // Add context markers in reverse, so newest marker shows first
-    contextMarkers.forEachReversed { marker ->
-      if (!markerKeyAdded(marker.key)) {
-        logEvent.addMarker(marker.logstashMarker)
+    contextMarkers.forEachReversed { logstashMarker ->
+      if (!markerKeyAdded(logstashMarker.fieldName)) {
+        logEvent.addMarker(logstashMarker)
       }
     }
   }

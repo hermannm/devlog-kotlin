@@ -59,7 +59,7 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
 class LogMarker
 @PublishedApi
 internal constructor(
-    internal val logstashMarker: SingleFieldAppendingMarker,
+    @PublishedApi internal val logstashMarker: SingleFieldAppendingMarker,
 ) {
   // For now, we don't make this public, as we don't necessarily want to bind ourselves to this API
   internal val key
