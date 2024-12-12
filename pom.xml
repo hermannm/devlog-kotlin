@@ -46,6 +46,10 @@
     <kotlin.compiler.jvmTarget>${java.version}</kotlin.compiler.jvmTarget>
     <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
 
+    <!-- Benchmarks -->
+    <benchmark-jar.name>benchmarks</benchmark-jar.name>
+    <jmh.version>1.37</jmh.version>
+
     <!-- Logging -->
     <slf4j.version>2.0.16</slf4j.version>
     <logback.version>1.5.12</logback.version>
@@ -85,6 +89,13 @@
   </dependencyManagement>
 
   <dependencies>
+    <!-- Benchmarks -->
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-core</artifactId>
+      <version>${jmh.version}</version>
+    </dependency>
+
     <!-- Kotlin -->
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
@@ -144,6 +155,9 @@
           <compilerPlugins>
             <plugin>kotlinx-serialization</plugin>
           </compilerPlugins>
+          <args>
+            <!--<arg>-Xno-inline</arg>-->
+          </args>
         </configuration>
         <dependencies>
           <dependency>
@@ -154,18 +168,16 @@
         </dependencies>
         <executions>
           <execution>
-            <id>compile</id>
+            <id>process-sources</id>
+            <phase>process-sources</phase>
             <goals>
               <goal>compile</goal>
             </goals>
-            <phase>compile</phase>
-          </execution>
-          <execution>
-            <id>test-compile</id>
-            <goals>
-              <goal>test-compile</goal>
-            </goals>
-            <phase>test-compile</phase>
+            <configuration>
+              <sourceDirs>
+                <sourceDir>${project.basedir}/src/main/kotlin</sourceDir>
+              </sourceDirs>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -212,6 +224,117 @@
                 <requireUpperBoundDeps/>
                 <banDynamicVersions/>
               </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Invoke JMH generators to produce benchmark code -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.2.1</version>
+        <executions>
+          <execution>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>java</goal>
+            </goals>
+            <configuration>
+              <includePluginDependencies>true</includePluginDependencies>
+              <mainClass>org.openjdk.jmh.generators.bytecode.JmhBytecodeGenerator</mainClass>
+              <arguments>
+                <argument>${project.basedir}/target/classes/</argument>
+                <argument>${project.basedir}/target/generated-sources/jmh/</argument>
+                <argument>${project.basedir}/target/classes/</argument>
+                <argument>default</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-bytecode</artifactId>
+            <version>${jmh.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+      <!-- Add JMH generated code to the compile session -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${project.basedir}/target/generated-sources/jmh</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
+          4. Compile JMH generated code.
+       -->
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.1</version>
+        <configuration>
+          <compilerVersion>${java.version}</compilerVersion>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+          <compilerArgument>-proc:none</compilerArgument>
+        </configuration>
+        <executions>
+          <execution>
+            <id>compile-sources</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>compile-all</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
+          5. Package all the dependencies into the JAR
+       -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.2</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <finalName>${benchmark-jar.name}</finalName>
+              <transformers>
+                <transformer
+                  implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>org.openjdk.jmh.Main</mainClass>
+                </transformer>
+              </transformers>
             </configuration>
           </execution>
         </executions>
