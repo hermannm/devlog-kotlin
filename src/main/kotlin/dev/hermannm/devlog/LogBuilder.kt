@@ -116,21 +116,44 @@ internal constructor(
   }
 
   internal fun addMarkersFromContextAndCause() {
-    val exceptionMarkers = getLogMarkersFromException(cause)
-    val contextMarkers = getLogMarkersFromContext()
-
-    exceptionMarkers.forEach { marker ->
-      // Don't add marker keys that have already been added
-      if (!markerKeyAdded(marker.logstashMarker.fieldName)) {
-        logEvent.addMarker(marker.logstashMarker)
-      }
-    }
+    // Add markers from cause exception first, as we prioritize these over context markers
+    addMarkersFromCauseException()
 
     // Add context markers in reverse, so newest marker shows first
-    contextMarkers.forEachReversed { logstashMarker ->
+    getLogMarkersFromContext().forEachReversed { logstashMarker ->
+      // Don't add marker keys that have already been added
       if (!markerKeyAdded(logstashMarker.fieldName)) {
         logEvent.addMarker(logstashMarker)
       }
+    }
+  }
+
+  /**
+   * Checks if the given exception (or any of its cause exceptions) implements the [WithLogMarkers]
+   * interface, and if so, adds those markers.
+   */
+  private fun addMarkersFromCauseException() {
+    // The `cause` here is the log event cause exception. But this exception may itself have a
+    // `cause` exception, and that may have another one, and so on. We want to go through all these
+    // exceptions to look for log markers, so we re-assign this local variable as we iterate
+    // through.
+    var exception = cause
+    while (exception != null) {
+      if (exception is WithLogMarkers) {
+        exception.logMarkers.forEach { marker ->
+          // Don't add marker keys that have already been added
+          if (!markerKeyAdded(marker.logstashMarker.fieldName)) {
+            logEvent.addMarker(marker.logstashMarker)
+          }
+        }
+      }
+
+      // Avoid infinite loop from cyclic cause exceptions
+      if (exception.cause === exception) {
+        break
+      }
+
+      exception = exception.cause
     }
   }
 }
