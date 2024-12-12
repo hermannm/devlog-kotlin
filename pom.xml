@@ -47,9 +47,10 @@
     <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
 
     <!-- Logging -->
-    <slf4j.version>2.0.16</slf4j.version>
     <logback.version>1.5.12</logback.version>
     <logstash-logback-encoder.version>8.0</logstash-logback-encoder.version>
+    <!-- Use same SLF4J version as Logback (Logback is the more important dependency here, so we want to match it) -->
+    <slf4j.version>2.0.15</slf4j.version>
 
     <!-- Serialization -->
     <kotlinx-serialization.version>1.7.3</kotlinx-serialization.version>
@@ -73,14 +74,6 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-bom</artifactId>
-        <version>${slf4j.version}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -94,10 +87,6 @@
 
     <!-- Logging -->
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <version>${logback.version}</version>
@@ -106,6 +95,11 @@
       <groupId>net.logstash.logback</groupId>
       <artifactId>logstash-logback-encoder</artifactId>
       <version>${logstash-logback-encoder.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
     </dependency>
 
     <!-- Serialization -->
