@@ -12,7 +12,7 @@ class LoggingContextTest {
       withLoggingContext(
           marker("key", "value"),
       ) {
-        log.info("Test")
+        log.info { "Test" }
       }
     }
 
@@ -30,8 +30,8 @@ class LoggingContextTest {
     withLoggingContext(
         marker("key", "value"),
     ) {
-      markers[0] = captureLogMarkers { log.info("Test") }
-      markers[1] = captureLogMarkers { log.info("Test 2") }
+      markers[0] = captureLogMarkers { log.info { "Test" } }
+      markers[1] = captureLogMarkers { log.info { "Test 2" } }
     }
 
     markers.forEach {
@@ -48,10 +48,10 @@ class LoggingContextTest {
     withLoggingContext(
         marker("key", "value"),
     ) {
-      log.info("Inside scope")
+      log.info { "Inside scope" }
     }
 
-    val markers = captureLogMarkers { log.info("Outside scope") }
+    val markers = captureLogMarkers { log.info { "Outside scope" } }
     markers shouldBe ""
   }
 
@@ -62,10 +62,10 @@ class LoggingContextTest {
           marker("contextMarker1", "value"),
           marker("contextMarker2", "value"),
       ) {
-        log.info(
-            "Test",
-            marker("logMarker", "value"),
-        )
+        log.info {
+          addMarker("logMarker", "value")
+          "Test"
+        }
       }
     }
 
@@ -90,10 +90,10 @@ class LoggingContextTest {
           marker("duplicateKey", "inner1"),
           marker("duplicateKey", "inner2"),
       ) {
-        markersFromInnerContext = captureLogMarkers { log.info("Test") }
+        markersFromInnerContext = captureLogMarkers { log.info { "Test" } }
       }
 
-      markersFromOuterContext = captureLogMarkers { log.info("Test") }
+      markersFromOuterContext = captureLogMarkers { log.info { "Test" } }
     }
 
     markersFromInnerContext shouldBe
@@ -119,10 +119,10 @@ class LoggingContextTest {
       withLoggingContext(
           marker("duplicateKey", "from context"),
       ) {
-        log.info(
-            "Test",
-            marker("duplicateKey", "from log event"),
-        )
+        log.info {
+          addMarker("duplicateKey", "from log event")
+          "Test"
+        }
       }
     }
 

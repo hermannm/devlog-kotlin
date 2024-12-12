@@ -3,11 +3,12 @@ package dev.hermannm.devlog
 import ch.qos.logback.classic.Level as LogbackLevel
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
-import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
+import net.logstash.logback.marker.ObjectAppendingMarker
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -35,36 +36,56 @@ internal class LoggerTest {
 
   @Test
   fun `info log`() {
-    testLogFunction(LogLevel.INFO) { message, marker, exception ->
-      log.info(message, marker, cause = exception)
+    testLogFunction(LogLevel.INFO) { message, exception, markerKey, markerValue ->
+      log.info {
+        cause = exception
+        addMarker(markerKey, markerValue)
+        message
+      }
     }
   }
 
   @Test
   fun `warn log`() {
-    testLogFunction(LogLevel.WARN) { message, marker, exception ->
-      log.warn(message, marker, cause = exception)
+    testLogFunction(LogLevel.WARN) { message, exception, markerKey, markerValue ->
+      log.warn {
+        cause = exception
+        addMarker(markerKey, markerValue)
+        message
+      }
     }
   }
 
   @Test
   fun `error log`() {
-    testLogFunction(LogLevel.ERROR) { message, marker, exception ->
-      log.error(message, marker, cause = exception)
+    testLogFunction(LogLevel.ERROR) { message, exception, markerKey, markerValue ->
+      log.error {
+        cause = exception
+        addMarker(markerKey, markerValue)
+        message
+      }
     }
   }
 
   @Test
   fun `debug log`() {
-    testLogFunction(LogLevel.DEBUG) { message, marker, exception ->
-      log.debug(message, marker, cause = exception)
+    testLogFunction(LogLevel.DEBUG) { message, exception, markerKey, markerValue ->
+      log.debug {
+        cause = exception
+        addMarker(markerKey, markerValue)
+        message
+      }
     }
   }
 
   @Test
   fun `trace log`() {
-    testLogFunction(LogLevel.TRACE) { message, marker, exception ->
-      log.trace(message, marker, cause = exception)
+    testLogFunction(LogLevel.TRACE) { message, exception, markerKey, markerValue ->
+      log.trace {
+        cause = exception
+        addMarker(markerKey, markerValue)
+        message
+      }
     }
   }
 
@@ -74,7 +95,7 @@ internal class LoggerTest {
    */
   @Test
   fun `log with no markers or exceptions`() {
-    log.info("Test")
+    log.info { "Test" }
 
     logAppender.list shouldHaveSize 1
     val logEvent = logAppender.list.first()
@@ -84,62 +105,7 @@ internal class LoggerTest {
   }
 
   @Test
-  fun `lazy info log`() {
-    testLogFunction(LogLevel.INFO) { message, marker, exception ->
-      log.infoLazy {
-        cause = exception
-        addExistingMarker(marker)
-        message
-      }
-    }
-  }
-
-  @Test
-  fun `lazy warn log`() {
-    testLogFunction(LogLevel.WARN) { message, marker, exception ->
-      log.warnLazy {
-        addExistingMarker(marker)
-        cause = exception
-        message
-      }
-    }
-  }
-
-  @Test
-  fun `lazy error log`() {
-    testLogFunction(LogLevel.ERROR) { message, marker, exception ->
-      log.errorLazy {
-        cause = exception
-        addExistingMarker(marker)
-        message
-      }
-    }
-  }
-
-  @Test
-  fun `lazy debug log`() {
-    testLogFunction(LogLevel.DEBUG) { message, marker, exception ->
-      log.debugLazy {
-        cause = exception
-        addExistingMarker(marker)
-        message
-      }
-    }
-  }
-
-  @Test
-  fun `lazy trace log`() {
-    testLogFunction(LogLevel.TRACE) { message, marker, exception ->
-      log.traceLazy {
-        cause = exception
-        addExistingMarker(marker)
-        message
-      }
-    }
-  }
-
-  @Test
-  fun `lazy log functions do not get called if log level is disabled`() {
+  fun `log builder functions do not get called if log level is disabled`() {
     // We have configured logback-test.xml to disable loggers with this prefix
     val disabledLogger = Logger(name = "com.example.disabled.Logger")
 
@@ -147,11 +113,11 @@ internal class LoggerTest {
       throw Exception("This function should not get called when log level is disabled")
     }
 
-    disabledLogger.infoLazy(failingLogBuilder)
-    disabledLogger.warnLazy(failingLogBuilder)
-    disabledLogger.errorLazy(failingLogBuilder)
-    disabledLogger.debugLazy(failingLogBuilder)
-    disabledLogger.traceLazy(failingLogBuilder)
+    disabledLogger.info(failingLogBuilder)
+    disabledLogger.warn(failingLogBuilder)
+    disabledLogger.error(failingLogBuilder)
+    disabledLogger.debug(failingLogBuilder)
+    disabledLogger.trace(failingLogBuilder)
   }
 
   @Test
@@ -181,23 +147,7 @@ internal class LoggerTest {
 
   @Test
   fun `log has expected file location`() {
-    log.info("Test")
-
-    logAppender.list shouldHaveSize 1
-    val logEvent = logAppender.list.first()
-    val callerData = logEvent.callerData
-    callerData.shouldNotBeEmpty()
-    val caller = callerData.first()
-
-    caller.fileName shouldBe "LoggerTest.kt"
-    caller.className shouldBe "dev.hermannm.devlog.LoggerTest"
-    caller.methodName shouldBe "log has expected file location"
-    caller.lineNumber shouldBe 184
-  }
-
-  @Test
-  fun `lazy log has expected file location`() {
-    log.infoLazy { "Test" }
+    log.info { "Test" }
 
     logAppender.list shouldHaveSize 1
     val logEvent = logAppender.list.first()
@@ -206,30 +156,40 @@ internal class LoggerTest {
     val caller = callerData.first()
 
     /**
-     * We don't test line number here, as the lazy logger methods will have wrong line numbers due
-     * to being inline functions (see [Logger.infoLazy]).
+     * We don't test line number here, as the logger methods will have wrong line numbers due to
+     * being inline functions (see [Logger.info]).
      */
     caller.fileName shouldBe "LoggerTest.kt"
     caller.className shouldBe "dev.hermannm.devlog.LoggerTest"
-    caller.methodName shouldBe "lazy log has expected file location"
+    caller.methodName shouldBe "log has expected file location"
   }
 
   private fun testLogFunction(
       logLevel: LogLevel,
-      logFunction: (String, LogMarker, Exception) -> Unit
+      // (message, cause exception, marker key, marker value)
+      logFunction: (String, Exception, String, String) -> Unit
   ) {
-    val testMessage = "Test message"
-    val testMarker = marker("test", true)
-    val testException = Exception("Something went wrong")
-    logFunction(testMessage, testMarker, testException)
+    val message = "Test message"
+    val markerKey = "key"
+    val markerValue = "value"
+    val exception = Exception("Something went wrong")
+    logFunction(message, exception, markerKey, markerValue)
 
     logAppender.list shouldHaveSize 1
     val logEvent = logAppender.list.first()
     logEvent.level.toString() shouldBe logLevel.toString()
-    logEvent.message shouldBe testMessage
-    logEvent.markerList shouldContain testMarker.logstashMarker
-    logEvent.throwableProxy.message shouldBe testException.message
+    logEvent.message shouldBe message
+    logEvent.throwableProxy.message shouldBe exception.message
     logEvent.loggerName shouldBe testLoggerName
+
+    logEvent.markerList shouldHaveSize 1
+    val marker = logEvent.markerList.first()
+    val logstashMarker = marker.shouldBeInstanceOf<ObjectAppendingMarker>()
+    logstashMarker.fieldName shouldBe markerKey
+
+    val fakeJsonGenerator = FakeJsonGenerator()
+    logstashMarker.writeTo(fakeJsonGenerator)
+    fakeJsonGenerator.obj shouldBe markerValue
   }
 
   private val loggerConstructedInsideClass = Logger {}

@@ -9,7 +9,10 @@ class ExceptionWithLogMarkersTest {
   @Test
   fun `exception implementing WithLogMarkers has marker included in log`() {
     val markers = captureLogMarkers {
-      log.error("Test", cause = exceptionWithLogMarker(marker("errorCode", 60)))
+      log.error {
+        cause = exceptionWithLogMarker(marker("errorCode", 60))
+        "Test"
+      }
     }
 
     markers shouldBe
@@ -25,11 +28,11 @@ class ExceptionWithLogMarkersTest {
       withLoggingContext(
           marker("contextMarker", "value"),
       ) {
-        log.error(
-            "Test",
-            marker("logEventMarker", "value"),
-            cause = exceptionWithLogMarker(marker("exceptionMarker", "value")),
-        )
+        log.error {
+          cause = exceptionWithLogMarker(marker("exceptionMarker", "value"))
+          addMarker("logEventMarker", "value")
+          "Test"
+        }
       }
     }
 
@@ -43,14 +46,14 @@ class ExceptionWithLogMarkersTest {
   @Test
   fun `child exception that implements WithLogMarkers`() {
     val markers = captureLogMarkers {
-      log.error(
-          "Test",
-          cause =
-              Exception(
-                  "Parent exception",
-                  exceptionWithLogMarker(marker("childException", true)),
-              ),
-      )
+      log.error {
+        cause =
+            Exception(
+                "Parent exception",
+                exceptionWithLogMarker(marker("childException", true)),
+            )
+        "Test"
+      }
     }
 
     markers shouldBe
@@ -63,19 +66,19 @@ class ExceptionWithLogMarkersTest {
   @Test
   fun `parent and child exceptions that both implement WithLogMarkers have their markers merged`() {
     val markers = captureLogMarkers {
-      log.error(
-          "Test",
-          cause =
-              ExceptionWithLogMarkers(
-                  message = "Parent exception",
-                  logMarkers =
-                      listOf(
-                          marker("parentMarker1", "value"),
-                          marker("parentMarker2", "value"),
-                      ),
-                  cause = exceptionWithLogMarker(marker("childMarker", "value")),
-              ),
-      )
+      log.error {
+        cause =
+            ExceptionWithLogMarkers(
+                message = "Parent exception",
+                logMarkers =
+                    listOf(
+                        marker("parentMarker1", "value"),
+                        marker("parentMarker2", "value"),
+                    ),
+                cause = exceptionWithLogMarker(marker("childMarker", "value")),
+            )
+        "Test"
+      }
     }
 
     markers shouldBe
@@ -88,18 +91,18 @@ class ExceptionWithLogMarkersTest {
   @Test
   fun `exception with duplicate log markers logs first marker only`() {
     val markers = captureLogMarkers {
-      log.error(
-          "Test",
-          cause =
-              ExceptionWithLogMarkers(
-                  "Test",
-                  listOf(
-                      marker("duplicateKey", "value1"),
-                      marker("duplicateKey", "value2"),
-                  ),
-                  cause = exceptionWithLogMarker(marker("duplicateKey", "value3")),
-              ),
-      )
+      log.error {
+        cause =
+            ExceptionWithLogMarkers(
+                "Test",
+                listOf(
+                    marker("duplicateKey", "value1"),
+                    marker("duplicateKey", "value2"),
+                ),
+                cause = exceptionWithLogMarker(marker("duplicateKey", "value3")),
+            )
+        "Test"
+      }
     }
 
     markers shouldBe
@@ -116,11 +119,11 @@ class ExceptionWithLogMarkersTest {
   @Test
   fun `exception marker does not override duplicate log event marker`() {
     val markers = captureLogMarkers {
-      log.error(
-          "Test",
-          marker("duplicateKey", "from log event"),
-          cause = exceptionWithLogMarker(marker("duplicateKey", "from exception")),
-      )
+      log.error {
+        cause = exceptionWithLogMarker(marker("duplicateKey", "from exception"))
+        addMarker("duplicateKey", "from log event")
+        "Test"
+      }
     }
 
     markers shouldBe
@@ -140,10 +143,10 @@ class ExceptionWithLogMarkersTest {
       withLoggingContext(
           marker("duplicateKey", "from context"),
       ) {
-        log.error(
-            "Test",
-            cause = exceptionWithLogMarker(marker("duplicateKey", "from exception")),
-        )
+        log.error {
+          cause = exceptionWithLogMarker(marker("duplicateKey", "from exception"))
+          "Test"
+        }
       }
     }
 
@@ -164,7 +167,12 @@ class ExceptionWithLogMarkersTest {
           )
     }
 
-    val markers = captureLogMarkers { log.error("Test", cause = CustomException()) }
+    val markers = captureLogMarkers {
+      log.error {
+        cause = CustomException()
+        "Test"
+      }
+    }
 
     markers shouldBe
         """
@@ -181,7 +189,12 @@ class ExceptionWithLogMarkersTest {
             logMarkers = listOf(marker("key", "value")),
         )
 
-    val markers = captureLogMarkers { log.error("Test", cause = CustomException()) }
+    val markers = captureLogMarkers {
+      log.error {
+        cause = CustomException()
+        "Test"
+      }
+    }
 
     markers shouldBe
         """

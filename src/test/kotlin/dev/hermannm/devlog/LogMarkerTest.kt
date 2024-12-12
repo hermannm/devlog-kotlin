@@ -20,15 +20,15 @@ class LogMarkerTest {
   @Test
   fun `basic log marker test`() {
     val markers = captureLogMarkers {
-      log.info(
-          "Test",
-          marker("testMarker", "value"),
-      )
+      log.info {
+        addMarker("key", "value")
+        "Test"
+      }
     }
 
     markers shouldBe
         """
-          "testMarker":"value"
+          "key":"value"
         """
             .trimIndent()
   }
@@ -40,10 +40,10 @@ class LogMarkerTest {
     val user = User(id = 1, name = "John Doe")
 
     val markers = captureLogMarkers {
-      log.info(
-          "Test",
-          marker("user", user),
-      )
+      log.info {
+        addMarker("user", user)
+        "Test"
+      }
     }
 
     markers shouldBe
@@ -56,12 +56,12 @@ class LogMarkerTest {
   @Test
   fun `multiple log markers`() {
     val markers = captureLogMarkers {
-      log.info(
-          "Test",
-          marker("first", true),
-          marker("second", listOf("value1", "value2")),
-          marker("third", 10),
-      )
+      log.info {
+        addMarker("first", true)
+        addMarker("second", listOf("value1", "value2"))
+        addMarker("third", 10)
+        "Test"
+      }
     }
 
     markers shouldBe
@@ -74,14 +74,14 @@ class LogMarkerTest {
   @Test
   fun `special-case types`() {
     val markers = captureLogMarkers {
-      log.info(
-          "Test",
-          marker("instant", Instant.parse("2024-12-09T16:38:23Z")),
-          marker("uri", URI.create("https://example.com")),
-          marker("url", URL("https://example.com")),
-          marker("uuid", UUID.fromString("3638dd04-d196-41ad-8b15-5188a22a6ba4")),
-          marker("bigDecimal", BigDecimal("100.0")),
-      )
+      log.info {
+        addMarker("instant", Instant.parse("2024-12-09T16:38:23Z"))
+        addMarker("uri", URI.create("https://example.com"))
+        addMarker("url", URL("https://example.com"))
+        addMarker("uuid", UUID.fromString("3638dd04-d196-41ad-8b15-5188a22a6ba4"))
+        addMarker("bigDecimal", BigDecimal("100.0"))
+        "Test"
+      }
     }
 
     markers shouldContain """"instant":"2024-12-09T16:38:23Z""""
@@ -103,10 +103,10 @@ class LogMarkerTest {
         }
 
     val markers = captureLogMarkers {
-      log.info(
-          "Test",
-          marker("key", "value", serializer = prefixSerializer),
-      )
+      log.info {
+        addMarker("key", "value", serializer = prefixSerializer)
+        "Test"
+      }
     }
 
     markers shouldBe
@@ -123,10 +123,10 @@ class LogMarkerTest {
     val user = User(id = 1, name = "John Doe")
 
     val markers = captureLogMarkers {
-      log.info(
-          "Test",
-          marker("user", user),
-      )
+      log.info {
+        addMarker("user", user)
+        "Test"
+      }
     }
 
     markers shouldBe
@@ -139,12 +139,12 @@ class LogMarkerTest {
   @Test
   fun `duplicate markers only includes the first marker`() {
     val markers = captureLogMarkers {
-      log.info(
-          "Test",
-          marker("duplicateKey", "value1"),
-          marker("duplicateKey", "value2"),
-          marker("duplicateKey", "value3"),
-      )
+      log.info {
+        addMarker("duplicateKey", "value1")
+        addMarker("duplicateKey", "value2")
+        addMarker("duplicateKey", "value3")
+        "Test"
+      }
     }
 
     markers shouldBe
@@ -162,10 +162,10 @@ class LogMarkerTest {
     for (assumeValidJson in listOf(true, false)) {
       withClue({ "assumeValidJson = ${assumeValidJson}" }) {
         val markers = captureLogMarkers {
-          log.info(
-              "Test",
-              rawJsonMarker("user", userJson, validJson = assumeValidJson),
-          )
+          log.info {
+            addRawJsonMarker("user", userJson, validJson = assumeValidJson)
+            "Test"
+          }
         }
 
         markers shouldBe
@@ -182,10 +182,10 @@ class LogMarkerTest {
     val invalidJson = """{"id":1"""
 
     val markers = captureLogMarkers {
-      log.info(
-          "Test",
-          rawJsonMarker("user", invalidJson),
-      )
+      log.info {
+        addRawJsonMarker("user", invalidJson)
+        "Test"
+      }
     }
 
     markers shouldBe
@@ -206,10 +206,10 @@ class LogMarkerTest {
     val invalidJson = """{"id":1"""
 
     val markers = captureLogMarkers {
-      log.info(
-          "Test",
-          rawJsonMarker("user", invalidJson, validJson = true),
-      )
+      log.info {
+        addRawJsonMarker("user", invalidJson, validJson = true)
+        "Test"
+      }
     }
 
     markers shouldBe
@@ -231,10 +231,10 @@ class LogMarkerTest {
             .trimIndent()
 
     val markers = captureLogMarkers {
-      log.info(
-          "Test",
-          rawJsonMarker("user", jsonWithNewlines),
-      )
+      log.info {
+        addRawJsonMarker("user", jsonWithNewlines)
+        "Test"
+      }
     }
 
     markers shouldBe

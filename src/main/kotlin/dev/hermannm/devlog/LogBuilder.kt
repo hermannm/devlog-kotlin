@@ -2,17 +2,13 @@ package dev.hermannm.devlog
 
 import kotlinx.serialization.SerializationStrategy
 
-/**
- * Class used in the lazy logging methods on [Logger] to add markers/cause exception to lazily
- * constructed logs.
- */
+/** Class used in the logging methods on [Logger] to add markers/cause exception to logs. */
 class LogBuilder
 @PublishedApi // For use in inline functions
 internal constructor() {
   /** Set this if the log was caused by an exception. */
   var cause: Throwable? = null
 
-  // Initialize to null so we don't allocate a list when no markers are included (common case).
   @PublishedApi // For use in inline functions
   internal var markers: ArrayList<LogMarker>? = null
 
@@ -44,16 +40,6 @@ internal constructor() {
    */
   fun addRawJsonMarker(key: String, json: String, validJson: Boolean = false) {
     getInitializedMarkers().add(rawJsonMarker(key, json, validJson = validJson))
-  }
-
-  /**
-   * Adds the given [log marker][LogMarker] to the log.
-   *
-   * This method is kept internal for now, as it is useful for testing. If we find a need from
-   * library users to have a function like this, we should consider making it public.
-   */
-  internal fun addExistingMarker(marker: LogMarker) {
-    getInitializedMarkers().add(marker)
   }
 
   @PublishedApi // For use in inline functions

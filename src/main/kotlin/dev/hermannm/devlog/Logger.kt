@@ -1,5 +1,6 @@
 package dev.hermannm.devlog
 
+import ch.qos.logback.classic.Level as LogbackLevel
 import ch.qos.logback.classic.Logger as LogbackLogger
 import net.logstash.logback.marker.LogstashMarker
 import net.logstash.logback.marker.Markers
@@ -37,8 +38,10 @@ internal constructor(
   constructor(function: () -> Unit) : this(name = getClassNameFromFunction(function))
 
   /**
-   * Logs the given message at the INFO log level (if enabled), along with any given
-   * [log markers][LogMarker], and optionally a cause exception.
+   * Logs the message returned by the given function at the INFO log level, if it is enabled.
+   *
+   * You can add a cause exception by setting [cause][LogBuilder.cause] on the [LogBuilder] function
+   * receiver, and add [log markers][LogMarker] by calling [LogBuilder.addMarker].
    *
    * ### Example
    *
@@ -46,158 +49,30 @@ internal constructor(
    * private val log = Logger {}
    *
    * fun example(user: User) {
-   *   log.info("Registered new user", marker("user", user))
-   * }
-   * ```
-   */
-  fun info(message: String, vararg markers: LogMarker, cause: Throwable? = null) {
-    if (logbackLogger.isInfoEnabled) {
-      log(LogLevel.INFO, message, markers.asList(), cause)
-    }
-  }
-
-  /**
-   * Logs the given message at the WARN log level (if enabled), along with any given
-   * [log markers][LogMarker], and optionally a cause exception.
-   *
-   * ### Example
-   *
-   * ```
-   * private val log = Logger {}
-   *
-   * fun example(user: User) {
-   *   try {
-   *     sendWelcomeEmail(user)
-   *   } catch (e: Exception) {
-   *     log.warn(
-   *         "Failed to send welcome email to user",
-   *         marker("user", user),
-   *         cause = e,
-   *     )
-   *   }
-   * }
-   * ```
-   */
-  fun warn(message: String, vararg markers: LogMarker, cause: Throwable? = null) {
-    if (logbackLogger.isWarnEnabled) {
-      log(LogLevel.WARN, message, markers.asList(), cause)
-    }
-  }
-
-  /**
-   * Logs the given message at the ERROR log level (if enabled), along with any given
-   * [log markers][LogMarker], and optionally a cause exception.
-   *
-   * ### Example
-   *
-   * ```
-   * private val log = Logger {}
-   *
-   * fun example(user: User) {
-   *   try {
-   *     storeUser(user)
-   *   } catch (e: Exception) {
-   *     log.error(
-   *         "Failed to store user in database",
-   *         marker("user", user),
-   *         cause = e,
-   *     )
-   *   }
-   * }
-   * ```
-   */
-  fun error(message: String, vararg markers: LogMarker, cause: Throwable? = null) {
-    if (logbackLogger.isErrorEnabled) {
-      log(LogLevel.ERROR, message, markers.asList(), cause)
-    }
-  }
-
-  /**
-   * Logs the given message at the DEBUG log level (if enabled), along with any given
-   * [log markers][LogMarker], and optionally a cause exception.
-   *
-   * ### Example
-   *
-   * ```
-   * private val log = Logger {}
-   *
-   * fun example(user: User) {
-   *   log.debug("Received new sign-up request", marker("user", user))
-   * }
-   * ```
-   */
-  fun debug(message: String, vararg markers: LogMarker, cause: Throwable? = null) {
-    if (logbackLogger.isDebugEnabled) {
-      log(LogLevel.DEBUG, message, markers.asList(), cause)
-    }
-  }
-
-  /**
-   * Logs the given message at the TRACE log level (if enabled), along with any given
-   * [log markers][LogMarker], and optionally a cause exception.
-   *
-   * ### Example
-   *
-   * ```
-   * private val log = Logger {}
-   *
-   * fun example(user: User) {
-   *   log.trace("Started processing user request", marker("user", user))
-   * }
-   * ```
-   */
-  fun trace(message: String, vararg markers: LogMarker, cause: Throwable? = null) {
-    if (logbackLogger.isTraceEnabled) {
-      log(LogLevel.TRACE, message, markers.asList(), cause)
-    }
-  }
-
-  /**
-   * Calls the given function to build a log event and log it, but only if the INFO log level is
-   * enabled. This can improve performance over [Logger.info] for cases where the log level may not
-   * be enabled, and constructing the log message/markers is expensive.
-   *
-   * The log message is the string returned by the function. You can add [log markers][LogMarker]
-   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and setting
-   * [cause][LogBuilder.cause] on the [LogBuilder] function receiver.
-   *
-   * Note that if you include file location information in your log encoder (such as enabling
-   * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
-   * wrong line number. This is because we use an inline function, to avoid allocating an object for
-   * the given function. We prioritize this performance gain over correct line numbers.
-   *
-   * ### Example
-   *
-   * ```
-   * private val log = Logger {}
-   *
-   * fun example(user: User) {
-   *   log.infoLazy {
+   *   log.info {
    *     addMarker("user", user)
    *     "Registered new user"
    *   }
    * }
    * ```
+   *
+   * ### Note on file locations
+   *
+   * If you include file location information in your log encoder (such as enabling
+   * `includeCallerData` in `logstash-logback-encoder`), then the log will show an incorrect line
+   * number. This happens because [Logger]'s methods are `inline`, to avoid allocating a function
+   * object for [buildLog]. Inline functions give incorrect line numbers, but we prioritize the
+   * performance gain in this case. File, class and method names will still be correct.
    */
-  inline fun infoLazy(buildLog: LogBuilder.() -> String) {
-    if (logbackLogger.isInfoEnabled) {
-      logLazy(LogLevel.INFO, buildLog)
-    }
+  inline fun info(buildLog: LogBuilder.() -> String) {
+    logIfEnabled(LogLevel.INFO, buildLog)
   }
 
   /**
-   * Calls the given function to build a log event and log it, but only if the WARN log level is
-   * enabled. This can improve performance over [Logger.warn] for cases where the log level may not
-   * be enabled, and constructing the log message/markers is expensive.
+   * Logs the message returned by the given function at the INFO log level, if it is enabled.
    *
-   * The log message is the string returned by the function. You can add [log markers][LogMarker]
-   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and setting
-   * [cause][LogBuilder.cause] on the [LogBuilder] function receiver.
-   *
-   * Note that if you include file location information in your log encoder (such as enabling
-   * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
-   * wrong line number. This is because we use an inline function, to avoid allocating an object for
-   * the given function. We prioritize this performance gain over correct line numbers.
+   * You can add a cause exception by setting [cause][LogBuilder.cause] on the [LogBuilder] function
+   * receiver, and add [log markers][LogMarker] by calling [LogBuilder.addMarker].
    *
    * ### Example
    *
@@ -208,7 +83,7 @@ internal constructor(
    *   try {
    *     sendWelcomeEmail(user)
    *   } catch (e: Exception) {
-   *     log.warnLazy {
+   *     log.warn {
    *       cause = e
    *       addMarker("user", user)
    *       "Failed to send welcome email to user"
@@ -216,26 +91,24 @@ internal constructor(
    *   }
    * }
    * ```
+   *
+   * ### Note on file locations
+   *
+   * If you include file location information in your log encoder (such as enabling
+   * `includeCallerData` in `logstash-logback-encoder`), then the log will show an incorrect line
+   * number. This happens because [Logger]'s methods are `inline`, to avoid allocating a function
+   * object for [buildLog]. Inline functions give incorrect line numbers, but we prioritize the
+   * performance gain in this case. File, class and method names will still be correct.
    */
-  inline fun warnLazy(buildLog: LogBuilder.() -> String) {
-    if (logbackLogger.isWarnEnabled) {
-      logLazy(LogLevel.WARN, buildLog)
-    }
+  inline fun warn(buildLog: LogBuilder.() -> String) {
+    logIfEnabled(LogLevel.WARN, buildLog)
   }
 
   /**
-   * Calls the given function to build a log event and log it, but only if the ERROR log level is
-   * enabled. This can improve performance over [Logger.error] for cases where the log level may not
-   * be enabled, and constructing the log message/markers is expensive.
+   * Logs the message returned by the given function at the INFO log level, if it is enabled.
    *
-   * The log message is the string returned by the function. You can add [log markers][LogMarker]
-   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and setting
-   * [cause][LogBuilder.cause] on the [LogBuilder] function receiver.
-   *
-   * Note that if you include file location information in your log encoder (such as enabling
-   * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
-   * wrong line number. This is because we use an inline function, to avoid allocating an object for
-   * the given function. We prioritize this performance gain over correct line numbers.
+   * You can add a cause exception by setting [cause][LogBuilder.cause] on the [LogBuilder] function
+   * receiver, and add [log markers][LogMarker] by calling [LogBuilder.addMarker].
    *
    * ### Example
    *
@@ -246,7 +119,7 @@ internal constructor(
    *   try {
    *     storeUser(user)
    *   } catch (e: Exception) {
-   *     log.errorLazy {
+   *     log.error {
    *       cause = e
    *       addMarker("user", user)
    *       "Failed to store user in database"
@@ -254,26 +127,24 @@ internal constructor(
    *   }
    * }
    * ```
+   *
+   * ### Note on file locations
+   *
+   * If you include file location information in your log encoder (such as enabling
+   * `includeCallerData` in `logstash-logback-encoder`), then the log will show an incorrect line
+   * number. This happens because [Logger]'s methods are `inline`, to avoid allocating a function
+   * object for [buildLog]. Inline functions give incorrect line numbers, but we prioritize the
+   * performance gain in this case. File, class and method names will still be correct.
    */
-  inline fun errorLazy(buildLog: LogBuilder.() -> String) {
-    if (logbackLogger.isErrorEnabled) {
-      logLazy(LogLevel.ERROR, buildLog)
-    }
+  inline fun error(buildLog: LogBuilder.() -> String) {
+    logIfEnabled(LogLevel.ERROR, buildLog)
   }
 
   /**
-   * Calls the given function to build a log event and log it, but only if the DEBUG log level is
-   * enabled. This can improve performance over [Logger.debug] for cases where the log level may not
-   * be enabled, and constructing the log message/markers is expensive.
+   * Logs the message returned by the given function at the INFO log level, if it is enabled.
    *
-   * The log message is the string returned by the function. You can add [log markers][LogMarker]
-   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and setting
-   * [cause][LogBuilder.cause] on the [LogBuilder] function receiver.
-   *
-   * Note that if you include file location information in your log encoder (such as enabling
-   * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
-   * wrong line number. This is because we use an inline function, to avoid allocating an object for
-   * the given function. We prioritize this performance gain over correct line numbers.
+   * You can add a cause exception by setting [cause][LogBuilder.cause] on the [LogBuilder] function
+   * receiver, and add [log markers][LogMarker] by calling [LogBuilder.addMarker].
    *
    * ### Example
    *
@@ -281,32 +152,30 @@ internal constructor(
    * private val log = Logger {}
    *
    * fun example(user: User) {
-   *   log.debugLazy {
+   *   log.debug {
    *     addMarker("user", user)
    *     "Received new sign-up request"
    *   }
    * }
    * ```
+   *
+   * ### Note on file locations
+   *
+   * If you include file location information in your log encoder (such as enabling
+   * `includeCallerData` in `logstash-logback-encoder`), then the log will show an incorrect line
+   * number. This happens because [Logger]'s methods are `inline`, to avoid allocating a function
+   * object for [buildLog]. Inline functions give incorrect line numbers, but we prioritize the
+   * performance gain in this case. File, class and method names will still be correct.
    */
-  inline fun debugLazy(buildLog: LogBuilder.() -> String) {
-    if (logbackLogger.isDebugEnabled) {
-      logLazy(LogLevel.DEBUG, buildLog)
-    }
+  inline fun debug(buildLog: LogBuilder.() -> String) {
+    logIfEnabled(LogLevel.DEBUG, buildLog)
   }
 
   /**
-   * Calls the given function to build a log event and log it, but only if the TRACE log level is
-   * enabled. This can improve performance over [Logger.trace] for cases where the log level may not
-   * be enabled, and constructing the log message/markers is expensive.
+   * Logs the message returned by the given function at the INFO log level, if it is enabled.
    *
-   * The log message is the string returned by the function. You can add [log markers][LogMarker]
-   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and setting
-   * [cause][LogBuilder.cause] on the [LogBuilder] function receiver.
-   *
-   * Note that if you include file location information in your log encoder (such as enabling
-   * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
-   * wrong line number. This is because we use an inline function, to avoid allocating an object for
-   * the given function. We prioritize this performance gain over correct line numbers.
+   * You can add a cause exception by setting [cause][LogBuilder.cause] on the [LogBuilder] function
+   * receiver, and add [log markers][LogMarker] by calling [LogBuilder.addMarker].
    *
    * ### Example
    *
@@ -314,39 +183,46 @@ internal constructor(
    * private val log = Logger {}
    *
    * fun example(user: User) {
-   *   log.traceLazy {
+   *   log.trace {
    *     addMarker("user", user)
    *     "Started processing user request"
    *   }
    * }
    * ```
+   *
+   * ### Note on file locations
+   *
+   * If you include file location information in your log encoder (such as enabling
+   * `includeCallerData` in `logstash-logback-encoder`), then the log will show an incorrect line
+   * number. This happens because [Logger]'s methods are `inline`, to avoid allocating a function
+   * object for [buildLog]. Inline functions give incorrect line numbers, but we prioritize the
+   * performance gain in this case. File, class and method names will still be correct.
    */
-  inline fun traceLazy(buildLog: LogBuilder.() -> String) {
-    if (logbackLogger.isTraceEnabled) {
-      logLazy(LogLevel.TRACE, buildLog)
-    }
+  inline fun trace(buildLog: LogBuilder.() -> String) {
+    logIfEnabled(LogLevel.TRACE, buildLog)
   }
 
-  /**
-   * Logs the message, markers and cause exception at the given log level.
-   *
-   * This method is kept internal for now. If we find a need from library users to have a method
-   * like this where they can pass the log level as a parameter, we should:
-   * - Keep this implementation internal (consider renaming to `logInternal`)
-   * - Make [LogLevel] public, but keep its fields internal
-   * - Add a new public `log` method that calls this method, checks if the logger is enabled for the
-   *   given level, makes [markers] a vararg instead of a list, and with a default value of `null`
-   *   for [cause]
-   *     - The reason we use a list here instead of a vararg is for performance: Kotlin copies
-   *       varargs into a new array for each vararg function, so if `Logger.info` calls
-   *       `Logger.log`, and both take varargs, we would allocate 2 arrays instead of just one. When
-   *       `Logger.log` takes a list instead, the vararg array from `Logger.info` can be wrapped in
-   *       a list and passed directly (we pass a list instead of an array in order for this to also
-   *       work with the marker list from `LogBuilder` used in our lazy methods). See
-   *       [issue KT-17043](https://youtrack.jetbrains.com/issue/KT-17043/Do-not-create-new-arrays-for-pass-through-vararg-parameters).
-   */
+  /** Calls the given function to build a log event and log it. */
   @PublishedApi // For use in inline functions
-  internal fun log(level: LogLevel, message: String, markers: List<LogMarker>, cause: Throwable?) {
+  internal inline fun logIfEnabled(level: LogLevel, buildLog: LogBuilder.() -> String) {
+    if (!logbackLogger.isEnabledFor(level.logbackLevel)) {
+      return
+    }
+
+    val builder = LogBuilder()
+    val message = builder.buildLog()
+    val marker = combineLogMarkers(builder.markers ?: emptyList(), builder.cause)
+
+    logInternal(level, message, marker, builder.cause)
+  }
+
+  @PublishedApi
+  internal fun logInternal(
+      level: LogLevel,
+      message: String,
+      marker: LogstashMarker?,
+      cause: Throwable?
+  ) {
     /**
      * Logback can be configured to output file/line information of where in the source code a log
      * occurred. But if we just call the normal SLF4J logger methods here, that would show this
@@ -358,7 +234,7 @@ internal constructor(
      * class name, which Logback can then use to omit it from the file/line info.
      */
     logbackLogger.log(
-        combineLogMarkers(markers, cause),
+        marker,
         FULLY_QUALIFIED_CLASS_NAME,
         level.intValue,
         message,
@@ -367,35 +243,24 @@ internal constructor(
     )
   }
 
-  /**
-   * Calls the given function to build a log event and log it.
-   *
-   * This method is kept internal for now. If we find a need from library users to have a method
-   * like this where they can pass the log level as a parameter, we should:
-   * - Keep this implementation internal (consider renaming to `logInternal`)
-   * - Make [LogLevel] public, but keep its fields internal
-   * - Add a new public inline `logLazy` method that calls this method, and checks if the logger is
-   *   enabled for the given level
-   */
   @PublishedApi // For use in inline functions
-  internal inline fun logLazy(level: LogLevel, buildLog: LogBuilder.() -> String) {
-    val builder = LogBuilder()
-    val message = builder.buildLog()
-    log(level, message, builder.markers ?: emptyList(), builder.cause)
-  }
-
   internal companion object {
+    @PublishedApi // For use in inline functions
     internal val FULLY_QUALIFIED_CLASS_NAME: String = Logger::class.java.name
   }
 }
 
-@PublishedApi // For use in inline functions
-internal enum class LogLevel(internal val intValue: Int) {
-  INFO(LocationAwareLogger.INFO_INT),
-  WARN(LocationAwareLogger.WARN_INT),
-  ERROR(LocationAwareLogger.ERROR_INT),
-  DEBUG(LocationAwareLogger.DEBUG_INT),
-  TRACE(LocationAwareLogger.TRACE_INT),
+enum class LogLevel(
+    @PublishedApi // For use in inline functions
+    internal val logbackLevel: LogbackLevel,
+    @PublishedApi // For use in inline functions
+    internal val intValue: Int,
+) {
+  INFO(LogbackLevel.INFO, LocationAwareLogger.INFO_INT),
+  WARN(LogbackLevel.WARN, LocationAwareLogger.WARN_INT),
+  ERROR(LogbackLevel.ERROR, LocationAwareLogger.ERROR_INT),
+  DEBUG(LogbackLevel.DEBUG, LocationAwareLogger.DEBUG_INT),
+  TRACE(LogbackLevel.TRACE, LocationAwareLogger.TRACE_INT),
 }
 
 /**
@@ -434,6 +299,7 @@ internal fun getLogbackLogger(name: String): LogbackLogger {
  * [LocationAwareLogger.log] takes just a single log marker, so to pass multiple markers, we have to
  * combine them using [LogstashMarker.add].
  */
+@PublishedApi // For use in inline functions
 internal fun combineLogMarkers(markers: List<LogMarker>, cause: Throwable?): LogstashMarker? {
   val contextMarkers = getLogMarkersFromContext()
   val exceptionMarkers = getLogMarkersFromException(cause)
