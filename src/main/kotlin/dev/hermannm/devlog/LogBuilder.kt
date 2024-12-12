@@ -104,12 +104,13 @@ internal constructor(
     }
   }
 
-  internal fun addMarkersFromContextAndCause() {
-    // Add markers from cause exception first, as we prioritize these over context markers
-    addMarkersFromCauseException()
+  /** Adds log markers from [withLoggingContext]. */
+  internal fun addMarkersFromContext() {
+    // loggingContext will be null if withLoggingContext has not been called in this thread
+    val contextMarkers = loggingContext.get() ?: return
 
     // Add context markers in reverse, so newest marker shows first
-    getLogMarkersFromContext().forEachReversed { logstashMarker ->
+    contextMarkers.forEachReversed { logstashMarker ->
       // Don't add marker keys that have already been added
       if (!markerKeyAdded(logstashMarker.fieldName)) {
         logEvent.addMarker(logstashMarker)
@@ -121,7 +122,7 @@ internal constructor(
    * Checks if the log [cause] exception (or any of its own cause exceptions) implements the
    * [WithLogMarkers] interface, and if so, adds those markers.
    */
-  private fun addMarkersFromCauseException() {
+  internal fun addMarkersFromCauseException() {
     // The `cause` here is the log event cause exception. But this exception may itself have a
     // `cause` exception, and that may have another one, and so on. We want to go through all these
     // exceptions to look for log markers, so we re-assign this local variable as we iterate

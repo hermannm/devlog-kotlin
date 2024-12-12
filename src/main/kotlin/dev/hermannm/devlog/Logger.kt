@@ -274,7 +274,9 @@ internal constructor(
   /** Finalizes the log event from the given builder, and logs it. */
   @PublishedApi
   internal fun log(builder: LogBuilder) {
-    builder.addMarkersFromContextAndCause()
+    // Add markers from cause exception first, as we prioritize them over context markers
+    builder.addMarkersFromCauseException()
+    builder.addMarkersFromContext()
     logbackLogger.callAppenders(builder.logEvent)
   }
 

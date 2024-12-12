@@ -63,8 +63,3 @@ inline fun <ReturnT> withLoggingContext(
     }
   }
 }
-
-internal fun getLogMarkersFromContext(): List<SingleFieldAppendingMarker> {
-  // loggingContext will be null if withLoggingContext has not been called in this thread
-  return loggingContext.get() ?: emptyList()
-}
