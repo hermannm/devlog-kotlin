@@ -27,7 +27,8 @@ import org.slf4j.spi.LocationAwareLogger
  * private val log = Logger(name = "com.example.Example")
  * ```
  */
-class Logger
+@JvmInline // Use inline value class, to avoid redundant indirection when we just wrap Logback
+value class Logger
 internal constructor(
     @PublishedApi // For use in inline functions
     internal val logbackLogger: LogbackLogger,
