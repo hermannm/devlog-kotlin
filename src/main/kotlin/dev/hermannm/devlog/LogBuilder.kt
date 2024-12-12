@@ -104,17 +104,6 @@ internal constructor(
     }
   }
 
-  private fun getMarkers(): List<SingleFieldAppendingMarker> {
-    // We know this cast is safe, since we only ever add markers of type SingleFieldAppendingMarker
-    @Suppress("UNCHECKED_CAST")
-    return (logEvent.markerList as List<SingleFieldAppendingMarker>?) ?: emptyList()
-  }
-
-  @PublishedApi
-  internal fun markerKeyAdded(key: String): Boolean {
-    return getMarkers().any { existingMarker -> existingMarker.fieldName == key }
-  }
-
   internal fun addMarkersFromContextAndCause() {
     // Add markers from cause exception first, as we prioritize these over context markers
     addMarkersFromCauseException()
@@ -129,8 +118,8 @@ internal constructor(
   }
 
   /**
-   * Checks if the given exception (or any of its cause exceptions) implements the [WithLogMarkers]
-   * interface, and if so, adds those markers.
+   * Checks if the log [cause] exception (or any of its own cause exceptions) implements the
+   * [WithLogMarkers] interface, and if so, adds those markers.
    */
   private fun addMarkersFromCauseException() {
     // The `cause` here is the log event cause exception. But this exception may itself have a
@@ -155,5 +144,15 @@ internal constructor(
 
       exception = exception.cause
     }
+  }
+
+  @PublishedApi
+  internal fun markerKeyAdded(key: String): Boolean {
+    // We know this cast is safe, since we only ever add markers of type SingleFieldAppendingMarker
+    // (see createLogstashMarker and createRawJsonLogstashMarker)
+    @Suppress("UNCHECKED_CAST")
+    val markers = (logEvent.markerList as List<SingleFieldAppendingMarker>?) ?: emptyList()
+
+    return markers.any { existingMarker -> existingMarker.fieldName == key }
   }
 }
