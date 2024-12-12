@@ -52,7 +52,9 @@ internal constructor(
    * ```
    */
   fun info(message: String, vararg markers: LogMarker, cause: Throwable? = null) {
-    logIfEnabled(LogLevel.INFO, message, markers, cause)
+    if (logbackLogger.isInfoEnabled) {
+      log(LogLevel.INFO, message, markers.asList(), cause)
+    }
   }
 
   /**
@@ -78,7 +80,9 @@ internal constructor(
    * ```
    */
   fun warn(message: String, vararg markers: LogMarker, cause: Throwable? = null) {
-    logIfEnabled(LogLevel.WARN, message, markers, cause)
+    if (logbackLogger.isWarnEnabled) {
+      log(LogLevel.WARN, message, markers.asList(), cause)
+    }
   }
 
   /**
@@ -104,7 +108,9 @@ internal constructor(
    * ```
    */
   fun error(message: String, vararg markers: LogMarker, cause: Throwable? = null) {
-    logIfEnabled(LogLevel.ERROR, message, markers, cause)
+    if (logbackLogger.isErrorEnabled) {
+      log(LogLevel.ERROR, message, markers.asList(), cause)
+    }
   }
 
   /**
@@ -122,7 +128,9 @@ internal constructor(
    * ```
    */
   fun debug(message: String, vararg markers: LogMarker, cause: Throwable? = null) {
-    logIfEnabled(LogLevel.DEBUG, message, markers, cause)
+    if (logbackLogger.isDebugEnabled) {
+      log(LogLevel.DEBUG, message, markers.asList(), cause)
+    }
   }
 
   /**
@@ -140,7 +148,9 @@ internal constructor(
    * ```
    */
   fun trace(message: String, vararg markers: LogMarker, cause: Throwable? = null) {
-    logIfEnabled(LogLevel.TRACE, message, markers, cause)
+    if (logbackLogger.isTraceEnabled) {
+      log(LogLevel.TRACE, message, markers.asList(), cause)
+    }
   }
 
   /**
@@ -171,7 +181,9 @@ internal constructor(
    * ```
    */
   inline fun infoLazy(buildLog: LogBuilder.() -> String) {
-    logLazy(LogLevel.INFO, buildLog)
+    if (logbackLogger.isInfoEnabled) {
+      logLazy(LogLevel.INFO, buildLog)
+    }
   }
 
   /**
@@ -207,7 +219,9 @@ internal constructor(
    * ```
    */
   inline fun warnLazy(buildLog: LogBuilder.() -> String) {
-    logLazy(LogLevel.WARN, buildLog)
+    if (logbackLogger.isWarnEnabled) {
+      logLazy(LogLevel.WARN, buildLog)
+    }
   }
 
   /**
@@ -243,7 +257,9 @@ internal constructor(
    * ```
    */
   inline fun errorLazy(buildLog: LogBuilder.() -> String) {
-    logLazy(LogLevel.ERROR, buildLog)
+    if (logbackLogger.isErrorEnabled) {
+      logLazy(LogLevel.ERROR, buildLog)
+    }
   }
 
   /**
@@ -274,7 +290,9 @@ internal constructor(
    * ```
    */
   inline fun debugLazy(buildLog: LogBuilder.() -> String) {
-    logLazy(LogLevel.DEBUG, buildLog)
+    if (logbackLogger.isDebugEnabled) {
+      logLazy(LogLevel.DEBUG, buildLog)
+    }
   }
 
   /**
@@ -305,68 +323,31 @@ internal constructor(
    * ```
    */
   inline fun traceLazy(buildLog: LogBuilder.() -> String) {
-    logLazy(LogLevel.TRACE, buildLog)
+    if (logbackLogger.isTraceEnabled) {
+      logLazy(LogLevel.TRACE, buildLog)
+    }
   }
 
   /**
-   * Logs the message, markers and cause exception at the given log level, if enabled.
+   * Logs the message, markers and cause exception at the given log level.
    *
-   * This method is kept private for now. If we find a need from library users to have a function
+   * This method is kept internal for now. If we find a need from library users to have a method
    * like this where they can pass the log level as a parameter, we should:
-   * - Keep this implementation private
+   * - Keep this implementation internal (consider renaming to `logInternal`)
    * - Make [LogLevel] public, but keep its fields internal
-   * - Add a new `log` function that calls `logIfEnabled`, but makes [markers] a vararg instead of
-   *   an array, and with a default value of `null` for [cause]
-   *     - The reason we use an array here instead of a vararg is for performance: Kotlin copies
+   * - Add a new public `log` method that calls this method, checks if the logger is enabled for the
+   *   given level, makes [markers] a vararg instead of a list, and with a default value of `null`
+   *   for [cause]
+   *     - The reason we use a list here instead of a vararg is for performance: Kotlin copies
    *       varargs into a new array for each vararg function, so if `Logger.info` calls
    *       `Logger.log`, and both take varargs, we would allocate 2 arrays instead of just one. When
-   *       `Logger.log` takes an array instead, the vararg array from `Logger.info` can be passed
-   *       directly. See
+   *       `Logger.log` takes a list instead, the vararg array from `Logger.info` can be wrapped in
+   *       a list and passed directly (we pass a list instead of an array in order for this to also
+   *       work with the marker list from `LogBuilder` used in our lazy methods). See
    *       [issue KT-17043](https://youtrack.jetbrains.com/issue/KT-17043/Do-not-create-new-arrays-for-pass-through-vararg-parameters).
    */
-  private fun logIfEnabled(
-      level: LogLevel,
-      message: String,
-      markers: Array<out LogMarker>,
-      cause: Throwable?
-  ) {
-    if (!logbackLogger.isEnabledForLevel(level.slf4jLevel)) {
-      return
-    }
-
-    // Call markers.asList() to wrap the Array as a List without copying
-    logInternal(level, message, markers.asList(), cause)
-  }
-
-  /**
-   * Calls the given function to construct a log, but only if the given log level is enabled.
-   *
-   * This method is kept internal for now. If we find a need from library users to have a function
-   * like this where they can pass the log level as a parameter, we should make this and [LogLevel]
-   * public, and follow the instructions on [logIfEnabled].
-   */
   @PublishedApi // For use in inline functions
-  internal inline fun logLazy(level: LogLevel, buildLog: LogBuilder.() -> String) {
-    if (!logbackLogger.isEnabledForLevel(level.slf4jLevel)) {
-      return
-    }
-
-    val builder = LogBuilder()
-    val message = builder.buildLog()
-    logInternal(level, message, builder.markers ?: emptyList(), builder.cause)
-  }
-
-  /**
-   * Shared implementation for [logIfEnabled] and [logLazy]. Should be kept internal (see
-   * [logIfEnabled]).
-   */
-  @PublishedApi // For use in inline functions
-  internal fun logInternal(
-      level: LogLevel,
-      message: String,
-      markers: List<LogMarker>,
-      cause: Throwable?
-  ) {
+  internal fun log(level: LogLevel, message: String, markers: List<LogMarker>, cause: Throwable?) {
     /**
      * Logback can be configured to output file/line information of where in the source code a log
      * occurred. But if we just call the normal SLF4J logger methods here, that would show this
@@ -385,6 +366,23 @@ internal constructor(
         null,
         cause,
     )
+  }
+
+  /**
+   * Calls the given function to build a log event and log it.
+   *
+   * This method is kept internal for now. If we find a need from library users to have a method
+   * like this where they can pass the log level as a parameter, we should:
+   * - Keep this implementation internal (consider renaming to `logInternal`)
+   * - Make [LogLevel] public, but keep its fields internal
+   * - Add a new public inline `logLazy` method that calls this method, and checks if the logger is
+   *   enabled for the given level
+   */
+  @PublishedApi // For use in inline functions
+  internal inline fun logLazy(level: LogLevel, buildLog: LogBuilder.() -> String) {
+    val builder = LogBuilder()
+    val message = builder.buildLog()
+    log(level, message, builder.markers ?: emptyList(), builder.cause)
   }
 
   internal companion object {
