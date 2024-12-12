@@ -52,7 +52,7 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
  * @Serializable data class User(val id: Long, val name: String)
  * ```
  *
- * This would give the following output using `logstash-logback-encoder`:
+ * This gives the following output using `logstash-logback-encoder`:
  * ```json
  * {
  *   "message": "Registered new user",
@@ -186,7 +186,7 @@ internal inline fun <reified ValueT> createLogstashMarker(
  * }
  * ```
  *
- * This would give the following output using `logstash-logback-encoder`:
+ * This gives the following output using `logstash-logback-encoder`:
  * ```json
  * {"message":"Started processing user","user":{"id":1,"name":"John Doe"},/* ...timestamp etc. */}
  * {"message":"User processing ended","user":{"id":1,"name":"John Doe"},/* ...timestamp etc. */}

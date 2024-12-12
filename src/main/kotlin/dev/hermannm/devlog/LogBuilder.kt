@@ -46,7 +46,7 @@ internal constructor(
    * @Serializable data class User(val id: Long, val name: String)
    * ```
    *
-   * This would give the following output using `logstash-logback-encoder`:
+   * This gives the following output using `logstash-logback-encoder`:
    * ```json
    * {
    *   "message": "Registered new user",
@@ -93,7 +93,7 @@ internal constructor(
    * }
    * ```
    *
-   * This would give the following output using `logstash-logback-encoder`:
+   * This gives the following output using `logstash-logback-encoder`:
    * ```json
    * {"message":"Registered new user","user":{"id":1,"name":"John Doe"},/* ...timestamp etc. */}
    * ```
