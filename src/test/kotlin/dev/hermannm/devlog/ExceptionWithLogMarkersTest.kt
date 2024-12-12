@@ -202,6 +202,31 @@ class ExceptionWithLogMarkersTest {
         """
             .trimIndent()
   }
+
+  /** See comment in [LogBuilder.addMarkersFromCauseException]. */
+  @Test
+  fun `exception cause cycle should not cause infinite loop`() {
+    class EvilException : Exception() {
+      var settableCause: Throwable? = null
+
+      override val cause: Throwable?
+        get() = settableCause
+    }
+
+    val exception1 = EvilException()
+    val exception2 = EvilException()
+    val exception3 = EvilException()
+
+    // Set up cause cycle
+    exception1.settableCause = exception2
+    exception2.settableCause = exception3
+    exception3.settableCause = exception1
+
+    log.info {
+      cause = exception1
+      "Should not cause an infinite loop"
+    }
+  }
 }
 
 private fun exceptionWithLogMarker(marker: LogMarker) =

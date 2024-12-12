@@ -128,7 +128,14 @@ internal constructor(
     // exceptions to look for log markers, so we re-assign this local variable as we iterate
     // through.
     var exception = cause
-    while (exception != null) {
+    // Limit the depth of cause exceptions, so we don't expose ourselves to infinite loops.
+    // This can happen if:
+    // - exception1.cause -> exception2
+    // - exception2.cause -> exception3
+    // - exception3.cause -> exception1
+    // We set max depth to 10, which should be high enough to not affect real users.
+    var depth = 0
+    while (exception != null && depth < 10) {
       if (exception is WithLogMarkers) {
         exception.logMarkers.forEach { marker ->
           // Don't add marker keys that have already been added
@@ -138,12 +145,8 @@ internal constructor(
         }
       }
 
-      // Avoid infinite loop from cyclic cause exceptions
-      if (exception.cause === exception) {
-        break
-      }
-
       exception = exception.cause
+      depth++
     }
   }
 
