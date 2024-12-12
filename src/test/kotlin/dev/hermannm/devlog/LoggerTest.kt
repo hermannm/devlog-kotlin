@@ -87,7 +87,7 @@ internal class LoggerTest {
   fun `lazy info log`() {
     testLogFunction(LogLevel.INFO) { message, marker, exception ->
       log.infoLazy {
-        setCause(exception)
+        cause = exception
         addExistingMarker(marker)
         message
       }
@@ -98,8 +98,8 @@ internal class LoggerTest {
   fun `lazy warn log`() {
     testLogFunction(LogLevel.WARN) { message, marker, exception ->
       log.warnLazy {
-        setCause(exception)
         addExistingMarker(marker)
+        cause = exception
         message
       }
     }
@@ -109,7 +109,7 @@ internal class LoggerTest {
   fun `lazy error log`() {
     testLogFunction(LogLevel.ERROR) { message, marker, exception ->
       log.errorLazy {
-        setCause(exception)
+        cause = exception
         addExistingMarker(marker)
         message
       }
@@ -120,7 +120,7 @@ internal class LoggerTest {
   fun `lazy debug log`() {
     testLogFunction(LogLevel.DEBUG) { message, marker, exception ->
       log.debugLazy {
-        setCause(exception)
+        cause = exception
         addExistingMarker(marker)
         message
       }
@@ -131,7 +131,7 @@ internal class LoggerTest {
   fun `lazy trace log`() {
     testLogFunction(LogLevel.TRACE) { message, marker, exception ->
       log.traceLazy {
-        setCause(exception)
+        cause = exception
         addExistingMarker(marker)
         message
       }

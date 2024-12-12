@@ -9,18 +9,12 @@ import kotlinx.serialization.SerializationStrategy
 class LogBuilder
 @PublishedApi // For use in inline functions
 internal constructor() {
-  @PublishedApi // For use in inline functions
-  // Can't call this `cause`, as that clashes with `setCause`
-  internal var causeException: Throwable? = null
+  /** Set this if the log was caused by an exception. */
+  var cause: Throwable? = null
 
   // Initialize to null so we don't allocate a list when no markers are included (common case).
   @PublishedApi // For use in inline functions
   internal var markers: ArrayList<LogMarker>? = null
-
-  /** Sets the given exception as the cause of the log. */
-  fun setCause(cause: Throwable) {
-    this.causeException = cause
-  }
 
   /**
    * Adds a [log marker][LogMarker] with the given key and value to the log.

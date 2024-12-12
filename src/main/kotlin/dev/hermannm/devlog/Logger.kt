@@ -149,8 +149,8 @@ internal constructor(
    * be enabled, and constructing the log message/markers is expensive.
    *
    * The log message is the string returned by the function. You can add [log markers][LogMarker]
-   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and
-   * [setCause][LogBuilder.setCause] on the [LogBuilder] function receiver.
+   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and setting
+   * [cause][LogBuilder.cause] on the [LogBuilder] function receiver.
    *
    * Note that if you include file location information in your log encoder (such as enabling
    * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
@@ -180,8 +180,8 @@ internal constructor(
    * be enabled, and constructing the log message/markers is expensive.
    *
    * The log message is the string returned by the function. You can add [log markers][LogMarker]
-   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and
-   * [setCause][LogBuilder.setCause] on the [LogBuilder] function receiver.
+   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and setting
+   * [cause][LogBuilder.cause] on the [LogBuilder] function receiver.
    *
    * Note that if you include file location information in your log encoder (such as enabling
    * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
@@ -198,7 +198,7 @@ internal constructor(
    *     sendWelcomeEmail(user)
    *   } catch (e: Exception) {
    *     log.warnLazy {
-   *       setCause(e)
+   *       cause = e
    *       addMarker("user", user)
    *       "Failed to send welcome email to user"
    *     }
@@ -216,8 +216,8 @@ internal constructor(
    * be enabled, and constructing the log message/markers is expensive.
    *
    * The log message is the string returned by the function. You can add [log markers][LogMarker]
-   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and
-   * [setCause][LogBuilder.setCause] on the [LogBuilder] function receiver.
+   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and setting
+   * [cause][LogBuilder.cause] on the [LogBuilder] function receiver.
    *
    * Note that if you include file location information in your log encoder (such as enabling
    * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
@@ -234,7 +234,7 @@ internal constructor(
    *     storeUser(user)
    *   } catch (e: Exception) {
    *     log.errorLazy {
-   *       setCause(e)
+   *       cause = e
    *       addMarker("user", user)
    *       "Failed to store user in database"
    *     }
@@ -252,8 +252,8 @@ internal constructor(
    * be enabled, and constructing the log message/markers is expensive.
    *
    * The log message is the string returned by the function. You can add [log markers][LogMarker]
-   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and
-   * [setCause][LogBuilder.setCause] on the [LogBuilder] function receiver.
+   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and setting
+   * [cause][LogBuilder.cause] on the [LogBuilder] function receiver.
    *
    * Note that if you include file location information in your log encoder (such as enabling
    * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
@@ -283,8 +283,8 @@ internal constructor(
    * be enabled, and constructing the log message/markers is expensive.
    *
    * The log message is the string returned by the function. You can add [log markers][LogMarker]
-   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and
-   * [setCause][LogBuilder.setCause] on the [LogBuilder] function receiver.
+   * and set a cause exception on the log by calling [addMarker][LogBuilder.addMarker] and setting
+   * [cause][LogBuilder.cause] on the [LogBuilder] function receiver.
    *
    * Note that if you include file location information in your log encoder (such as enabling
    * `includeCallerData` in `logstash-logback-encoder`), then logs from lazy functions will show the
@@ -353,7 +353,7 @@ internal constructor(
 
     val builder = LogBuilder()
     val message = builder.buildLog()
-    logInternal(level, message, builder.markers ?: emptyList(), builder.causeException)
+    logInternal(level, message, builder.markers ?: emptyList(), builder.cause)
   }
 
   /**
