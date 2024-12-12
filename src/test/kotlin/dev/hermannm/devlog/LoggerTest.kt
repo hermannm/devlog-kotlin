@@ -225,7 +225,7 @@ internal class LoggerTest {
 
     logAppender.list shouldHaveSize 1
     val logEvent = logAppender.list.first()
-    logEvent.level.toString() shouldBe logLevel.slf4jLevel.toString()
+    logEvent.level.toString() shouldBe logLevel.toString()
     logEvent.message shouldBe testMessage
     logEvent.markerList shouldContain testMarker.logstashMarker
     logEvent.throwableProxy.message shouldBe testException.message

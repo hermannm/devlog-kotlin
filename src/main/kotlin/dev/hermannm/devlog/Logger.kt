@@ -4,7 +4,6 @@ import ch.qos.logback.classic.Logger as LogbackLogger
 import net.logstash.logback.marker.LogstashMarker
 import net.logstash.logback.marker.Markers
 import org.slf4j.LoggerFactory
-import org.slf4j.event.Level as Slf4jLogLevel
 import org.slf4j.spi.LocationAwareLogger
 
 /**
@@ -391,16 +390,12 @@ internal constructor(
 }
 
 @PublishedApi // For use in inline functions
-internal enum class LogLevel(
-    @PublishedApi // For use in inline functions
-    internal val slf4jLevel: Slf4jLogLevel,
-    internal val intValue: Int,
-) {
-  INFO(Slf4jLogLevel.INFO, LocationAwareLogger.INFO_INT),
-  WARN(Slf4jLogLevel.WARN, LocationAwareLogger.WARN_INT),
-  ERROR(Slf4jLogLevel.ERROR, LocationAwareLogger.ERROR_INT),
-  DEBUG(Slf4jLogLevel.DEBUG, LocationAwareLogger.DEBUG_INT),
-  TRACE(Slf4jLogLevel.TRACE, LocationAwareLogger.TRACE_INT),
+internal enum class LogLevel(internal val intValue: Int) {
+  INFO(LocationAwareLogger.INFO_INT),
+  WARN(LocationAwareLogger.WARN_INT),
+  ERROR(LocationAwareLogger.ERROR_INT),
+  DEBUG(LocationAwareLogger.DEBUG_INT),
+  TRACE(LocationAwareLogger.TRACE_INT),
 }
 
 /**
