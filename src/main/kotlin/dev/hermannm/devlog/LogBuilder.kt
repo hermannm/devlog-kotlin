@@ -67,7 +67,7 @@ internal constructor(
 
     exceptionMarkers.forEach { marker ->
       // Don't add marker keys that have already been added
-      if (!markerKeyAdded(marker.key)) {
+      if (!markerKeyAdded(marker.logstashMarker.fieldName)) {
         logEvent.addMarker(marker.logstashMarker)
       }
     }

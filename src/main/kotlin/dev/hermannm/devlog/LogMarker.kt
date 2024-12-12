@@ -61,10 +61,6 @@ class LogMarker
 internal constructor(
     @PublishedApi internal val logstashMarker: SingleFieldAppendingMarker,
 ) {
-  // For now, we don't make this public, as we don't necessarily want to bind ourselves to this API
-  internal val key
-    get() = logstashMarker.fieldName
-
   // We override toString, equals and hashCode manually here instead of using a data class, since we
   // don't want the data class copy/componentN methods to be part of our API.
   override fun toString() = logstashMarker.toString()
