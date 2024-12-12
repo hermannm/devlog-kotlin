@@ -3,6 +3,12 @@
 Logging library for Kotlin JVM, that thinly wraps SLF4J and Logback to provide a more ergonomic API,
 and to use `kotlinx.serialization` for log marker serialization instead of Jackson.
 
+**Contents:**
+
+- [Usage](#usage)
+- [Implementation](#implementation)
+- [Credits](#credits)
+
 ## Usage
 
 The `Logger` class is the entry point to `devlog-kotlin`'s logging API. You can construct a `Logger`
@@ -10,8 +16,12 @@ by providing an empty lambda, which automatically gives the logger the name of i
 (or file, if defined at the top level).
 
 ```kotlin
+// File Example.kt
+package com.example
+
 import dev.hermannm.devlog.Logger
 
+// Gets the name "com.example.Example"
 private val log = Logger {}
 ```
 
@@ -88,3 +98,20 @@ fun example(user: User) {
   }
 }
 ```
+
+## Implementation
+
+All the methods on `Logger` are `inline`, and don't do anything if the log level is disabled - so
+you only pay for marker serialization and log message concatenation if it's actually logged.
+
+Elsewhere in the library, we use inline value classes to wrap Logback APIs, to get as close as
+possible to a zero-cost abstraction.
+
+## Credits
+
+Credits to the [kotlin-logging library by Ohad Shai](https://github.com/oshai/kotlin-logging)
+(licensed under [Apache 2.0](https://github.com/oshai/kotlin-logging/blob/master/LICENSE)), which
+inspired the `Logger {}` syntax using a lambda to get the logger name.
+[This kotlin-logging issue](https://github.com/oshai/kotlin-logging/issues/34) (by
+[kosiakk](https://github.com/kosiakk)) also inspired the implementation using `inline` methods for
+minimal overhead.
