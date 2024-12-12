@@ -89,6 +89,61 @@ internal class LoggerTest {
     }
   }
 
+  @Test
+  fun `info log using 'at' method`() {
+    testLogFunction(LogLevel.INFO) { message, exception, markerKey, markerValue ->
+      log.at(LogLevel.INFO) {
+        cause = exception
+        addMarker(markerKey, markerValue)
+        message
+      }
+    }
+  }
+
+  @Test
+  fun `warn log using 'at' method`() {
+    testLogFunction(LogLevel.WARN) { message, exception, markerKey, markerValue ->
+      log.at(LogLevel.WARN) {
+        cause = exception
+        addMarker(markerKey, markerValue)
+        message
+      }
+    }
+  }
+
+  @Test
+  fun `error log using 'at' method`() {
+    testLogFunction(LogLevel.ERROR) { message, exception, markerKey, markerValue ->
+      log.at(LogLevel.ERROR) {
+        cause = exception
+        addMarker(markerKey, markerValue)
+        message
+      }
+    }
+  }
+
+  @Test
+  fun `debug log using 'at' method`() {
+    testLogFunction(LogLevel.DEBUG) { message, exception, markerKey, markerValue ->
+      log.at(LogLevel.DEBUG) {
+        cause = exception
+        addMarker(markerKey, markerValue)
+        message
+      }
+    }
+  }
+
+  @Test
+  fun `trace log using 'at' method`() {
+    testLogFunction(LogLevel.TRACE) { message, exception, markerKey, markerValue ->
+      log.at(LogLevel.TRACE) {
+        cause = exception
+        addMarker(markerKey, markerValue)
+        message
+      }
+    }
+  }
+
   /**
    * We test logs with marker + cause exception above, but we also want to make sure that just
    * logging a message by itself works.

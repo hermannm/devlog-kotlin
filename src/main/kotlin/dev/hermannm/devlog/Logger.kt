@@ -200,6 +200,45 @@ internal constructor(
   }
 
   /**
+   * Logs the message returned by the given function at the given [LogLevel], if it is enabled. This
+   * is useful when setting the log level dynamically, instead of calling
+   * [info]/[warn]/[error]/[debug]/[trace] conditionally.
+   *
+   * You can add a cause exception by setting [cause][LogBuilder.cause] on the [LogBuilder] function
+   * receiver, and add [log markers][LogMarker] by calling [LogBuilder.addMarker].
+   *
+   * ### Example
+   *
+   * ```
+   * private val log = Logger {}
+   *
+   * fun example(user: User) {
+   *   try {
+   *     sendWelcomeEmail(user)
+   *   } catch (e: Exception) {
+   *     val logLevel = if (e is IOException) LogLevel.ERROR else LogLevel.WARN
+   *     log.at(logLevel) {
+   *       cause = e
+   *       addMarker("user", user)
+   *       "Failed to send welcome email to user"
+   *     }
+   *   }
+   * }
+   * ```
+   *
+   * ### Note on file locations
+   *
+   * If you include file location information in your log encoder (such as enabling
+   * `includeCallerData` in `logstash-logback-encoder`), then the log will show an incorrect line
+   * number. This happens because [Logger]'s methods are `inline`, to avoid allocating a function
+   * object for [buildLog]. Inline functions give incorrect line numbers, but we prioritize the
+   * performance gain in this case. File, class and method names will still be correct.
+   */
+  inline fun at(level: LogLevel, buildLog: LogBuilder.() -> String) {
+    logIfEnabled(level, buildLog)
+  }
+
+  /**
    * Calls the given function to build a log event and log it, but only if the logger is enabled for
    * the given level.
    */
