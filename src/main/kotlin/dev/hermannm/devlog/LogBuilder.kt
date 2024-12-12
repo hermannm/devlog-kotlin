@@ -1,16 +1,20 @@
 package dev.hermannm.devlog
 
+import ch.qos.logback.classic.spi.LoggingEvent as LogbackEvent
+import ch.qos.logback.classic.spi.ThrowableProxy
 import kotlinx.serialization.SerializationStrategy
+import net.logstash.logback.marker.SingleFieldAppendingMarker
 
 /** Class used in the logging methods on [Logger] to add markers/cause exception to logs. */
-class LogBuilder
-@PublishedApi // For use in inline functions
-internal constructor() {
+@JvmInline // Inline value class, since we just wrap a Logback logging event
+value class LogBuilder
+internal constructor(
+    @PublishedApi internal val logEvent: LogbackEvent,
+) {
   /** Set this if the log was caused by an exception. */
-  var cause: Throwable? = null
-
-  @PublishedApi // For use in inline functions
-  internal var markers: ArrayList<LogMarker>? = null
+  var cause: Throwable?
+    set(value) = logEvent.setThrowableProxy(ThrowableProxy(value))
+    get() = (logEvent.throwableProxy as? ThrowableProxy)?.throwable
 
   /**
    * Adds a [log marker][LogMarker] with the given key and value to the log.
@@ -27,7 +31,9 @@ internal constructor() {
       value: ValueT,
       serializer: SerializationStrategy<ValueT>? = null,
   ) {
-    getInitializedMarkers().add(marker(key, value, serializer = serializer))
+    if (!markerKeyAdded(key)) {
+      logEvent.addMarker(createLogstashMarker(key, value, serializer))
+    }
   }
 
   /**
@@ -39,15 +45,38 @@ internal constructor() {
    * 100% sure that the given JSON string is valid, you can set [validJson] to true.
    */
   fun addRawJsonMarker(key: String, json: String, validJson: Boolean = false) {
-    getInitializedMarkers().add(rawJsonMarker(key, json, validJson = validJson))
+    if (!markerKeyAdded(key)) {
+      logEvent.addMarker(createRawJsonLogstashMarker(key, json, validJson))
+    }
   }
 
-  @PublishedApi // For use in inline functions
-  internal fun getInitializedMarkers(): ArrayList<LogMarker> {
-    if (markers == null) {
-      markers = ArrayList()
+  private fun getMarkers(): List<SingleFieldAppendingMarker> {
+    // We know this cast is safe, since we only ever add markers of type SingleFieldAppendingMarker
+    @Suppress("UNCHECKED_CAST")
+    return (logEvent.markerList as List<SingleFieldAppendingMarker>?) ?: emptyList()
+  }
+
+  @PublishedApi
+  internal fun markerKeyAdded(key: String): Boolean {
+    return getMarkers().any { existingMarker -> existingMarker.fieldName == key }
+  }
+
+  internal fun addMarkersFromContextAndCause() {
+    val exceptionMarkers = getLogMarkersFromException(cause)
+    val contextMarkers = getLogMarkersFromContext()
+
+    exceptionMarkers.forEach { marker ->
+      // Don't add marker keys that have already been added
+      if (!markerKeyAdded(marker.key)) {
+        logEvent.addMarker(marker.logstashMarker)
+      }
     }
-    // We never set this to null again after initializing above, so this should be safe
-    return markers!!
+
+    // Add context markers in reverse, so newest marker shows first
+    contextMarkers.forEachReversed { marker ->
+      if (!markerKeyAdded(marker.key)) {
+        logEvent.addMarker(marker.logstashMarker)
+      }
+    }
   }
 }

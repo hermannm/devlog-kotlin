@@ -2,10 +2,8 @@ package dev.hermannm.devlog
 
 import ch.qos.logback.classic.Level as LogbackLevel
 import ch.qos.logback.classic.Logger as LogbackLogger
-import net.logstash.logback.marker.LogstashMarker
-import net.logstash.logback.marker.Markers
+import ch.qos.logback.classic.spi.LoggingEvent as LogbackEvent
 import org.slf4j.LoggerFactory
-import org.slf4j.spi.LocationAwareLogger
 
 /**
  * A logger provides methods for logging at various log levels ([info], [warn], [error], [debug] and
@@ -30,8 +28,7 @@ import org.slf4j.spi.LocationAwareLogger
 @JvmInline // Use inline value class, to avoid redundant indirection when we just wrap Logback
 value class Logger
 internal constructor(
-    @PublishedApi // For use in inline functions
-    internal val logbackLogger: LogbackLogger,
+    @PublishedApi internal val logbackLogger: LogbackLogger,
 ) {
   constructor(name: String) : this(getLogbackLogger(name))
 
@@ -202,65 +199,63 @@ internal constructor(
     logIfEnabled(LogLevel.TRACE, buildLog)
   }
 
-  /** Calls the given function to build a log event and log it. */
-  @PublishedApi // For use in inline functions
+  /**
+   * Calls the given function to build a log event and log it, but only if the logger is enabled for
+   * the given level.
+   */
+  @PublishedApi
   internal inline fun logIfEnabled(level: LogLevel, buildLog: LogBuilder.() -> String) {
     if (!logbackLogger.isEnabledFor(level.logbackLevel)) {
       return
     }
 
-    val builder = LogBuilder()
-    val message = builder.buildLog()
-    val marker = combineLogMarkers(builder.markers ?: emptyList(), builder.cause)
-
-    logInternal(level, message, marker, builder.cause)
+    // We want to call buildLog here in the inline method, to avoid allocating a function object for
+    // it. But having too much code inline can be costly, so we use separate non-inline methods
+    // for initialization and finalization of the log.
+    val builder = initializeLogBuilder(level)
+    builder.logEvent.message = builder.buildLog()
+    log(builder)
   }
 
   @PublishedApi
-  internal fun logInternal(
-      level: LogLevel,
-      message: String,
-      marker: LogstashMarker?,
-      cause: Throwable?
-  ) {
-    /**
-     * Logback can be configured to output file/line information of where in the source code a log
-     * occurred. But if we just call the normal SLF4J logger methods here, that would show this
-     * class (Logger) as where the logs occurred - but what we actually want is to show where in the
-     * user's code the log was made!
-     *
-     * To solve this problem, SLF4J provides a [LocationAwareLogger] interface, which Logback
-     * implements. The interface has a [LocationAwareLogger.log] method that takes a fully qualified
-     * class name, which Logback can then use to omit it from the file/line info.
-     */
-    logbackLogger.log(
-        marker,
-        FULLY_QUALIFIED_CLASS_NAME,
-        level.intValue,
-        message,
-        null,
-        cause,
+  internal fun initializeLogBuilder(level: LogLevel): LogBuilder {
+    return LogBuilder(
+        logEvent =
+            LogbackEvent(
+                FULLY_QUALIFIED_CLASS_NAME,
+                logbackLogger,
+                level.logbackLevel,
+                null, // message (we set this after calling buildLog)
+                null, // throwable (may be set by buildLog)
+                null, // argArray (we don't use this)
+            ),
     )
   }
 
-  @PublishedApi // For use in inline functions
+  /** Finalizes the log event from the given builder, and logs it. */
+  @PublishedApi
+  internal fun log(builder: LogBuilder) {
+    builder.addMarkersFromContextAndCause()
+    logbackLogger.callAppenders(builder.logEvent)
+  }
+
   internal companion object {
-    @PublishedApi // For use in inline functions
+    /**
+     * Passed to the [LogbackEvent] when logging to indicate which class made the log. Logback uses
+     * this to set the correct location information on the log, if the user has enabled caller data.
+     */
     internal val FULLY_QUALIFIED_CLASS_NAME: String = Logger::class.java.name
   }
 }
 
 enum class LogLevel(
-    @PublishedApi // For use in inline functions
-    internal val logbackLevel: LogbackLevel,
-    @PublishedApi // For use in inline functions
-    internal val intValue: Int,
+    @PublishedApi internal val logbackLevel: LogbackLevel,
 ) {
-  INFO(LogbackLevel.INFO, LocationAwareLogger.INFO_INT),
-  WARN(LogbackLevel.WARN, LocationAwareLogger.WARN_INT),
-  ERROR(LogbackLevel.ERROR, LocationAwareLogger.ERROR_INT),
-  DEBUG(LogbackLevel.DEBUG, LocationAwareLogger.DEBUG_INT),
-  TRACE(LogbackLevel.TRACE, LocationAwareLogger.TRACE_INT),
+  INFO(LogbackLevel.INFO),
+  WARN(LogbackLevel.WARN),
+  ERROR(LogbackLevel.ERROR),
+  DEBUG(LogbackLevel.DEBUG),
+  TRACE(LogbackLevel.TRACE),
 }
 
 /**
@@ -292,77 +287,5 @@ internal fun getLogbackLogger(name: String): LogbackLogger {
         "Failed to get Logback logger - have you added logback-classic as a dependency?",
         e,
     )
-  }
-}
-
-/**
- * [LocationAwareLogger.log] takes just a single log marker, so to pass multiple markers, we have to
- * combine them using [LogstashMarker.add].
- */
-@PublishedApi // For use in inline functions
-internal fun combineLogMarkers(markers: List<LogMarker>, cause: Throwable?): LogstashMarker? {
-  val contextMarkers = getLogMarkersFromContext()
-  val exceptionMarkers = getLogMarkersFromException(cause)
-
-  // We have to combine the markers for this log event with the markers from the logging
-  // context, and the cause exception if it implements WithLogMarkers. But we can avoid doing
-  // this combination if there are no log markers, or if there is only 1 log marker among the
-  // log event/context/exception markers.
-  return when {
-    markers.isEmpty() && contextMarkers.isEmpty() && exceptionMarkers.isEmpty() -> {
-      null
-    }
-    markers.size == 1 && contextMarkers.isEmpty() && exceptionMarkers.isEmpty() -> {
-      markers.first().logstashMarker
-    }
-    markers.isEmpty() && contextMarkers.size == 1 && exceptionMarkers.isEmpty() -> {
-      contextMarkers.first().logstashMarker
-    }
-    markers.isEmpty() && contextMarkers.isEmpty() && exceptionMarkers.size == 1 -> {
-      exceptionMarkers.first().logstashMarker
-    }
-    else -> {
-      /**
-       * This is how [Markers.aggregate] combines markers: create an empty marker, then add to it.
-       * But that function takes a vararg or a Collection, which would require an additional
-       * allocation from us here, since we want to add both the log event markers and the context
-       * markers. So instead we make the empty marker and add to it ourselves.
-       */
-      val combinedMarker = Markers.empty()
-
-      markers.forEachIndexed { index, marker ->
-        // If there are duplicate markers, we only include the first one in the log - otherwise we
-        // would produce invalid JSON
-        if (markers.anyBefore(index) { it.key == marker.key }) {
-          return@forEachIndexed
-        }
-
-        combinedMarker.add(marker.logstashMarker)
-      }
-
-      exceptionMarkers.forEachIndexed { index, marker ->
-        // Don't add marker keys that have already been added
-        if (markers.any { it.key == marker.key } ||
-            exceptionMarkers.anyBefore(index) { it.key == marker.key }) {
-          return@forEachIndexed
-        }
-
-        combinedMarker.add(marker.logstashMarker)
-      }
-
-      // Add context markers in reverse, so newest marker shows first
-      contextMarkers.forEachReversed { index, marker ->
-        // Don't add marker keys that have already been added
-        if (markers.any { it.key == marker.key } ||
-            exceptionMarkers.any { it.key == marker.key } ||
-            contextMarkers.anyBefore(index, reverse = true) { it.key == marker.key }) {
-          return@forEachReversed
-        }
-
-        combinedMarker.add(marker.logstashMarker)
-      }
-
-      combinedMarker
-    }
   }
 }

@@ -57,11 +57,10 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
  * ```
  */
 class LogMarker
-@PublishedApi // For use in inline functions
+@PublishedApi
 internal constructor(
     internal val logstashMarker: SingleFieldAppendingMarker,
 ) {
-  @PublishedApi // For use in inline functions
   // For now, we don't make this public, as we don't necessarily want to bind ourselves to this API
   internal val key
     get() = logstashMarker.fieldName
@@ -130,34 +129,47 @@ inline fun <reified ValueT> marker(
     value: ValueT,
     serializer: SerializationStrategy<ValueT>? = null
 ): LogMarker {
+  return LogMarker(createLogstashMarker(key, value, serializer))
+}
+
+/**
+ * Implementation for [marker], but without wrapping the return type in the [LogMarker] class - we
+ * use this in [LogBuilder], where we don't need the wrapper.
+ *
+ * [LogBuilder] assumes that all our marker functions return [SingleFieldAppendingMarker], so if you
+ * change the return type here, you may also have to change [LogBuilder.getMarkers].
+ */
+@PublishedApi
+internal inline fun <reified ValueT> createLogstashMarker(
+    key: String,
+    value: ValueT,
+    serializer: SerializationStrategy<ValueT>?
+): SingleFieldAppendingMarker {
   try {
     if (serializer != null) {
       val serializedValue = logMarkerJson.encodeToString(serializer, value)
-      return LogMarker(RawJsonAppendingMarker(key, serializedValue))
+      return RawJsonAppendingMarker(key, serializedValue)
     }
 
-    val logstashMarker =
-        when (ValueT::class) {
-          // Special case for String to avoid redundant serialization
-          String::class -> ObjectAppendingMarker(key, value)
-          // Special cases for common types that kotlinx.serialization doesn't handle by default.
-          // If more cases are added here, you should also add them to the list in the docstring.
-          Instant::class,
-          UUID::class,
-          URI::class,
-          URL::class,
-          BigDecimal::class -> ObjectAppendingMarker(key, value.toString())
-          else -> {
-            val serializedValue = logMarkerJson.encodeToString(value)
-            RawJsonAppendingMarker(key, serializedValue)
-          }
-        }
-
-    return LogMarker(logstashMarker)
+    return when (ValueT::class) {
+      // Special case for String to avoid redundant serialization
+      String::class -> ObjectAppendingMarker(key, value)
+      // Special cases for common types that kotlinx.serialization doesn't handle by default.
+      // If more cases are added here, you should also add them to the list in the docstring.
+      Instant::class,
+      UUID::class,
+      URI::class,
+      URL::class,
+      BigDecimal::class -> ObjectAppendingMarker(key, value.toString())
+      else -> {
+        val serializedValue = logMarkerJson.encodeToString(value)
+        RawJsonAppendingMarker(key, serializedValue)
+      }
+    }
   } catch (_: Exception) {
     // We don't want to ever throw an exception from constructing a marker, which may happen if
     // serialization fails, for example. So in those cases we fall back to toString().
-    return LogMarker(ObjectAppendingMarker(key, value.toString()))
+    return ObjectAppendingMarker(key, value.toString())
   }
 }
 
@@ -199,6 +211,21 @@ inline fun <reified ValueT> marker(
  * ```
  */
 fun rawJsonMarker(key: String, json: String, validJson: Boolean = false): LogMarker {
+  return LogMarker(createRawJsonLogstashMarker(key, json, validJson))
+}
+
+/**
+ * Implementation for [rawJsonMarker], but without wrapping the return type in the [LogMarker] class
+ * - we use this in [LogBuilder], where we don't need the wrapper.
+ *
+ * [LogBuilder] assumes that all our marker functions return [SingleFieldAppendingMarker], so if you
+ * change the return type here, you may also have to change [LogBuilder.getMarkers].
+ */
+internal fun createRawJsonLogstashMarker(
+    key: String,
+    json: String,
+    validJson: Boolean
+): SingleFieldAppendingMarker {
   try {
     // Some log platforms (e.g. AWS CloudWatch) use newlines as the separator between log messages.
     // So if the JSON string has unescaped newlines, we must re-parse the JSON.
@@ -206,7 +233,7 @@ fun rawJsonMarker(key: String, json: String, validJson: Boolean = false): LogMar
 
     // If we assume the JSON is valid, and there are no unescaped newlines, we can return it as-is.
     if (validJson && !containsNewlines) {
-      return LogMarker(RawJsonAppendingMarker(key, json))
+      return RawJsonAppendingMarker(key, json)
     }
 
     // If we do not assume that the JSON is valid, we must try to decode it.
@@ -215,17 +242,16 @@ fun rawJsonMarker(key: String, json: String, validJson: Boolean = false): LogMar
     // If we successfully decoded the JSON, and it does not contain unescaped newlines, we can
     // return it as-is.
     if (!containsNewlines) {
-      return LogMarker(RawJsonAppendingMarker(key, json))
+      return RawJsonAppendingMarker(key, json)
     }
 
     // If the JSON did contain unescaped newlines, then we need to re-encode to escape them.
     val encoded = logMarkerJson.encodeToString(JsonElement.serializer(), decoded)
-    return LogMarker(RawJsonAppendingMarker(key, encoded))
+    return RawJsonAppendingMarker(key, encoded)
   } catch (_: Exception) {
     // If we failed to decode/re-encode the JSON string, we return it as a non-JSON string.
-    return LogMarker(ObjectAppendingMarker(key, json))
+    return ObjectAppendingMarker(key, json)
   }
 }
 
-@PublishedApi // For use in inline functions
-internal val logMarkerJson = Json { encodeDefaults = true }
+@PublishedApi internal val logMarkerJson = Json { encodeDefaults = true }
