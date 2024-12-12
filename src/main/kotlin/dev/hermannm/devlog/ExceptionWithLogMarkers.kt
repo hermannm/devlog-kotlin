@@ -34,7 +34,10 @@ package dev.hermannm.devlog
  *   try {
  *     storeUser(user)
  *   } catch (e: Exception) {
- *     log.error("Failed to store user", cause = e)
+ *     log.error {
+ *       cause = e
+ *       "Failed to store user"
+ *     }
  *   }
  * }
  * ```

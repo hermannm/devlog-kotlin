@@ -27,9 +27,9 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
  *   withLoggingContext(
  *       marker("event", event),
  *   ) {
- *     log.debug("Started processing event")
+ *     log.debug { "Started processing event" }
  *     // ...
- *     log.debug("Finished processing event")
+ *     log.debug { "Finished processing event" }
  *   }
  * }
  * ```

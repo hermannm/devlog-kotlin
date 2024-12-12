@@ -16,21 +16,26 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
 /**
  * A log marker is a key-value pair to add structured context to a log event.
  *
- * If you output logs as JSON (e.g. using
+ * If you output logs as JSON (using
  * [logstash-logback-encoder](https://github.com/logfellow/logstash-logback-encoder)), each marker
  * will be its own field in the resulting JSON. This allows you to filter and query on these fields
  * in the log analysis tool of your choice, in a more structured manner than if you were to just use
  * string concatenation.
  *
- * You can construct a log marker using the [marker] function, which will serialize the value using
- * `kotlinx.serialization`. Alternatively, if you have a value that is already serialized, you can
- * use [rawJsonMarker]. You can then pass the marker to the various logging methods on [Logger].
+ * You can add a marker to a log by calling [LogBuilder.addMarker] on one of [Logger]'s methods (see
+ * example below). This serializes the value using `kotlinx.serialization`. Alternatively, if you
+ * have a value that is already serialized, you can instead call [LogBuilder.addRawJsonMarker].
+ *
+ * If you instead want to attach a marker to all logs within a scope, you can use
+ * [withLoggingContext] and pass markers to it with the [marker]/[rawJsonMarker] functions.
+ *
+ * Finally, you can implement the [WithLogMarkers] interface or use [ExceptionWithLogMarkers] to
+ * attach markers to an exception when it's logged.
  *
  * ### Example
  *
  * ```
  * import dev.hermannm.devlog.Logger
- * import dev.hermannm.devlog.marker
  * import kotlinx.serialization.Serializable
  *
  * private val log = Logger {}
@@ -38,7 +43,10 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
  * fun example() {
  *   val user = User(id = 1, name = "John Doe")
  *
- *   log.info("Registered new user", marker("user", user))
+ *   log.info {
+ *     addMarker("user", user)
+ *     "Registered new user"
+ *   }
  * }
  *
  * @Serializable data class User(val id: Long, val name: String)
@@ -72,13 +80,16 @@ internal constructor(
 }
 
 /**
- * Constructs a [LogMarker], a key-value pair to add structured context to a log event. You can pass
- * the marker to the various logging methods on [Logger].
+ * Constructs a [LogMarker], a key-value pair to add structured context to logs.
  *
- * The value is serialized using `kotlinx.serialization`, so if you pass an object here, you should
- * make sure it is annotated with [@Serializable][kotlinx.serialization.Serializable].
- * Alternatively, you can pass your own [serializer] for the value. If serialization fails, we fall
- * back to calling `toString()` on the value.
+ * This function is made to be used with [withLoggingContext], to add markers to all logs within a
+ * scope. If you just want to add a marker to a single log, you should instead call
+ * [LogBuilder.addMarker] on one of [Logger]'s methods (see example on [LogMarker]).
+ *
+ * The value is serialized using `kotlinx.serialization`, so if you pass an object here, it should
+ * be annotated with [@Serializable][kotlinx.serialization.Serializable]. Alternatively, you can
+ * pass your own [serializer] for the value. If serialization fails, we fall back to calling
+ * `toString()` on the value.
  *
  * If you have a value that is already serialized, you should use [rawJsonMarker] instead.
  *
@@ -89,36 +100,6 @@ internal constructor(
  * - [java.net.URI]
  * - [java.net.URL]
  * - [java.math.BigDecimal]
- *
- * ### Example
- *
- * ```
- * import dev.hermannm.devlog.Logger
- * import dev.hermannm.devlog.marker
- * import kotlinx.serialization.Serializable
- *
- * private val log = Logger {}
- *
- * fun example() {
- *   val user = User(id = 1, name = "John Doe")
- *
- *   log.info("Registered new user", marker("user", user))
- * }
- *
- * @Serializable data class User(val id: Long, val name: String)
- * ```
- *
- * This would give the following output using `logstash-logback-encoder`:
- * ```json
- * {
- *   "message": "Registered new user",
- *   "user": {
- *     "id": 1,
- *     "name": "John Doe"
- *   },
- *   // ...timestamp etc.
- * }
- * ```
  */
 inline fun <reified ValueT> marker(
     key: String,
@@ -130,7 +111,7 @@ inline fun <reified ValueT> marker(
 
 /**
  * Implementation for [marker], but without wrapping the return type in the [LogMarker] class - we
- * use this in [LogBuilder], where we don't need the wrapper.
+ * use this in [LogBuilder.addMarker], where we don't need the wrapper.
  *
  * [LogBuilder] assumes that all our marker functions return [SingleFieldAppendingMarker], so if you
  * change the return type here, you may also have to change [LogBuilder.getMarkers].
@@ -151,7 +132,7 @@ internal inline fun <reified ValueT> createLogstashMarker(
       // Special case for String to avoid redundant serialization
       String::class -> ObjectAppendingMarker(key, value)
       // Special cases for common types that kotlinx.serialization doesn't handle by default.
-      // If more cases are added here, you should also add them to the list in the docstring.
+      // If more cases are added here, you should add them to the list in the docstring for `marker`
       Instant::class,
       UUID::class,
       URI::class,
@@ -164,15 +145,19 @@ internal inline fun <reified ValueT> createLogstashMarker(
     }
   } catch (_: Exception) {
     // We don't want to ever throw an exception from constructing a marker, which may happen if
-    // serialization fails, for example. So in those cases we fall back to toString().
+    // serialization fails, for example. So in these cases we fall back to toString().
     return ObjectAppendingMarker(key, value.toString())
   }
 }
 
 /**
- * Constructs a [LogMarker], a key-value pair to add structured context to a log event, with the
- * given pre-serialized JSON string. You can pass the marker to the various logging methods on
- * [Logger].
+ * Constructs a [LogMarker], a key-value pair to add structured context to logs, with the given
+ * pre-serialized JSON value.
+ *
+ * This function is made to be used with [withLoggingContext], to add markers to all logs within a
+ * scope. If you just want to add a marker to a single log, you should instead call
+ * [LogBuilder.addRawJsonMarker] on one of [Logger]'s methods (see example on
+ * [addRawJsonMarker][LogBuilder.addRawJsonMarker]).
  *
  * By default, this function checks that the given JSON string is actually valid JSON. The reason
  * for this is that giving raw JSON to our log encoder when it is not in fact valid JSON can break
@@ -184,26 +169,27 @@ internal inline fun <reified ValueT> createLogstashMarker(
  * ```
  * import dev.hermannm.devlog.Logger
  * import dev.hermannm.devlog.rawJsonMarker
+ * import dev.hermannm.devlog.withLoggingContext
  *
  * private val log = Logger {}
  *
  * fun example() {
  *   val userJson = """{"id":1,"name":"John Doe"}"""
  *
- *   log.info("Registered new user", rawJsonMarker("user", userJson))
+ *   withLoggingContext(
+ *       rawJsonMarker("user", userJson),
+ *   ) {
+ *     log.debug { "Started processing user" }
+ *     // ...
+ *     log.debug { "User processing ended" }
+ *   }
  * }
  * ```
  *
  * This would give the following output using `logstash-logback-encoder`:
  * ```json
- * {
- *   "message": "Registered new user",
- *   "user": {
- *     "id": 1,
- *     "name": "John Doe"
- *   },
- *   // ...timestamp etc.
- * }
+ * {"message":"Started processing user","user":{"id":1,"name":"John Doe"},/* ...timestamp etc. */}
+ * {"message":"User processing ended","user":{"id":1,"name":"John Doe"},/* ...timestamp etc. */}
  * ```
  */
 fun rawJsonMarker(key: String, json: String, validJson: Boolean = false): LogMarker {
@@ -212,7 +198,7 @@ fun rawJsonMarker(key: String, json: String, validJson: Boolean = false): LogMar
 
 /**
  * Implementation for [rawJsonMarker], but without wrapping the return type in the [LogMarker] class
- * - we use this in [LogBuilder], where we don't need the wrapper.
+ * - we use this in [LogBuilder.addRawJsonMarker], where we don't need the wrapper.
  *
  * [LogBuilder] assumes that all our marker functions return [SingleFieldAppendingMarker], so if you
  * change the return type here, you may also have to change [LogBuilder.getMarkers].

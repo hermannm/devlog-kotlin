@@ -25,6 +25,38 @@ internal constructor(
    * back to calling `toString()` on the value.
    *
    * If you have a value that is already serialized, you should use [addRawJsonMarker] instead.
+   *
+   * ### Example
+   *
+   * ```
+   * import dev.hermannm.devlog.Logger
+   * import kotlinx.serialization.Serializable
+   *
+   * private val log = Logger {}
+   *
+   * fun example() {
+   *   val user = User(id = 1, name = "John Doe")
+   *
+   *   log.info {
+   *     addMarker("user", user)
+   *     "Registered new user"
+   *   }
+   * }
+   *
+   * @Serializable data class User(val id: Long, val name: String)
+   * ```
+   *
+   * This would give the following output using `logstash-logback-encoder`:
+   * ```json
+   * {
+   *   "message": "Registered new user",
+   *   "user": {
+   *     "id": "1",
+   *     "name": "John Doe"
+   *   },
+   *   // ...timestamp etc.
+   * }
+   * ```
    */
   inline fun <reified ValueT> addMarker(
       key: String,
@@ -43,6 +75,28 @@ internal constructor(
    * for this is that giving raw JSON to our log encoder when it is not in fact valid JSON can break
    * our logs. So if the given JSON string is not valid JSON, we escape it as a string. If you are
    * 100% sure that the given JSON string is valid, you can set [validJson] to true.
+   *
+   * ### Example
+   *
+   * ```
+   * import dev.hermannm.devlog.Logger
+   *
+   * private val log = Logger {}
+   *
+   * fun example() {
+   *   val userJson = """{"id":1,"name":"John Doe"}"""
+   *
+   *   log.info {
+   *     addRawJsonMarker("user", userJson)
+   *     "Registered new user"
+   *   }
+   * }
+   * ```
+   *
+   * This would give the following output using `logstash-logback-encoder`:
+   * ```json
+   * {"message":"Registered new user","user":{"id":1,"name":"John Doe"},/* ...timestamp etc. */}
+   * ```
    */
   fun addRawJsonMarker(key: String, json: String, validJson: Boolean = false) {
     if (!markerKeyAdded(key)) {
