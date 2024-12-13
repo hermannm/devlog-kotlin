@@ -6,6 +6,7 @@ and to use `kotlinx.serialization` for log marker serialization instead of Jacks
 **Contents:**
 
 - [Usage](#usage)
+  - [Setting up with Logback](#setting-up-with-logback)
 - [Implementation](#implementation)
 - [Credits](#credits)
 
@@ -99,6 +100,28 @@ fun example(user: User) {
   }
 }
 ```
+
+### Setting up with Logback
+
+This library is designed to work with Logback and the
+[`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder) for JSON output.
+You can configure this logger by creating a `logback.xml` file under `src/main/resources`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="STDOUT"/>
+  </root>
+</configuration>
+```
+
+See the [Usage docs](https://github.com/logfellow/logstash-logback-encoder#usage) for
+`logstash-logback-encoder` for more configuration options.
 
 ## Implementation
 
