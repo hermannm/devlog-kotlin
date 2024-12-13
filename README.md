@@ -26,7 +26,8 @@ private val log = Logger {}
 ```
 
 `Logger` provides methods for logging at various log levels (`info`, `warn`, `error`, `debug` and
-`trace`):
+`trace`). The methods take a lambda to construct the log, which is only called if the log level is
+enabled (see [Implementation](#implementation) for how this is done efficiently).
 
 ```kotlin
 fun example() {
@@ -110,8 +111,9 @@ possible to a zero-cost abstraction.
 ## Credits
 
 Credits to the [kotlin-logging library by Ohad Shai](https://github.com/oshai/kotlin-logging)
-(licensed under [Apache 2.0](https://github.com/oshai/kotlin-logging/blob/master/LICENSE)), which
-inspired the `Logger {}` syntax using a lambda to get the logger name.
+(licensed under
+[Apache 2.0](https://github.com/oshai/kotlin-logging/blob/c91fe6ab71b9d3470fae71fb28c453006de4e584/LICENSE)),
+which inspired the `Logger {}` syntax using a lambda to get the logger name.
 [This kotlin-logging issue](https://github.com/oshai/kotlin-logging/issues/34) (by
 [kosiakk](https://github.com/kosiakk)) also inspired the implementation using `inline` methods for
 minimal overhead.
