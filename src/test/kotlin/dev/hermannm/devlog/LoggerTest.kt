@@ -161,18 +161,31 @@ internal class LoggerTest {
 
   @Test
   fun `log builder functions do not get called if log level is disabled`() {
-    // We have configured logback-test.xml to disable loggers with this prefix
-    val disabledLogger = Logger(name = "com.example.disabled.Logger")
-
     val failingLogBuilder: LogBuilder.() -> String = {
       throw Exception("This function should not get called when log level is disabled")
     }
 
-    disabledLogger.info(failingLogBuilder)
-    disabledLogger.warn(failingLogBuilder)
-    disabledLogger.error(failingLogBuilder)
-    disabledLogger.debug(failingLogBuilder)
-    disabledLogger.trace(failingLogBuilder)
+    try {
+      // Incrementally disable log levels, and verify that the log builder does not get called for
+      // disabled levels
+      logbackLogger.level = LogbackLevel.DEBUG
+      log.trace(failingLogBuilder)
+
+      logbackLogger.level = LogbackLevel.INFO
+      log.debug(failingLogBuilder)
+
+      logbackLogger.level = LogbackLevel.WARN
+      log.info(failingLogBuilder)
+
+      logbackLogger.level = LogbackLevel.ERROR
+      log.warn(failingLogBuilder)
+
+      logbackLogger.level = LogbackLevel.OFF
+      log.error(failingLogBuilder)
+    } finally {
+      // Reset logger level, so this test doesn't affect other tests
+      logbackLogger.level = LogbackLevel.TRACE
+    }
   }
 
   @Test

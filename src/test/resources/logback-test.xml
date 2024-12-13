@@ -7,9 +7,6 @@
     </encoder>
   </appender>
 
-  <!-- For testing that lazy logs are disabled -->
-  <logger name="com.example.disabled" level="OFF"/>
-
   <root level="INFO">
     <appender-ref ref="STDOUT"/>
   </root>
