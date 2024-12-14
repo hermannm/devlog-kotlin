@@ -39,6 +39,12 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
  * { "message": "Started processing event", "event": { /* ... */  } }
  * { "message": "Finished processing event", "event": { /* ... */  } }
  * ```
+ *
+ * ### Note on coroutines
+ *
+ * Since `withLoggingContext` uses a thread-local, it won't work with Kotlin coroutines and
+ * `suspend` functions (though it does work with Java virtual threads). An alternative that supports
+ * coroutines may be added in a future version of the library.
  */
 inline fun <ReturnT> withLoggingContext(
     vararg logMarkers: LogMarker,

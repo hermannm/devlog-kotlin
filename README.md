@@ -85,6 +85,10 @@ fun processEvent(event: Event) {
 { "message": "Finished processing event", "event": { /* ... */ } }
 ```
 
+Note that `withLoggingContext` uses a thread-local to provide markers to the scope, so it won't work
+with Kotlin coroutines and `suspend` functions (though it does work with Java virtual threads). An
+alternative that supports coroutines may be added in a future version of the library.
+
 Finally, you can attach a `cause` exception to logs:
 
 ```kotlin
