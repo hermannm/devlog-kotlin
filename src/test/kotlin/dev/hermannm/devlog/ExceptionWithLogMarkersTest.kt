@@ -25,9 +25,7 @@ class ExceptionWithLogMarkersTest {
   @Test
   fun `exception markers are placed between context and log event markers`() {
     val markers = captureLogMarkers {
-      withLoggingContext(
-          marker("contextMarker", "value"),
-      ) {
+      withLoggingContext(marker("contextMarker", "value")) {
         log.error {
           cause = exceptionWithLogMarker(marker("exceptionMarker", "value"))
           addMarker("logEventMarker", "value")
@@ -140,9 +138,7 @@ class ExceptionWithLogMarkersTest {
   @Test
   fun `exception marker overrides duplicate context marker`() {
     val markers = captureLogMarkers {
-      withLoggingContext(
-          marker("duplicateKey", "from context"),
-      ) {
+      withLoggingContext(marker("duplicateKey", "from context")) {
         log.error {
           cause = exceptionWithLogMarker(marker("duplicateKey", "from exception"))
           "Test"

@@ -36,8 +36,8 @@ fun example() {
 }
 ```
 
-You can also add "log markers" (structured key-value data) to your logs. The `addMarker` method
-uses `kotlinx.serialization` to serialize the value.
+You can also add _log markers_ (structured key-value data) to your logs. The `addMarker` method uses
+`kotlinx.serialization` to serialize the value.
 
 ```kotlin
 import kotlinx.serialization.Serializable
@@ -61,16 +61,14 @@ This will give the following log output (if outputting logs as JSON with
 { "message": "Registered new user", "user": { "id": 1, "name": "John Doe" } }
 ```
 
-You can also use `withLoggingContext` to add markers to all logs within a given scope:
+If you want to add markers to all logs within a scope, you can use `withLoggingContext`:
 
 ```kotlin
 import dev.hermannm.devlog.marker
 import dev.hermannm.devlog.withLoggingContext
 
 fun processEvent(event: Event) {
-  withLoggingContext(
-      marker("event", event),
-  ) {
+  withLoggingContext(marker("event", event)) {
     log.debug { "Started processing event" }
     // ...
     log.debug { "Finished processing event" }

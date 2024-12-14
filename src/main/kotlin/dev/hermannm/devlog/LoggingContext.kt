@@ -24,9 +24,7 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
  * private val log = Logger {}
  *
  * fun example(event: Event) {
- *   withLoggingContext(
- *       marker("event", event),
- *   ) {
+ *   withLoggingContext(marker("event", event)) {
  *     log.debug { "Started processing event" }
  *     // ...
  *     log.debug { "Finished processing event" }

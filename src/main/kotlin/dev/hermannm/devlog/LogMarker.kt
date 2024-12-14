@@ -176,9 +176,7 @@ internal inline fun <reified ValueT> createLogstashMarker(
  * fun example() {
  *   val userJson = """{"id":1,"name":"John Doe"}"""
  *
- *   withLoggingContext(
- *       rawJsonMarker("user", userJson),
- *   ) {
+ *   withLoggingContext(rawJsonMarker("user", userJson)) {
  *     log.debug { "Started processing user" }
  *     // ...
  *     log.debug { "User processing ended" }
