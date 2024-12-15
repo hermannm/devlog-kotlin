@@ -44,6 +44,21 @@ class LoggingContextTest {
   }
 
   @Test
+  fun `rawJsonMarker works with logging context`() {
+    val userJson = """{"id":1,"name":"John Doe"}"""
+
+    val markers = captureLogMarkers {
+      withLoggingContext(rawJsonMarker("user", userJson)) { log.info { "Test" } }
+    }
+
+    markers shouldBe
+        """
+          "user":${userJson}
+        """
+            .trimIndent()
+  }
+
+  @Test
   fun `logging context does not apply to logs outside scope`() {
     withLoggingContext(
         marker("key", "value"),
