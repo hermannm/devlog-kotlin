@@ -152,11 +152,11 @@ internal constructor(
 
   @PublishedApi
   internal fun markerKeyAdded(key: String): Boolean {
-    // We know this cast is safe, since we only ever add markers of type SingleFieldAppendingMarker
-    // (see createLogstashMarker and createRawJsonLogstashMarker)
-    @Suppress("UNCHECKED_CAST")
-    val markers = (logEvent.markerList as List<SingleFieldAppendingMarker>?) ?: emptyList()
+    /** [LogbackEvent.markerList] can be null if no markers have been added yet. */
+    val markers = logEvent.markerList ?: return false
 
-    return markers.any { existingMarker -> existingMarker.fieldName == key }
+    return markers.any { existingMarker ->
+      existingMarker is SingleFieldAppendingMarker && existingMarker.fieldName == key
+    }
   }
 }
