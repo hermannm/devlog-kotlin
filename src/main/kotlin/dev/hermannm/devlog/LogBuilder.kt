@@ -11,7 +11,10 @@ value class LogBuilder
 internal constructor(
     @PublishedApi internal val logEvent: LogbackEvent,
 ) {
-  /** Set this if the log was caused by an exception. */
+  /**
+   * Set this if the log was caused by an exception, to include the exception message and stack
+   * trace in the log.
+   */
   var cause: Throwable?
     set(value) = logEvent.setThrowableProxy(ThrowableProxy(value))
     get() = (logEvent.throwableProxy as? ThrowableProxy)?.throwable
@@ -101,6 +104,19 @@ internal constructor(
   fun addRawJsonMarker(key: String, json: String, validJson: Boolean = false) {
     if (!markerKeyAdded(key)) {
       logEvent.addMarker(createRawJsonLogstashMarker(key, json, validJson))
+    }
+  }
+
+  /**
+   * Adds the given [log marker][LogMarker] to the log. This is useful when you have a previously
+   * constructed log marker, from the [marker]/[rawJsonMarker] functions.
+   * - If you want to create a new marker and add it to the log, you should instead call [addMarker]
+   * - If you want to add the marker to all logs within a scope, you should instead use
+   *   [withLoggingContext]
+   */
+  fun addExistingMarker(marker: LogMarker) {
+    if (!markerKeyAdded(marker.logstashMarker.fieldName)) {
+      logEvent.addMarker(marker.logstashMarker)
     }
   }
 

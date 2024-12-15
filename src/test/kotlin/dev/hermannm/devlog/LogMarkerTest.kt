@@ -243,4 +243,22 @@ class LogMarkerTest {
         """
             .trimIndent()
   }
+
+  @Test
+  fun `addExistingMarker allows adding a previously constructed marker to the log`() {
+    val existingLogMarker = marker("key", "value")
+
+    val markers = captureLogMarkers {
+      log.info {
+        addExistingMarker(existingLogMarker)
+        "Test"
+      }
+    }
+
+    markers shouldBe
+        """
+          "key":"value"
+        """
+            .trimIndent()
+  }
 }
