@@ -112,9 +112,6 @@ inline fun <reified ValueT> marker(
 /**
  * Implementation for [marker], but without wrapping the return type in the [LogMarker] class - we
  * use this in [LogBuilder.addMarker], where we don't need the wrapper.
- *
- * [LogBuilder] assumes that all our marker functions return [SingleFieldAppendingMarker], so if you
- * change the return type here, you may also have to change [LogBuilder.getMarkers].
  */
 @PublishedApi
 internal inline fun <reified ValueT> createLogstashMarker(
@@ -197,9 +194,6 @@ fun rawJsonMarker(key: String, json: String, validJson: Boolean = false): LogMar
 /**
  * Implementation for [rawJsonMarker], but without wrapping the return type in the [LogMarker] class
  * - we use this in [LogBuilder.addRawJsonMarker], where we don't need the wrapper.
- *
- * [LogBuilder] assumes that all our marker functions return [SingleFieldAppendingMarker], so if you
- * change the return type here, you may also have to change [LogBuilder.getMarkers].
  */
 internal fun createRawJsonLogstashMarker(
     key: String,
