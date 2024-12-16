@@ -26,8 +26,8 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
  * example below). This serializes the value using `kotlinx.serialization`. Alternatively, if you
  * have a value that is already serialized, you can instead call [LogBuilder.addRawJsonMarker].
  *
- * If you instead want to attach a marker to all logs within a scope, you can use
- * [withLoggingContext] and pass markers to it with the [marker]/[rawJsonMarker] functions.
+ * If you want to attach a marker to all logs within a scope, you can use [withLoggingContext] and
+ * pass markers to it with the [marker]/[rawJsonMarker] functions.
  *
  * Finally, you can implement the [WithLogMarkers] interface or use [ExceptionWithLogMarkers] to
  * attach markers to an exception when it's logged.
