@@ -53,7 +53,7 @@ internal constructor(
    * }
    * ```
    *
-   * ### Note on file locations
+   * ### Note on line numbers
    *
    * If you include file location information in your log encoder (such as enabling
    * `includeCallerData` in `logstash-logback-encoder`), then the log will show an incorrect line
@@ -89,7 +89,7 @@ internal constructor(
    * }
    * ```
    *
-   * ### Note on file locations
+   * ### Note on line numbers
    *
    * If you include file location information in your log encoder (such as enabling
    * `includeCallerData` in `logstash-logback-encoder`), then the log will show an incorrect line
@@ -125,7 +125,7 @@ internal constructor(
    * }
    * ```
    *
-   * ### Note on file locations
+   * ### Note on line numbers
    *
    * If you include file location information in your log encoder (such as enabling
    * `includeCallerData` in `logstash-logback-encoder`), then the log will show an incorrect line
@@ -156,7 +156,7 @@ internal constructor(
    * }
    * ```
    *
-   * ### Note on file locations
+   * ### Note on line numbers
    *
    * If you include file location information in your log encoder (such as enabling
    * `includeCallerData` in `logstash-logback-encoder`), then the log will show an incorrect line
@@ -187,7 +187,7 @@ internal constructor(
    * }
    * ```
    *
-   * ### Note on file locations
+   * ### Note on line numbers
    *
    * If you include file location information in your log encoder (such as enabling
    * `includeCallerData` in `logstash-logback-encoder`), then the log will show an incorrect line
@@ -226,7 +226,7 @@ internal constructor(
    * }
    * ```
    *
-   * ### Note on file locations
+   * ### Note on line numbers
    *
    * If you include file location information in your log encoder (such as enabling
    * `includeCallerData` in `logstash-logback-encoder`), then the log will show an incorrect line
