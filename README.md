@@ -3,6 +3,8 @@
 Logging library for Kotlin JVM, that thinly wraps SLF4J and Logback to provide a more ergonomic API,
 and to use `kotlinx.serialization` for log marker serialization instead of Jackson.
 
+Published on Maven Central: https://central.sonatype.com/artifact/dev.hermannm/devlog-kotlin
+
 **Contents:**
 
 - [Usage](#usage)
