@@ -62,7 +62,12 @@
     <!-- Maven plugins -->
     <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
     <ktfmt.version>0.43</ktfmt.version>
+    <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
     <maven-enforcer.version>3.4.1</maven-enforcer.version>
+    <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
+    <dokka-maven-plugin.version>1.9.20</dokka-maven-plugin.version>
+    <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
+    <central-publishing-maven-plugin.version>0.6.0</central-publishing-maven-plugin.version>
   </properties>
 
   <dependencyManagement>
@@ -129,6 +134,7 @@
     <testSourceDirectory>src/test/kotlin</testSourceDirectory>
 
     <plugins>
+      <!-- Kotlin compilation and kotlinx.serialization codegen -->
       <plugin>
         <groupId>org.jetbrains.kotlin</groupId>
         <artifactId>kotlin-maven-plugin</artifactId>
@@ -162,6 +168,13 @@
             <phase>test-compile</phase>
           </execution>
         </executions>
+      </plugin>
+
+      <!-- Testing -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven-surefire-plugin.version}</version>
       </plugin>
 
       <!-- Formatting with ktfmt -->
@@ -209,6 +222,68 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+
+      <!-- Generates source file JARs, required for publishing to Maven Central -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>${maven-source-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Generates Javadoc JAR, required for publishing to Maven Central -->
+      <plugin>
+        <groupId>org.jetbrains.dokka</groupId>
+        <artifactId>dokka-maven-plugin</artifactId>
+        <version>${dokka-maven-plugin.version}</version>
+        <executions>
+          <execution>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>javadocJar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Signs built artifacts with GPG, required for publishing to Maven Central -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>${maven-gpg-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+            <configuration>
+              <bestPractices>true</bestPractices>
+              <keyname>${gpg.keyname}</keyname>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Publishes to Maven Central -->
+      <plugin>
+        <groupId>org.sonatype.central</groupId>
+        <artifactId>central-publishing-maven-plugin</artifactId>
+        <version>${central-publishing-maven-plugin.version}</version>
+        <extensions>true</extensions>
+        <configuration>
+          <publishingServerId>central</publishingServerId>
+          <deploymentName>${artifactId} v${version}</deploymentName>
+        </configuration>
       </plugin>
     </plugins>
   </build>
