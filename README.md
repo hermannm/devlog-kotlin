@@ -101,7 +101,7 @@ An alternative that supports coroutines may be added in a future version of the 
 Finally, you can attach a `cause` exception to logs:
 
 ```kotlin
-fun example( {
+fun example() {
   try {
     callExternalService()
   } catch (e: Exception) {
