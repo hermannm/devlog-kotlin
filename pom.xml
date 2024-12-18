@@ -282,7 +282,7 @@
         <extensions>true</extensions>
         <configuration>
           <publishingServerId>central</publishingServerId>
-          <deploymentName>${artifactId} v${version}</deploymentName>
+          <deploymentName>${project.artifactId} v${project.version}</deploymentName>
         </configuration>
       </plugin>
     </plugins>
