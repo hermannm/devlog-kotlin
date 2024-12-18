@@ -136,12 +136,13 @@ See the [Usage docs](https://github.com/logfellow/logstash-logback-encoder#usage
 
 ## Implementation
 
-All the methods on `Logger` are `inline`, and don't do anything if the log level is disabled - so
-you only pay for log field serialization and message concatenation if it's actually logged. Inlining
-the logger methods avoids having to allocate a function object for the lambda argument.
-
-Elsewhere in the library, we use inline value classes when wrapping Logback APIs, to get as close as
-possible to a zero-cost abstraction.
+- All the methods on `Logger` take a lambda argument to build the log, which is only called if the
+  log level is enabled - so you only pay for log field serialization and message concatenation if
+  it's actually logged.
+- `Logger`'s methods are also `inline`, so we avoid the cost of allocating a function object for the
+  lambda argument.
+- Elsewhere in the library, we use inline value classes when wrapping Logback APIs, to get as close
+  as possible to a zero-cost abstraction.
 
 ## Credits
 
