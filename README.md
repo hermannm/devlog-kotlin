@@ -37,7 +37,7 @@ fun example() {
 }
 ```
 
-You can also add _log fields_ (structured key-value data) to your logs. The `addField` method uses
+You can also add _fields_ (structured key-value data) to your logs. The `addField` method uses
 `kotlinx.serialization` to serialize the value.
 
 ```kotlin

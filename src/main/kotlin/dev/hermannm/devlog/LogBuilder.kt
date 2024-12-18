@@ -45,6 +45,10 @@ internal constructor(
   /**
    * Adds a [log field][LogField] (structured key-value data) to the log.
    *
+   * When outputting logs as JSON, this becomes a field in the logged JSON object (see example
+   * below). This allows you to filter and query on the field in the log analysis tool of your
+   * choice, in a more structured manner than if you were to just use string concatenation.
+   *
    * The value is serialized using `kotlinx.serialization`, so if you pass an object here, you
    * should make sure it is annotated with [@Serializable][kotlinx.serialization.Serializable].
    * Alternatively, you can pass your own serializer for the value. If serialization fails, we fall
@@ -97,6 +101,10 @@ internal constructor(
   /**
    * Adds a [log field][LogField] (structured key-value data) to the log, with the given
    * pre-serialized JSON value.
+   *
+   * When outputting logs as JSON, this becomes a field in the logged JSON object (see example
+   * below). This allows you to filter and query on the field in the log analysis tool of your
+   * choice, in a more structured manner than if you were to just use string concatenation.
    *
    * By default, this function checks that the given JSON string is actually valid JSON. The reason
    * for this is that giving raw JSON to our log encoder when it is not in fact valid JSON can break
