@@ -252,6 +252,15 @@
             </goals>
           </execution>
         </executions>
+        <configuration>
+          <sourceLinks>
+            <link>
+              <path>src</path>
+              <url>https://github.com/hermannm/devlog-kotlin/tree/main/src</url>
+              <lineSuffix>#L</lineSuffix>
+            </link>
+          </sourceLinks>
+        </configuration>
       </plugin>
 
       <!-- Signs built artifacts with GPG, required for publishing to Maven Central -->
