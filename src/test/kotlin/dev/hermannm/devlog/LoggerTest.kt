@@ -253,10 +253,7 @@ internal class LoggerTest {
     logEvent.markerList shouldHaveSize 1
     val logstashField = logEvent.markerList.first().shouldBeInstanceOf<ObjectAppendingMarker>()
     logstashField.fieldName shouldBe fieldKey
-
-    val fakeJsonGenerator = FakeJsonGenerator()
-    logstashField.writeTo(fakeJsonGenerator)
-    fakeJsonGenerator.obj shouldBe fieldValue
+    logstashField shouldBe ObjectAppendingMarker(fieldKey, fieldValue)
   }
 
   private val loggerConstructedInsideClass = Logger {}
