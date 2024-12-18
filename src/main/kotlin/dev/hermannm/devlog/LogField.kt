@@ -67,6 +67,23 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
 class LogField
 @PublishedApi
 internal constructor(
+    /**
+     * We use a "marker" for the field here instead of [KeyValuePair][org.slf4j.event.KeyValuePair],
+     * as this allows us to use [RawJsonAppendingMarker] to pass pre-serialized JSON to
+     * `logstash-logback-encoder`. We want this for 2 reasons:
+     * 1. To use `kotlinx.serialization` field value serialization, instead of Jackson.
+     *     - When we use `kotlinx.serialization` generally in our application, some of our objects
+     *       may be serializable with `kotlinx` but fail to serialize with Jackson. Since we
+     *       typically don't test Jackson serialization when we use `kotlinx`, such serialization
+     *       failures are often not discovered before the system is deployed.
+     *     - By default, when `logstash-logback-encoder` fails to serialize a log field value with
+     *       Jackson, it _drops the entire log_ (!). This can make it difficult to reason about what
+     *       happened to a system in production, as a log being dropped may lead you to believe that
+     *       a given code path was not executed.
+     *     - To avoid this issue, we always fall back to `toString()` if we fail to serialize a log
+     *       field value, and never drop logs.
+     * 2. To support adding fields with raw JSON ([rawJsonField]/[LogBuilder.addRawJsonField]).
+     */
     @PublishedApi internal val logstashField: SingleFieldAppendingMarker,
 ) {
   // We don't expose this publically, as we don't necessarily want to bind ourselves to this API
