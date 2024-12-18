@@ -18,9 +18,9 @@ import java.math.BigInteger
 
 /**
  * Since we have configured Logback in resources/logback-test.xml to use the Logstash JSON encoder,
- * we can verify in our tests that markers have the expected JSON output.
+ * we can verify in our tests that user-provided log fields have the expected JSON output.
  */
-internal fun captureLogMarkers(block: () -> Unit): String {
+internal fun captureLogFields(block: () -> Unit): String {
   val originalStdout = System.out
 
   // We redirect System.out to our own output stream, so we can capture the log output
@@ -34,32 +34,36 @@ internal fun captureLogMarkers(block: () -> Unit): String {
   }
 
   val logOutput = outputStream.toString("UTF-8")
-  // We expect each call to captureLogMarkers to capture just a single log line, so it should only
+  // We expect each call to captureLogFields to capture just a single log line, so it should only
   // contain 1 newline. If we get more, that is likely an error and should fail our tests.
   logOutput shouldContainOnlyOnce "\n"
 
-  var markerStartIndex: Int? = null
+  var fieldsStartIndex: Int? = null
 
-  // The last log event field before markers is either "level_value" or "stack_trace". We want our
-  // tests to assert on the contents of all markers, so we strip away the non-marker fields here.
+  // The last standard log field before user-provided fields is either "level_value" or
+  // "stack_trace" (depending on whether a cause exception was attached). We want our tests to
+  // assert on the contents of all user-provided fields, so we strip away the standard fields here.
   val indexOfStackTrace = logOutput.indexOf("\"stack_trace\"")
   if (indexOfStackTrace != -1) {
-    markerStartIndex = indexAfterJsonStringField(logOutput, startIndex = indexOfStackTrace)
+    fieldsStartIndex = indexAfterJsonStringField(logOutput, startIndex = indexOfStackTrace)
   }
-  if (markerStartIndex == null) {
+  if (fieldsStartIndex == null) {
     val indexOfLevelValue = logOutput.indexOf("\"level_value\"") shouldNotBe -1 // -1 = not found
-    markerStartIndex = indexAfterJsonNumberField(logOutput, startIndex = indexOfLevelValue)
+    fieldsStartIndex = indexAfterJsonNumberField(logOutput, startIndex = indexOfLevelValue)
   }
 
-  markerStartIndex.shouldNotBeNull() shouldNotBe -1
+  fieldsStartIndex.shouldNotBeNull() shouldNotBe -1
 
-  // After markers come caller info fields, since includeCallerData=true in logback-test.xml
-  val markerEndIndex = logOutput.indexOf("\"caller_class_name\"") shouldNotBe -1
+  // Since we set includeCallerData=true in logback-test.xml, caller info fields are included at the
+  // end of the log - we strip away these as well, since we again only want to test user-provided
+  // fields
+  val fieldsEndIndex = logOutput.indexOf("\"caller_class_name\"") shouldNotBe -1
 
-  // Omit comma before and after markers
-  val start = markerStartIndex + 1
-  val end = markerEndIndex - 1
-  // If there are no markers (which we want to test sometimes), start will be greater than end
+  // Omit comma before and after fields
+  val start = fieldsStartIndex + 1
+  val end = fieldsEndIndex - 1
+  // If there are no user-provided fields (which we want to test sometimes), start will be greater
+  // than end
   if (start > end) {
     return ""
   }

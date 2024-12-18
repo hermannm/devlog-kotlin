@@ -14,23 +14,23 @@ import net.logstash.logback.marker.RawJsonAppendingMarker
 import net.logstash.logback.marker.SingleFieldAppendingMarker
 
 /**
- * A log marker is a key-value pair to add structured context to a log event.
+ * A log field is a key-value pair for adding structured data to logs.
  *
- * If you output logs as JSON (using
- * [logstash-logback-encoder](https://github.com/logfellow/logstash-logback-encoder)), each marker
- * will be its own field in the resulting JSON. This allows you to filter and query on these fields
- * in the log analysis tool of your choice, in a more structured manner than if you were to just use
- * string concatenation.
+ * When outputting logs as JSON (using
+ * [logstash-logback-encoder](https://github.com/logfellow/logstash-logback-encoder)), this becomes
+ * a field in the logged JSON object. That allows you to filter and query on the field in the log
+ * analysis tool of your choice, in a more structured manner than if you were to just use string
+ * concatenation.
  *
- * You can add a marker to a log by calling [LogBuilder.addMarker] on one of [Logger]'s methods (see
+ * You can add a field to a log by calling [LogBuilder.addField] on one of [Logger]'s methods (see
  * example below). This serializes the value using `kotlinx.serialization`. Alternatively, if you
- * have a value that is already serialized, you can instead call [LogBuilder.addRawJsonMarker].
+ * have a value that is already serialized, you can instead call [LogBuilder.addRawJsonField].
  *
- * If you want to attach a marker to all logs within a scope, you can use [withLoggingContext] and
- * pass markers to it with the [marker]/[rawJsonMarker] functions.
+ * If you want to attach fields to all logs within a scope, you can use [withLoggingContext] and
+ * pass fields to it with the [field]/[rawJsonField] functions.
  *
- * Finally, you can implement the [WithLogMarkers] interface or use [ExceptionWithLogMarkers] to
- * attach markers to an exception when it's logged.
+ * Finally, you can implement the [WithLogFields] interface or use [ExceptionWithLogFields] to
+ * attach fields to an exception when it's logged.
  *
  * ### Example
  *
@@ -44,7 +44,7 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
  *   val user = User(id = 1, name = "John Doe")
  *
  *   log.info {
- *     addMarker("user", user)
+ *     addField("user", user)
  *     "Registered new user"
  *   }
  * }
@@ -52,7 +52,7 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
  * @Serializable data class User(val id: Long, val name: String)
  * ```
  *
- * This gives the following output using `logstash-logback-encoder`:
+ * This gives the following output (using `logstash-logback-encoder`):
  * ```json
  * {
  *   "message": "Registered new user",
@@ -64,34 +64,38 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
  * }
  * ```
  */
-class LogMarker
+class LogField
 @PublishedApi
 internal constructor(
-    @PublishedApi internal val logstashMarker: SingleFieldAppendingMarker,
+    @PublishedApi internal val logstashField: SingleFieldAppendingMarker,
 ) {
+  // We don't expose this publically, as we don't necessarily want to bind ourselves to this API
+  internal val key: String
+    get() = logstashField.fieldName
+
   // We override toString, equals and hashCode manually here instead of using a data class, since we
   // don't want the data class copy/componentN methods to be part of our API.
-  override fun toString() = logstashMarker.toString()
+  override fun toString() = logstashField.toString()
 
-  override fun equals(other: Any?) =
-      other is LogMarker && other.logstashMarker == this.logstashMarker
+  override fun equals(other: Any?) = other is LogField && other.logstashField == this.logstashField
 
-  override fun hashCode() = logstashMarker.hashCode()
+  override fun hashCode() = logstashField.hashCode()
 }
 
 /**
- * Constructs a [LogMarker], a key-value pair to add structured context to logs.
+ * Constructs a [LogField], a key-value pair for adding structured data to logs.
  *
- * This function is made to be used with [withLoggingContext], to add markers to all logs within a
- * scope. If you just want to add a marker to a single log, you should instead call
- * [LogBuilder.addMarker] on one of [Logger]'s methods (see example on [LogMarker]).
+ * This function is made to be used with [withLoggingContext], to add fields to all logs within a
+ * scope. If you just want to add a field to a single log, you should instead call
+ * [LogBuilder.addField] on one of [Logger]'s methods (see example on
+ * [addField][LogBuilder.addField]).
  *
  * The value is serialized using `kotlinx.serialization`, so if you pass an object here, it should
  * be annotated with [@Serializable][kotlinx.serialization.Serializable]. Alternatively, you can
  * pass your own [serializer] for the value. If serialization fails, we fall back to calling
  * `toString()` on the value.
  *
- * If you have a value that is already serialized, you should use [rawJsonMarker] instead.
+ * If you have a value that is already serialized, you should use [rawJsonField] instead.
  *
  * Certain types that `kotlinx.serialization` doesn't support natively have special-case handling
  * here, using their `toString()` representation instead:
@@ -101,27 +105,27 @@ internal constructor(
  * - [java.net.URL]
  * - [java.math.BigDecimal]
  */
-inline fun <reified ValueT> marker(
+inline fun <reified ValueT> field(
     key: String,
     value: ValueT,
     serializer: SerializationStrategy<ValueT>? = null
-): LogMarker {
-  return LogMarker(createLogstashMarker(key, value, serializer))
+): LogField {
+  return LogField(createLogstashField(key, value, serializer))
 }
 
 /**
- * Implementation for [marker], but without wrapping the return type in the [LogMarker] class - we
- * use this in [LogBuilder.addMarker], where we don't need the wrapper.
+ * Implementation for [field], but without wrapping the return type in the [LogField] class. We use
+ * this in [LogBuilder.addField], where we don't need the wrapper.
  */
 @PublishedApi
-internal inline fun <reified ValueT> createLogstashMarker(
+internal inline fun <reified ValueT> createLogstashField(
     key: String,
     value: ValueT,
     serializer: SerializationStrategy<ValueT>?
 ): SingleFieldAppendingMarker {
   try {
     if (serializer != null) {
-      val serializedValue = logMarkerJson.encodeToString(serializer, value)
+      val serializedValue = logFieldJson.encodeToString(serializer, value)
       return RawJsonAppendingMarker(key, serializedValue)
     }
 
@@ -129,43 +133,44 @@ internal inline fun <reified ValueT> createLogstashMarker(
       // Special case for String to avoid redundant serialization
       String::class -> ObjectAppendingMarker(key, value)
       // Special cases for common types that kotlinx.serialization doesn't handle by default.
-      // If more cases are added here, you should add them to the list in the docstring for `marker`
+      // If more cases are added here, you should add them to the list in the docstring for `field`.
       Instant::class,
       UUID::class,
       URI::class,
       URL::class,
       BigDecimal::class -> ObjectAppendingMarker(key, value.toString())
       else -> {
-        val serializedValue = logMarkerJson.encodeToString(value)
+        val serializedValue = logFieldJson.encodeToString(value)
         RawJsonAppendingMarker(key, serializedValue)
       }
     }
   } catch (_: Exception) {
-    // We don't want to ever throw an exception from constructing a marker, which may happen if
+    // We don't want to ever throw an exception from constructing a log field, which may happen if
     // serialization fails, for example. So in these cases we fall back to toString().
     return ObjectAppendingMarker(key, value.toString())
   }
 }
 
 /**
- * Constructs a [LogMarker], a key-value pair to add structured context to logs, with the given
+ * Constructs a [LogField], a key-value pair for adding structured data to logs, with the given
  * pre-serialized JSON value.
  *
- * This function is made to be used with [withLoggingContext], to add markers to all logs within a
- * scope. If you just want to add a marker to a single log, you should instead call
- * [LogBuilder.addRawJsonMarker] on one of [Logger]'s methods (see example on
- * [addRawJsonMarker][LogBuilder.addRawJsonMarker]).
+ * This function is made to be used with [withLoggingContext], to add fields to all logs within a
+ * scope. If you just want to add a field to a single log, you should instead call
+ * [LogBuilder.addRawJsonField] on one of [Logger]'s methods (see example on
+ * [addRawJsonField][LogBuilder.addRawJsonField]).
  *
  * By default, this function checks that the given JSON string is actually valid JSON. The reason
  * for this is that giving raw JSON to our log encoder when it is not in fact valid JSON can break
  * our logs. So if the given JSON string is not valid JSON, we escape it as a string. If you are
- * 100% sure that the given JSON string is valid, you can set [validJson] to true.
+ * 100% sure that the given JSON string is valid and you want to skip this check, you can set
+ * [validJson] to true.
  *
  * ### Example
  *
  * ```
  * import dev.hermannm.devlog.Logger
- * import dev.hermannm.devlog.rawJsonMarker
+ * import dev.hermannm.devlog.rawJsonField
  * import dev.hermannm.devlog.withLoggingContext
  *
  * private val log = Logger {}
@@ -173,7 +178,7 @@ internal inline fun <reified ValueT> createLogstashMarker(
  * fun example() {
  *   val userJson = """{"id":1,"name":"John Doe"}"""
  *
- *   withLoggingContext(rawJsonMarker("user", userJson)) {
+ *   withLoggingContext(rawJsonField("user", userJson)) {
  *     log.debug { "Started processing user" }
  *     // ...
  *     log.debug { "User processing ended" }
@@ -181,21 +186,21 @@ internal inline fun <reified ValueT> createLogstashMarker(
  * }
  * ```
  *
- * This gives the following output using `logstash-logback-encoder`:
+ * This gives the following output (using `logstash-logback-encoder`):
  * ```json
  * {"message":"Started processing user","user":{"id":1,"name":"John Doe"},/* ...timestamp etc. */}
  * {"message":"User processing ended","user":{"id":1,"name":"John Doe"},/* ...timestamp etc. */}
  * ```
  */
-fun rawJsonMarker(key: String, json: String, validJson: Boolean = false): LogMarker {
-  return LogMarker(createRawJsonLogstashMarker(key, json, validJson))
+fun rawJsonField(key: String, json: String, validJson: Boolean = false): LogField {
+  return LogField(createRawJsonLogstashField(key, json, validJson))
 }
 
 /**
- * Implementation for [rawJsonMarker], but without wrapping the return type in the [LogMarker] class
- * - we use this in [LogBuilder.addRawJsonMarker], where we don't need the wrapper.
+ * Implementation for [rawJsonField], but without wrapping the return type in the [LogField] class.
+ * We use this in [LogBuilder.addRawJsonField], where we don't need the wrapper.
  */
-internal fun createRawJsonLogstashMarker(
+internal fun createRawJsonLogstashField(
     key: String,
     json: String,
     validJson: Boolean
@@ -211,7 +216,7 @@ internal fun createRawJsonLogstashMarker(
     }
 
     // If we do not assume that the JSON is valid, we must try to decode it.
-    val decoded = logMarkerJson.parseToJsonElement(json)
+    val decoded = logFieldJson.parseToJsonElement(json)
 
     // If we successfully decoded the JSON, and it does not contain unescaped newlines, we can
     // return it as-is.
@@ -220,7 +225,7 @@ internal fun createRawJsonLogstashMarker(
     }
 
     // If the JSON did contain unescaped newlines, then we need to re-encode to escape them.
-    val encoded = logMarkerJson.encodeToString(JsonElement.serializer(), decoded)
+    val encoded = logFieldJson.encodeToString(JsonElement.serializer(), decoded)
     return RawJsonAppendingMarker(key, encoded)
   } catch (_: Exception) {
     // If we failed to decode/re-encode the JSON string, we return it as a non-JSON string.
@@ -228,4 +233,4 @@ internal fun createRawJsonLogstashMarker(
   }
 }
 
-@PublishedApi internal val logMarkerJson = Json { encodeDefaults = true }
+@PublishedApi internal val logFieldJson = Json { encodeDefaults = true }
