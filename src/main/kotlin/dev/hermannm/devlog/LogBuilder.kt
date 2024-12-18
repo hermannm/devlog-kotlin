@@ -146,11 +146,8 @@ internal constructor(
 
   /** Adds log fields from [withLoggingContext]. */
   internal fun addFieldsFromContext() {
-    // loggingContext will be null if withLoggingContext has not been called in this thread
-    val contextFields = loggingContext.get() ?: return
-
     // Add context fields in reverse, so newest field shows first
-    contextFields.forEachReversed { logstashField ->
+    getLogFieldsFromContext().forEachReversed { logstashField ->
       // Don't add fields with keys that have already been added
       if (!keyAdded(logstashField.fieldName)) {
         logEvent.addMarker(logstashField)

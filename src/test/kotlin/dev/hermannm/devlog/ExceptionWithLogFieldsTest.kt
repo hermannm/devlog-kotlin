@@ -23,12 +23,15 @@ class ExceptionWithLogFieldsTest {
   }
 
   @Test
-  fun `exception log fields are placed between context and log event fields`() {
+  fun `ExceptionWithLogFields includes fields from logging context`() {
     val logFields = captureLogFields {
-      withLoggingContext(field("contextField", "value")) {
+      try {
+        withLoggingContext(field("contextField1", "value"), field("contextField2", "value")) {
+          throw exceptionWithLogField(field("exceptionField", "value"))
+        }
+      } catch (e: Exception) {
         log.error {
-          cause = exceptionWithLogField(field("exceptionField", "value"))
-          addField("logEventField", "value")
+          cause = e
           "Test"
         }
       }
@@ -36,7 +39,34 @@ class ExceptionWithLogFieldsTest {
 
     logFields shouldBe
         """
-          "logEventField":"value","exceptionField":"value","contextField":"value"
+          "exceptionField":"value","contextField1":"value","contextField2":"value"
+        """
+            .trimIndent()
+  }
+
+  /**
+   * The first test above verifies that logging context fields are included when the exception is
+   * caught outside the context. We want to verify that this still works when the exception is
+   * caught inside the context, and that this doesn't duplicate the fields from the context.
+   */
+  @Test
+  fun `ExceptionWithLogFields still includes fields from logging context when caught within that context`() {
+    val logFields = captureLogFields {
+      withLoggingContext(field("contextField", "value")) {
+        try {
+          throw exceptionWithLogField(field("exceptionField", "value"))
+        } catch (e: Exception) {
+          log.error {
+            cause = e
+            "Test"
+          }
+        }
+      }
+    }
+
+    logFields shouldBe
+        """
+          "exceptionField":"value","contextField":"value"
         """
             .trimIndent()
   }
@@ -82,6 +112,25 @@ class ExceptionWithLogFieldsTest {
     logFields shouldBe
         """
           "parentField1":"value","parentField2":"value","childField":"value"
+        """
+            .trimIndent()
+  }
+
+  @Test
+  fun `exception log fields are placed between context and log event fields`() {
+    val logFields = captureLogFields {
+      withLoggingContext(field("contextField", "value")) {
+        log.error {
+          cause = exceptionWithLogField(field("exceptionField", "value"))
+          addField("logEventField", "value")
+          "Test"
+        }
+      }
+    }
+
+    logFields shouldBe
+        """
+          "logEventField":"value","exceptionField":"value","contextField":"value"
         """
             .trimIndent()
   }

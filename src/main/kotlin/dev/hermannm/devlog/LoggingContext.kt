@@ -65,3 +65,8 @@ inline fun <ReturnT> withLoggingContext(vararg logFields: LogField, block: () ->
     }
   }
 }
+
+internal fun getLogFieldsFromContext(): List<SingleFieldAppendingMarker> {
+  // loggingContext list will be null if withLoggingContext has not been called in this thread
+  return loggingContext.get() ?: emptyList()
+}
