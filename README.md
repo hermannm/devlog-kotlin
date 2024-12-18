@@ -60,13 +60,14 @@ key/value given to `addField` is added to the logged JSON object (see below). Th
 filter and query on the field in the log analysis tool of your choice, in a more structured manner
 than if you were to just use string concatenation.
 
+<!-- prettier-ignore -->
 ```jsonc
 {
   "message": "Registered new user",
   "user": {
     "id": 1,
     "name": "John Doe"
-  }
+  },
   // ...timestamp etc.
 }
 ```
