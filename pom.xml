@@ -53,14 +53,14 @@
     <kotlinx-serialization.version>1.7.3</kotlinx-serialization.version>
 
     <!-- Testing -->
-    <junit.version>5.11.3</junit.version>
+    <junit.version>5.11.4</junit.version>
     <kotest.version>5.9.1</kotest.version>
 
     <!-- Maven plugins -->
     <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
     <ktfmt.version>0.43</ktfmt.version>
     <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
-    <maven-enforcer.version>3.5.0</maven-enforcer.version>
+    <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
     <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
     <dokka-maven-plugin.version>1.9.20</dokka-maven-plugin.version>
     <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
@@ -201,7 +201,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>${maven-enforcer.version}</version>
+        <version>${maven-enforcer-plugin.version}</version>
         <executions>
           <execution>
             <id>enforce</id>
