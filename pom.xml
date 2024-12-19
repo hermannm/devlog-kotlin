@@ -60,7 +60,7 @@
     <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
     <ktfmt.version>0.43</ktfmt.version>
     <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
-    <maven-enforcer.version>3.4.1</maven-enforcer.version>
+    <maven-enforcer.version>3.5.0</maven-enforcer.version>
     <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
     <dokka-maven-plugin.version>1.9.20</dokka-maven-plugin.version>
     <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
