@@ -15,3 +15,6 @@
 !.idea/kotlinc.xml
 !.idea/ktfmt.xml
 !.idea/vcs.xml
+
+# Exclude example test directory, which we use to create examples for docstrings
+/src/test/kotlin/dev/hermannm/devlog/example
