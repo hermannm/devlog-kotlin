@@ -162,7 +162,7 @@ internal constructor(
    * constructed field from the [field][dev.hermannm.devlog.field]/[rawJsonField] functions.
    * - If you want to create a new field and add it to the log, you should instead call [addField]
    * - If you want to add the field to all logs within a scope, you should instead use
-   *   [withLoggingContextInternal]
+   *   [withLoggingContext]
    */
   fun addPreconstructedField(field: LogField) {
     if (!keyAdded(field.key)) {
@@ -170,7 +170,7 @@ internal constructor(
     }
   }
 
-  /** Adds log fields from [withLoggingContextInternal]. */
+  /** Adds log fields from [withLoggingContext]. */
   internal fun addFieldsFromContext() {
     // Add context fields in reverse, so newest field shows first
     getLogFieldsFromContext().forEachReversed { logstashField ->

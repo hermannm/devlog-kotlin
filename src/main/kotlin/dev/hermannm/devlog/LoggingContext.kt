@@ -155,8 +155,8 @@ internal inline fun <ReturnT> withLoggingContextInternal(
 
 /**
  * Returns a copy of the log fields in the current thread's logging context (from
- * [withLoggingContextInternal]). This can be used to pass logging context between threads (see
- * example below).
+ * [withLoggingContext]). This can be used to pass logging context between threads (see example
+ * below).
  *
  * ### Example
  *
