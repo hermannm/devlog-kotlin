@@ -198,6 +198,14 @@ class LoggingContextTest {
   }
 
   @Test
+  fun `non-local return works in withLoggingContext`() {
+    withLoggingContext(field("key", "value")) {
+      // This won't compile if withLoggingContext isn't inline, and we want to verify that
+      return
+    }
+  }
+
+  @Test
   fun `getLoggingContext allows passing logging context between threads`() {
     val executor = Executors.newSingleThreadExecutor()
     val lock = ReentrantLock()
