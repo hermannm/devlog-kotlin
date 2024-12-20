@@ -1,10 +1,10 @@
 package dev.hermannm.devlog
 
+import ch.qos.logback.classic.Level as LogbackLevel
+import ch.qos.logback.classic.Logger as LogbackLogger
 import org.slf4j.Logger as Slf4jLogger
 import org.slf4j.LoggerFactory as Slf4jLoggerFactory
-import org.slf4j.event.DefaultLoggingEvent as Slf4jLogEvent
 import org.slf4j.event.Level as Slf4jLevel
-import org.slf4j.spi.LoggingEventAware
 
 /**
  * A logger provides methods for logging at various log levels ([info], [warn], [error], [debug] and
@@ -26,10 +26,10 @@ import org.slf4j.spi.LoggingEventAware
  * private val log = Logger(name = "com.example.Example")
  * ```
  */
-@JvmInline // Use inline value class, to avoid redundant indirection when we just wrap Logback
+@JvmInline // Use inline value class, to avoid redundant indirection when we just wrap SLF4J
 value class Logger
 internal constructor(
-    @PublishedApi internal val slf4jLogger: Slf4jLogger,
+    @PublishedApi internal val innerLogger: Slf4jLogger,
 ) {
   constructor(name: String) : this(Slf4jLoggerFactory.getLogger(name))
 
@@ -63,7 +63,7 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun info(buildLog: LogBuilder.() -> String) {
-    if (slf4jLogger.isInfoEnabled) {
+    if (innerLogger.isInfoEnabled) {
       log(LogLevel.INFO, buildLog)
     }
   }
@@ -101,7 +101,7 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun warn(buildLog: LogBuilder.() -> String) {
-    if (slf4jLogger.isWarnEnabled) {
+    if (innerLogger.isWarnEnabled) {
       log(LogLevel.WARN, buildLog)
     }
   }
@@ -139,7 +139,7 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun error(buildLog: LogBuilder.() -> String) {
-    if (slf4jLogger.isErrorEnabled) {
+    if (innerLogger.isErrorEnabled) {
       log(LogLevel.ERROR, buildLog)
     }
   }
@@ -172,7 +172,7 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun debug(buildLog: LogBuilder.() -> String) {
-    if (slf4jLogger.isDebugEnabled) {
+    if (innerLogger.isDebugEnabled) {
       log(LogLevel.DEBUG, buildLog)
     }
   }
@@ -205,7 +205,7 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun trace(buildLog: LogBuilder.() -> String) {
-    if (slf4jLogger.isTraceEnabled) {
+    if (innerLogger.isTraceEnabled) {
       log(LogLevel.TRACE, buildLog)
     }
   }
@@ -246,7 +246,7 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun at(level: LogLevel, buildLog: LogBuilder.() -> String) {
-    if (slf4jLogger.isEnabledForLevel(level.slf4jLevel)) {
+    if (innerLogger.isEnabledForLevel(level.slf4jLevel)) {
       log(level, buildLog)
     }
   }
@@ -261,38 +261,37 @@ internal constructor(
     // it. But having too much code inline can be costly, so we use separate non-inline methods
     // for initialization and finalization of the log.
     val builder = initializeLogBuilder(level)
-    builder.logEvent.message = builder.buildLog()
-    finalizeLog(builder)
+    val message = builder.buildLog()
+    finalizeLog(builder, message)
   }
 
   @PublishedApi
   internal fun initializeLogBuilder(level: LogLevel): LogBuilder {
-    val logEvent = Slf4jLogEvent(level.slf4jLevel, slf4jLogger)
-    logEvent.callerBoundary = FULLY_QUALIFIED_CLASS_NAME
+    val logEvent =
+        when (innerLogger) {
+          is LogbackLogger -> LogEvent.Logback(level, innerLogger)
+          else -> LogEvent.Slf4j(level, innerLogger)
+        }
     return LogBuilder(logEvent)
   }
 
   /** Finalizes the log event from the given builder, and logs it. */
   @PublishedApi
-  internal fun finalizeLog(builder: LogBuilder) {
+  internal fun finalizeLog(builder: LogBuilder, message: String) {
+    builder.logEvent.setLogMessage(message)
+
     // Add fields from cause exception first, as we prioritize them over context fields
     builder.addFieldsFromCauseException()
     builder.addFieldsFromContext()
 
-    when (slf4jLogger) {
-      is LoggingEventAware -> {
-        slf4jLogger.log(builder.logEvent)
-      }
-      else -> {
-        Slf4jLogBuilderAdapter(slf4jLogger, builder.logEvent.level).log(builder.logEvent)
-      }
-    }
+    builder.logEvent.log(innerLogger)
   }
 
   internal companion object {
     /**
-     * Passed to the [Slf4jLogEvent] when logging to indicate which class made the log. Logback uses
-     * this to set the correct location information on the log, if the user has enabled caller data.
+     * Passed to the [LogEvent] when logging to indicate which class made the log. The logger
+     * implementation (e.g. Logback) can use this to set the correct location information on the
+     * log, if the user has enabled caller data.
      */
     internal val FULLY_QUALIFIED_CLASS_NAME: String = Logger::class.java.name
   }
@@ -300,12 +299,13 @@ internal constructor(
 
 enum class LogLevel(
     @PublishedApi internal val slf4jLevel: Slf4jLevel,
+    @PublishedApi internal val logbackLevel: LogbackLevel,
 ) {
-  INFO(Slf4jLevel.INFO),
-  WARN(Slf4jLevel.WARN),
-  ERROR(Slf4jLevel.ERROR),
-  DEBUG(Slf4jLevel.DEBUG),
-  TRACE(Slf4jLevel.TRACE),
+  INFO(Slf4jLevel.INFO, LogbackLevel.INFO),
+  WARN(Slf4jLevel.WARN, LogbackLevel.WARN),
+  ERROR(Slf4jLevel.ERROR, LogbackLevel.ERROR),
+  DEBUG(Slf4jLevel.DEBUG, LogbackLevel.DEBUG),
+  TRACE(Slf4jLevel.TRACE, LogbackLevel.TRACE),
 }
 
 /**

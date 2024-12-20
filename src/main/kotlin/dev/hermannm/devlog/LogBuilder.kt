@@ -1,12 +1,17 @@
 package dev.hermannm.devlog
 
+import ch.qos.logback.classic.Logger as LogbackLogger
+import ch.qos.logback.classic.spi.LoggingEvent as LogbackEvent
+import ch.qos.logback.classic.spi.ThrowableProxy
 import kotlinx.serialization.SerializationStrategy
 import net.logstash.logback.marker.SingleFieldAppendingMarker
 import org.slf4j.Logger as Slf4jLogger
-import org.slf4j.event.DefaultLoggingEvent as Slf4jLogEvent
+import org.slf4j.Marker
+import org.slf4j.event.DefaultLoggingEvent as Slf4jEvent
 import org.slf4j.event.Level as Slf4jLevel
 import org.slf4j.event.LoggingEvent
 import org.slf4j.spi.DefaultLoggingEventBuilder as Slf4jLogEventBuilder
+import org.slf4j.spi.LoggingEventAware
 
 /**
  * Class used in the logging methods on [Logger], allowing you to set a [cause] exception and
@@ -32,20 +37,18 @@ import org.slf4j.spi.DefaultLoggingEventBuilder as Slf4jLogEventBuilder
  * }
  * ```
  */
-@JvmInline // Inline value class, since we just wrap a Logback logging event
+@JvmInline // Inline value class, since we just wrap a log event
 value class LogBuilder
 internal constructor(
-    @PublishedApi internal val logEvent: Slf4jLogEvent,
+    @PublishedApi internal val logEvent: LogEvent,
 ) {
   /**
    * Set this if the log was caused by an exception, to include the exception message and stack
    * trace in the log.
    */
   var cause: Throwable?
-    set(value) {
-      logEvent.throwable = value
-    }
-    get() = logEvent.throwable
+    set(value) = logEvent.setCauseException(value)
+    get() = logEvent.getCauseException()
 
   /**
    * Adds a [log field][LogField] (structured key-value data) to the log.
@@ -99,7 +102,7 @@ internal constructor(
       serializer: SerializationStrategy<ValueT>? = null,
   ) {
     if (!keyAdded(key)) {
-      logEvent.addMarker(createLogstashField(key, value, serializer))
+      logEvent.addLogMarker(createLogstashField(key, value, serializer))
     }
   }
 
@@ -140,7 +143,7 @@ internal constructor(
    */
   fun addRawJsonField(key: String, json: String, validJson: Boolean = false) {
     if (!keyAdded(key)) {
-      logEvent.addMarker(createRawJsonLogstashField(key, json, validJson))
+      logEvent.addLogMarker(createRawJsonLogstashField(key, json, validJson))
     }
   }
 
@@ -153,7 +156,7 @@ internal constructor(
    */
   fun addPreconstructedField(field: LogField) {
     if (!keyAdded(field.key)) {
-      logEvent.addMarker(field.logstashField)
+      logEvent.addLogMarker(field.logstashField)
     }
   }
 
@@ -163,7 +166,7 @@ internal constructor(
     getLogFieldsFromContext().forEachReversed { logstashField ->
       // Don't add fields with keys that have already been added
       if (!keyAdded(logstashField.fieldName)) {
-        logEvent.addMarker(logstashField)
+        logEvent.addLogMarker(logstashField)
       }
     }
   }
@@ -189,7 +192,7 @@ internal constructor(
         exception.logFields.forEach { field ->
           // Don't add fields with keys that have already been added
           if (!keyAdded(field.key)) {
-            logEvent.addMarker(field.logstashField)
+            logEvent.addLogMarker(field.logstashField)
           }
         }
       }
@@ -201,11 +204,106 @@ internal constructor(
 
   @PublishedApi
   internal fun keyAdded(key: String): Boolean {
-    /** [Slf4jLogEvent.markers] can be null if no fields have been added yet. */
-    val addedFields = logEvent.markers ?: return false
+    val addedFields = logEvent.getLogMarkers() ?: return false
 
     return addedFields.any { logstashField ->
       logstashField is SingleFieldAppendingMarker && logstashField.fieldName == key
+    }
+  }
+}
+
+@PublishedApi
+internal sealed interface LogEvent {
+  fun setLogMessage(message: String)
+
+  fun setCauseException(cause: Throwable?)
+
+  fun getCauseException(): Throwable?
+
+  fun addLogMarker(marker: Marker)
+
+  fun getLogMarkers(): List<Marker>?
+
+  fun log(logger: Slf4jLogger)
+
+  class Logback(level: LogLevel, logger: LogbackLogger) :
+      LogEvent,
+      LogbackEvent(
+          Logger.FULLY_QUALIFIED_CLASS_NAME,
+          logger,
+          level.logbackLevel,
+          null, // message (we set this when finalizing the log)
+          null, // throwable (may be set by LogBuilder)
+          null, // argArray (we don't use this)
+      ) {
+    override fun setLogMessage(message: String) {
+      this.message = message
+    }
+
+    override fun setCauseException(cause: Throwable?) {
+      if (cause != null && this.throwableProxy == null) {
+        this.setThrowableProxy(ThrowableProxy(cause))
+      }
+    }
+
+    override fun getCauseException(): Throwable? {
+      return (this.throwableProxy as? ThrowableProxy)?.throwable
+    }
+
+    override fun addLogMarker(marker: Marker) {
+      this.addMarker(marker)
+    }
+
+    override fun getLogMarkers(): List<Marker>? {
+      return this.markerList
+    }
+
+    override fun log(logger: Slf4jLogger) {
+      (logger as LogbackLogger).callAppenders(this)
+    }
+  }
+
+  class Slf4j(level: LogLevel, logger: Slf4jLogger) :
+      LogEvent,
+      Slf4jEvent(
+          level.slf4jLevel,
+          logger,
+      ) {
+    init {
+      this.callerBoundary = Logger.FULLY_QUALIFIED_CLASS_NAME
+    }
+
+    override fun setLogMessage(message: String) {
+      this.message = message
+    }
+
+    override fun setCauseException(cause: Throwable?) {
+      if (cause != null) {
+        this.throwable = cause
+      }
+    }
+
+    override fun getCauseException(): Throwable? {
+      return this.throwable
+    }
+
+    override fun addLogMarker(marker: Marker) {
+      this.addMarker(marker)
+    }
+
+    override fun getLogMarkers(): List<Marker>? {
+      return this.markers
+    }
+
+    override fun log(logger: Slf4jLogger) {
+      when (logger) {
+        is LoggingEventAware -> {
+          logger.log(this)
+        }
+        else -> {
+          Slf4jLogBuilderAdapter(logger, this.level).log(this)
+        }
+      }
     }
   }
 }

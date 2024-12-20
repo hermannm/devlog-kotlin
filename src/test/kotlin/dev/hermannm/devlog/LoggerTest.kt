@@ -194,7 +194,7 @@ internal class LoggerTest {
   fun `Logger constructor with name parameter`() {
     val testName = "LoggerWithCustomName"
     val logger = Logger(name = testName)
-    logger.slf4jLogger.name shouldBe testName
+    logger.innerLogger.name shouldBe testName
   }
 
   @Test
@@ -202,12 +202,12 @@ internal class LoggerTest {
     // All loggers in this file should have this name (since file name and class name here are the
     // same), whether it's constructed inside the class, outside, or on a companion object.
     val expectedName = "dev.hermannm.devlog.LoggerTest"
-    loggerConstructedInsideClass.slf4jLogger.name shouldBe expectedName
-    loggerConstructedOutsideClass.slf4jLogger.name shouldBe expectedName
-    loggerConstructedOnCompanionObject.slf4jLogger.name shouldBe expectedName
+    loggerConstructedInsideClass.innerLogger.name shouldBe expectedName
+    loggerConstructedOutsideClass.innerLogger.name shouldBe expectedName
+    loggerConstructedOnCompanionObject.innerLogger.name shouldBe expectedName
 
     // Logger constructed in separate file should be named after that file.
-    loggerConstructedInOtherFile.slf4jLogger.name shouldBe "dev.hermannm.devlog.TestUtils"
+    loggerConstructedInOtherFile.innerLogger.name shouldBe "dev.hermannm.devlog.TestUtils"
   }
 
   @Test
