@@ -39,6 +39,7 @@ import org.slf4j.spi.LoggingEventAware
  */
 @JvmInline // Inline value class, since we just wrap a log event
 value class LogBuilder
+@PublishedApi
 internal constructor(
     @PublishedApi internal val logEvent: LogEvent,
 ) {
@@ -160,8 +161,19 @@ internal constructor(
     }
   }
 
+  @PublishedApi
+  internal fun finalizeAndLog(message: String, logger: Slf4jLogger) {
+    logEvent.setLogMessage(message)
+
+    // Add fields from cause exception first, as we prioritize them over context fields
+    addFieldsFromCauseException()
+    addFieldsFromContext()
+
+    logEvent.log(logger)
+  }
+
   /** Adds log fields from [withLoggingContext]. */
-  internal fun addFieldsFromContext() {
+  private fun addFieldsFromContext() {
     // Add context fields in reverse, so newest field shows first
     getLogFieldsFromContext().forEachReversed { logstashField ->
       // Don't add fields with keys that have already been added
@@ -175,7 +187,7 @@ internal constructor(
    * Checks if the log [cause] exception (or any of its own cause exceptions) implements the
    * [WithLogFields] interface, and if so, adds those fields.
    */
-  internal fun addFieldsFromCauseException() {
+  private fun addFieldsFromCauseException() {
     // The `cause` here is the log event cause exception. But this exception may itself have a
     // `cause` exception, and that may have another one, and so on. We want to go through all these
     // exceptions to look for log field, so we re-assign this local variable as we iterate through.
@@ -210,10 +222,28 @@ internal constructor(
       logstashField is SingleFieldAppendingMarker && logstashField.fieldName == key
     }
   }
+
+  internal companion object {
+    /**
+     * Passed to the [LogEvent] when logging to indicate which class made the log. The logger
+     * implementation (e.g. Logback) can use this to set the correct location information on the
+     * log, if the user has enabled caller data.
+     */
+    internal val FULLY_QUALIFIED_CLASS_NAME = LogBuilder::class.java.name
+  }
 }
 
 @PublishedApi
 internal sealed interface LogEvent {
+  companion object {
+    fun create(level: LogLevel, logger: Slf4jLogger): LogEvent {
+      return when (logger) {
+        is LogbackLogger -> Logback(level, logger)
+        else -> Slf4j(level, logger)
+      }
+    }
+  }
+
   fun setLogMessage(message: String)
 
   fun setCauseException(cause: Throwable?)
@@ -229,7 +259,7 @@ internal sealed interface LogEvent {
   class Logback(level: LogLevel, logger: LogbackLogger) :
       LogEvent,
       LogbackEvent(
-          Logger.FULLY_QUALIFIED_CLASS_NAME,
+          LogBuilder.FULLY_QUALIFIED_CLASS_NAME,
           logger,
           level.logbackLevel,
           null, // message (we set this when finalizing the log)
@@ -259,18 +289,15 @@ internal sealed interface LogEvent {
     }
 
     override fun log(logger: Slf4jLogger) {
+      // Safe to cast here, since we only construct this class when the logger is a LogbackLogger
       (logger as LogbackLogger).callAppenders(this)
     }
   }
 
   class Slf4j(level: LogLevel, logger: Slf4jLogger) :
-      LogEvent,
-      Slf4jEvent(
-          level.slf4jLevel,
-          logger,
-      ) {
+      LogEvent, Slf4jEvent(level.slf4jLevel, logger) {
     init {
-      this.callerBoundary = Logger.FULLY_QUALIFIED_CLASS_NAME
+      this.callerBoundary = LogBuilder.FULLY_QUALIFIED_CLASS_NAME
     }
 
     override fun setLogMessage(message: String) {

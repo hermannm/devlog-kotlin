@@ -211,8 +211,8 @@ internal class LoggerTest {
   }
 
   @Test
-  fun `Logger fully qualified class name has expected value`() {
-    Logger.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.Logger"
+  fun `fully qualified class name used for logger caller data has expected value`() {
+    LogBuilder.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.LogBuilder"
   }
 
   @Test

@@ -1,7 +1,6 @@
 package dev.hermannm.devlog
 
 import ch.qos.logback.classic.Level as LogbackLevel
-import ch.qos.logback.classic.Logger as LogbackLogger
 import org.slf4j.Logger as Slf4jLogger
 import org.slf4j.LoggerFactory as Slf4jLoggerFactory
 import org.slf4j.event.Level as Slf4jLevel
@@ -252,7 +251,7 @@ internal constructor(
   }
 
   /**
-   * Calls the given function to build a log event and log it, but only if the logger is enabled for
+   * Creates a [LogBuilder], calls the given function on it to build the log event, and logs it at
    * the given level.
    */
   @PublishedApi
@@ -260,40 +259,9 @@ internal constructor(
     // We want to call buildLog here in the inline method, to avoid allocating a function object for
     // it. But having too much code inline can be costly, so we use separate non-inline methods
     // for initialization and finalization of the log.
-    val builder = initializeLogBuilder(level)
+    val builder = LogBuilder(LogEvent.create(level, innerLogger))
     val message = builder.buildLog()
-    finalizeLog(builder, message)
-  }
-
-  @PublishedApi
-  internal fun initializeLogBuilder(level: LogLevel): LogBuilder {
-    val logEvent =
-        when (innerLogger) {
-          is LogbackLogger -> LogEvent.Logback(level, innerLogger)
-          else -> LogEvent.Slf4j(level, innerLogger)
-        }
-    return LogBuilder(logEvent)
-  }
-
-  /** Finalizes the log event from the given builder, and logs it. */
-  @PublishedApi
-  internal fun finalizeLog(builder: LogBuilder, message: String) {
-    builder.logEvent.setLogMessage(message)
-
-    // Add fields from cause exception first, as we prioritize them over context fields
-    builder.addFieldsFromCauseException()
-    builder.addFieldsFromContext()
-
-    builder.logEvent.log(innerLogger)
-  }
-
-  internal companion object {
-    /**
-     * Passed to the [LogEvent] when logging to indicate which class made the log. The logger
-     * implementation (e.g. Logback) can use this to set the correct location information on the
-     * log, if the user has enabled caller data.
-     */
-    internal val FULLY_QUALIFIED_CLASS_NAME: String = Logger::class.java.name
+    builder.finalizeAndLog(message, innerLogger)
   }
 }
 
