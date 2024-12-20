@@ -198,6 +198,19 @@ class LoggingContextTest {
   }
 
   @Test
+  fun `passing an empty list to withLoggingContext works`() {
+    val logFields = captureLogFields {
+      withLoggingContext(
+          logFields = emptyList(),
+      ) {
+        log.info { "Test" }
+      }
+    }
+
+    logFields shouldBe ""
+  }
+
+  @Test
   fun `non-local return works in withLoggingContext`() {
     withLoggingContext(field("key", "value")) {
       // This won't compile if withLoggingContext isn't inline, and we want to verify that

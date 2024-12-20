@@ -128,6 +128,9 @@ internal inline fun <ReturnT> withLoggingContextInternal(
     addLogFieldsToContext: (ArrayList<SingleFieldAppendingMarker>) -> Unit,
     block: () -> ReturnT
 ): ReturnT {
+  // Passing 0 log fields to withLoggingContext would be strange, but it may happen if fields are
+  // passed dynamically (e.g. when using getLoggingContext). In these cases, we don't have to touch
+  // loggingContext and can just call the block directly.
   if (size == 0) {
     return block()
   }
