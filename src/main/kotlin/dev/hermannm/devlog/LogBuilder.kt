@@ -1,9 +1,12 @@
 package dev.hermannm.devlog
 
-import ch.qos.logback.classic.spi.LoggingEvent as LogbackEvent
-import ch.qos.logback.classic.spi.ThrowableProxy
 import kotlinx.serialization.SerializationStrategy
 import net.logstash.logback.marker.SingleFieldAppendingMarker
+import org.slf4j.Logger as Slf4jLogger
+import org.slf4j.event.DefaultLoggingEvent as Slf4jLogEvent
+import org.slf4j.event.Level as Slf4jLevel
+import org.slf4j.event.LoggingEvent
+import org.slf4j.spi.DefaultLoggingEventBuilder as Slf4jLogEventBuilder
 
 /**
  * Class used in the logging methods on [Logger], allowing you to set a [cause] exception and
@@ -32,33 +35,17 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
 @JvmInline // Inline value class, since we just wrap a Logback logging event
 value class LogBuilder
 internal constructor(
-    @PublishedApi internal val logEvent: LogbackEvent,
+    @PublishedApi internal val logEvent: Slf4jLogEvent,
 ) {
   /**
    * Set this if the log was caused by an exception, to include the exception message and stack
    * trace in the log.
-   *
-   * This property can only be set once on a single log. If you set `cause` multiple times, only the
-   * first non-null exception will be kept (this is due to a limitation in Logback's LoggingEvent
-   * API).
    */
   var cause: Throwable?
     set(value) {
-      /**
-       * Passing null to [ThrowableProxy] will throw, so we must only call it if value is not null.
-       * We still want to keep the property nullable, to support the case where the user has a cause
-       * exception that may or not be null.
-       *
-       * Calling [LogbackEvent.setThrowableProxy] twice on the same event will also throw - and at
-       * the time of writing, there is no way to just overwrite the previous throwableProxy. We
-       * would rather ignore the second cause exception than throw an exception from our logger
-       * method, so we only set throwableProxy here if it has not already been set.
-       */
-      if (value != null && logEvent.throwableProxy == null) {
-        logEvent.setThrowableProxy(ThrowableProxy(value))
-      }
+      logEvent.throwable = value
     }
-    get() = (logEvent.throwableProxy as? ThrowableProxy)?.throwable
+    get() = logEvent.throwable
 
   /**
    * Adds a [log field][LogField] (structured key-value data) to the log.
@@ -214,11 +201,20 @@ internal constructor(
 
   @PublishedApi
   internal fun keyAdded(key: String): Boolean {
-    /** [LogbackEvent.markerList] can be null if no fields have been added yet. */
-    val addedFields = logEvent.markerList ?: return false
+    /** [Slf4jLogEvent.markers] can be null if no fields have been added yet. */
+    val addedFields = logEvent.markers ?: return false
 
     return addedFields.any { logstashField ->
       logstashField is SingleFieldAppendingMarker && logstashField.fieldName == key
     }
+  }
+}
+
+internal class Slf4jLogBuilderAdapter(
+    logger: Slf4jLogger,
+    level: Slf4jLevel,
+) : Slf4jLogEventBuilder(logger, level) {
+  public override fun log(logEvent: LoggingEvent) {
+    super.log(logEvent)
   }
 }

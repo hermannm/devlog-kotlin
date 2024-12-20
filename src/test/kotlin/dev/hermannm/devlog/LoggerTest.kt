@@ -1,8 +1,8 @@
 package dev.hermannm.devlog
 
 import ch.qos.logback.classic.Level as LogbackLevel
+import ch.qos.logback.classic.Logger as LogbackLogger
 import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.classic.spi.ThrowableProxy
 import ch.qos.logback.core.read.ListAppender
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
@@ -14,13 +14,14 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.slf4j.LoggerFactory as Slf4jLoggerFactory
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class LoggerTest {
   /** We use a ListAppender from Logback here so we can inspect log events after logging. */
   private val logAppender = ListAppender<ILoggingEvent>()
   private val testLoggerName = "LoggerTest"
-  private val logbackLogger = getLogbackLogger(testLoggerName)
+  private val logbackLogger = Slf4jLoggerFactory.getLogger(testLoggerName) as LogbackLogger
   private val log = Logger(logbackLogger)
 
   @BeforeAll
@@ -193,7 +194,7 @@ internal class LoggerTest {
   fun `Logger constructor with name parameter`() {
     val testName = "LoggerWithCustomName"
     val logger = Logger(name = testName)
-    logger.logbackLogger.name shouldBe testName
+    logger.slf4jLogger.name shouldBe testName
   }
 
   @Test
@@ -201,12 +202,12 @@ internal class LoggerTest {
     // All loggers in this file should have this name (since file name and class name here are the
     // same), whether it's constructed inside the class, outside, or on a companion object.
     val expectedName = "dev.hermannm.devlog.LoggerTest"
-    loggerConstructedInsideClass.logbackLogger.name shouldBe expectedName
-    loggerConstructedOutsideClass.logbackLogger.name shouldBe expectedName
-    loggerConstructedOnCompanionObject.logbackLogger.name shouldBe expectedName
+    loggerConstructedInsideClass.slf4jLogger.name shouldBe expectedName
+    loggerConstructedOutsideClass.slf4jLogger.name shouldBe expectedName
+    loggerConstructedOnCompanionObject.slf4jLogger.name shouldBe expectedName
 
     // Logger constructed in separate file should be named after that file.
-    loggerConstructedInOtherFile.logbackLogger.name shouldBe "dev.hermannm.devlog.TestUtils"
+    loggerConstructedInOtherFile.slf4jLogger.name shouldBe "dev.hermannm.devlog.TestUtils"
   }
 
   @Test
@@ -263,25 +264,6 @@ internal class LoggerTest {
       cause = null
       "Test"
     }
-  }
-
-  /** See comment in [LogBuilder.cause] setter */
-  @Test
-  fun `setting cause multiple times only keeps the first non-null exception`() {
-    val exception1 = Exception("Exception 1")
-    val exception2 = Exception("Exception 2")
-
-    log.error {
-      cause = null
-      cause = exception1
-      cause = exception2
-      "Test"
-    }
-
-    logAppender.list shouldHaveSize 1
-    val logEvent = logAppender.list.first()
-    val cause = logEvent.throwableProxy.shouldBeInstanceOf<ThrowableProxy>().throwable
-    cause shouldBe exception1
   }
 
   private fun testLogFunction(

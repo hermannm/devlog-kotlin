@@ -44,10 +44,8 @@
     <kotlin.version>2.0.21</kotlin.version>
 
     <!-- Logging -->
-    <logback.version>1.5.12</logback.version>
-    <logstash-logback-encoder.version>8.0</logstash-logback-encoder.version>
-    <!-- Use same SLF4J version as Logback (Logback is the more important dependency here, so we want to match it) -->
     <slf4j.version>2.0.15</slf4j.version>
+    <logstash-logback-encoder.version>8.0</logstash-logback-encoder.version>
 
     <!-- Serialization -->
     <kotlinx-serialization.version>1.7.3</kotlinx-serialization.version>
@@ -55,6 +53,7 @@
     <!-- Testing -->
     <junit.version>5.11.4</junit.version>
     <kotest.version>5.9.1</kotest.version>
+    <logback.version>1.5.12</logback.version>
 
     <!-- Maven plugins -->
     <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
@@ -89,11 +88,6 @@
 
     <!-- Logging -->
     <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <version>${logback.version}</version>
-    </dependency>
-    <dependency>
       <groupId>net.logstash.logback</groupId>
       <artifactId>logstash-logback-encoder</artifactId>
       <version>${logstash-logback-encoder.version}</version>
@@ -122,6 +116,12 @@
       <groupId>io.kotest</groupId>
       <artifactId>kotest-assertions-core-jvm</artifactId>
       <version>${kotest.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

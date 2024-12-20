@@ -1,9 +1,10 @@
 package dev.hermannm.devlog
 
-import ch.qos.logback.classic.Level as LogbackLevel
-import ch.qos.logback.classic.Logger as LogbackLogger
-import ch.qos.logback.classic.spi.LoggingEvent as LogbackEvent
-import org.slf4j.LoggerFactory
+import org.slf4j.Logger as Slf4jLogger
+import org.slf4j.LoggerFactory as Slf4jLoggerFactory
+import org.slf4j.event.DefaultLoggingEvent as Slf4jLogEvent
+import org.slf4j.event.Level as Slf4jLevel
+import org.slf4j.spi.LoggingEventAware
 
 /**
  * A logger provides methods for logging at various log levels ([info], [warn], [error], [debug] and
@@ -28,9 +29,9 @@ import org.slf4j.LoggerFactory
 @JvmInline // Use inline value class, to avoid redundant indirection when we just wrap Logback
 value class Logger
 internal constructor(
-    @PublishedApi internal val logbackLogger: LogbackLogger,
+    @PublishedApi internal val slf4jLogger: Slf4jLogger,
 ) {
-  constructor(name: String) : this(getLogbackLogger(name))
+  constructor(name: String) : this(Slf4jLoggerFactory.getLogger(name))
 
   constructor(function: () -> Unit) : this(name = getClassNameFromFunction(function))
 
@@ -62,7 +63,9 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun info(buildLog: LogBuilder.() -> String) {
-    logIfEnabled(LogLevel.INFO, buildLog)
+    if (slf4jLogger.isInfoEnabled) {
+      log(LogLevel.INFO, buildLog)
+    }
   }
 
   /**
@@ -98,7 +101,9 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun warn(buildLog: LogBuilder.() -> String) {
-    logIfEnabled(LogLevel.WARN, buildLog)
+    if (slf4jLogger.isWarnEnabled) {
+      log(LogLevel.WARN, buildLog)
+    }
   }
 
   /**
@@ -134,7 +139,9 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun error(buildLog: LogBuilder.() -> String) {
-    logIfEnabled(LogLevel.ERROR, buildLog)
+    if (slf4jLogger.isErrorEnabled) {
+      log(LogLevel.ERROR, buildLog)
+    }
   }
 
   /**
@@ -165,7 +172,9 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun debug(buildLog: LogBuilder.() -> String) {
-    logIfEnabled(LogLevel.DEBUG, buildLog)
+    if (slf4jLogger.isDebugEnabled) {
+      log(LogLevel.DEBUG, buildLog)
+    }
   }
 
   /**
@@ -196,7 +205,9 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun trace(buildLog: LogBuilder.() -> String) {
-    logIfEnabled(LogLevel.TRACE, buildLog)
+    if (slf4jLogger.isTraceEnabled) {
+      log(LogLevel.TRACE, buildLog)
+    }
   }
 
   /**
@@ -235,7 +246,9 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun at(level: LogLevel, buildLog: LogBuilder.() -> String) {
-    logIfEnabled(level, buildLog)
+    if (slf4jLogger.isEnabledForLevel(level.slf4jLevel)) {
+      log(level, buildLog)
+    }
   }
 
   /**
@@ -243,46 +256,42 @@ internal constructor(
    * the given level.
    */
   @PublishedApi
-  internal inline fun logIfEnabled(level: LogLevel, buildLog: LogBuilder.() -> String) {
-    if (!logbackLogger.isEnabledFor(level.logbackLevel)) {
-      return
-    }
-
+  internal inline fun log(level: LogLevel, buildLog: LogBuilder.() -> String) {
     // We want to call buildLog here in the inline method, to avoid allocating a function object for
     // it. But having too much code inline can be costly, so we use separate non-inline methods
     // for initialization and finalization of the log.
     val builder = initializeLogBuilder(level)
     builder.logEvent.message = builder.buildLog()
-    log(builder)
+    finalizeLog(builder)
   }
 
   @PublishedApi
   internal fun initializeLogBuilder(level: LogLevel): LogBuilder {
-    return LogBuilder(
-        logEvent =
-            LogbackEvent(
-                FULLY_QUALIFIED_CLASS_NAME,
-                logbackLogger,
-                level.logbackLevel,
-                null, // message (we set this after calling buildLog)
-                null, // throwable (may be set by buildLog)
-                null, // argArray (we don't use this)
-            ),
-    )
+    val logEvent = Slf4jLogEvent(level.slf4jLevel, slf4jLogger)
+    logEvent.callerBoundary = FULLY_QUALIFIED_CLASS_NAME
+    return LogBuilder(logEvent)
   }
 
   /** Finalizes the log event from the given builder, and logs it. */
   @PublishedApi
-  internal fun log(builder: LogBuilder) {
+  internal fun finalizeLog(builder: LogBuilder) {
     // Add fields from cause exception first, as we prioritize them over context fields
     builder.addFieldsFromCauseException()
     builder.addFieldsFromContext()
-    logbackLogger.callAppenders(builder.logEvent)
+
+    when (slf4jLogger) {
+      is LoggingEventAware -> {
+        slf4jLogger.log(builder.logEvent)
+      }
+      else -> {
+        Slf4jLogBuilderAdapter(slf4jLogger, builder.logEvent.level).log(builder.logEvent)
+      }
+    }
   }
 
   internal companion object {
     /**
-     * Passed to the [LogbackEvent] when logging to indicate which class made the log. Logback uses
+     * Passed to the [Slf4jLogEvent] when logging to indicate which class made the log. Logback uses
      * this to set the correct location information on the log, if the user has enabled caller data.
      */
     internal val FULLY_QUALIFIED_CLASS_NAME: String = Logger::class.java.name
@@ -290,13 +299,13 @@ internal constructor(
 }
 
 enum class LogLevel(
-    @PublishedApi internal val logbackLevel: LogbackLevel,
+    @PublishedApi internal val slf4jLevel: Slf4jLevel,
 ) {
-  INFO(LogbackLevel.INFO),
-  WARN(LogbackLevel.WARN),
-  ERROR(LogbackLevel.ERROR),
-  DEBUG(LogbackLevel.DEBUG),
-  TRACE(LogbackLevel.TRACE),
+  INFO(Slf4jLevel.INFO),
+  WARN(Slf4jLevel.WARN),
+  ERROR(Slf4jLevel.ERROR),
+  DEBUG(Slf4jLevel.DEBUG),
+  TRACE(Slf4jLevel.TRACE),
 }
 
 /**
@@ -492,21 +501,5 @@ internal fun getClassNameFromFunction(function: () -> Unit): String {
     name.contains("Kt$") -> name.substringBefore("Kt$")
     name.contains("$") -> name.substringBefore("$")
     else -> name
-  }
-}
-
-/**
- * @throws IllegalStateException If [LoggerFactory.getLogger] does not return a Logback logger. This
- *   library is made to work with Logback only (since we use Logback-specific features such as raw
- *   JSON values in log fields), so we want to fail loudly if Logback is not configured.
- */
-internal fun getLogbackLogger(name: String): LogbackLogger {
-  try {
-    return LoggerFactory.getLogger(name) as LogbackLogger
-  } catch (e: ClassCastException) {
-    throw IllegalStateException(
-        "Failed to get Logback logger - have you added logback-classic as a dependency?",
-        e,
-    )
   }
 }
