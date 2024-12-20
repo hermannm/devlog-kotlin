@@ -45,7 +45,13 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
  * coroutines may be added in a future version of the library.
  */
 inline fun <ReturnT> withLoggingContext(vararg logFields: LogField, block: () -> ReturnT): ReturnT {
-  return withLoggingContext(logFields.asList(), block)
+  return withLoggingContextInternal(
+      size = logFields.size,
+      addLogFieldsToContext = { context ->
+        logFields.forEachReversed { field -> context.add(field.logstashField) }
+      },
+      block = block,
+  )
 }
 
 /**
@@ -92,25 +98,49 @@ inline fun <ReturnT> withLoggingContext(vararg logFields: LogField, block: () ->
  * coroutines may be added in a future version of the library.
  */
 inline fun <ReturnT> withLoggingContext(logFields: List<LogField>, block: () -> ReturnT): ReturnT {
-  // Passing empty log fields to this function would be strange, but it may happen if fields are
-  // passed dynamically (or when using inheritLoggingContext). In these cases, we don't have to
-  // touch loggingContext and can just call the block directly.
-  if (logFields.isEmpty()) {
+  return withLoggingContextInternal(
+      size = logFields.size,
+      addLogFieldsToContext = { context ->
+        logFields.forEachReversed { field -> context.add(field.logstashField) }
+      },
+      block = block,
+  )
+}
+
+/**
+ * Internal shared implementation for the `vararg` and `List` overloads of [withLoggingContext].
+ *
+ * Instead of taking a collection type here, we take a size parameter and a function to add fields
+ * to the logging context. This is because `Array` (which is what `vararg` becomes) and `List` share
+ * no common interface, so we would have to convert one to the other. We don't want to do such a
+ * conversion, since that would involve an additional allocation, so we use this instead. Since the
+ * function is inline, we pay no cost for the given functions.
+ */
+@PublishedApi
+internal inline fun <ReturnT> withLoggingContextInternal(
+    size: Int,
+    /**
+     * We add context fields in reverse when adding them to log events, to show the newest field
+     * first. But if we called `withLoggingContext` with multiple fields, that would cause these
+     * fields to show in reverse order to how they were passed. So to counteract that, this function
+     * should add fields to the logging context here in reverse order.
+     */
+    addLogFieldsToContext: (ArrayList<SingleFieldAppendingMarker>) -> Unit,
+    block: () -> ReturnT
+): ReturnT {
+  if (size == 0) {
     return block()
   }
 
-  val contextFields = loggingContext.getOrSet { ArrayList(logFields.size) }
-  contextFields.ensureCapacity(contextFields.size + logFields.size)
-  // We add context fields in reverse when adding them to log events, to show the newest field
-  // first. But if we called `withLoggingContext` with multiple fields, this would cause these
-  // fields to show in reverse order to how they were passed. So to counteract that, we add the
-  // fields to the logging context here in reverse order.
-  logFields.forEachReversed { field -> contextFields.add(field.logstashField) }
+  val contextFields = loggingContext.getOrSet { ArrayList(size) }
+  contextFields.ensureCapacity(contextFields.size + size)
+
+  addLogFieldsToContext(contextFields)
 
   try {
     return block()
   } finally {
-    for (i in logFields.indices) {
+    for (i in 0 until size) {
       contextFields.removeLast()
     }
     // Reset thread-local if list is empty, to avoid keeping the allocation around forever
@@ -122,8 +152,8 @@ inline fun <ReturnT> withLoggingContext(logFields: List<LogField>, block: () -> 
 
 /**
  * Returns a copy of the log fields in the current thread's logging context (from
- * [withLoggingContext]). This can be used to pass logging context between threads (see example
- * below).
+ * [withLoggingContextInternal]). This can be used to pass logging context between threads (see
+ * example below).
  *
  * ### Example
  *

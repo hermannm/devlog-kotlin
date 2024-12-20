@@ -26,8 +26,8 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
  * example below). This serializes the value using `kotlinx.serialization`. Alternatively, if you
  * have a value that is already serialized, you can instead call [LogBuilder.addRawJsonField].
  *
- * If you want to attach fields to all logs within a scope, you can use [withLoggingContext] and
- * pass fields to it with the [field]/[rawJsonField] functions.
+ * If you want to attach fields to all logs within a scope, you can use [withLoggingContextInternal]
+ * and pass fields to it with the [field]/[rawJsonField] functions.
  *
  * Finally, you can implement the [WithLogFields] interface or use [ExceptionWithLogFields] to
  * attach fields to an exception when it's logged.
@@ -102,8 +102,8 @@ internal constructor(
 /**
  * Constructs a [LogField], a key-value pair for adding structured data to logs.
  *
- * This function is made to be used with [withLoggingContext], to add fields to all logs within a
- * scope. If you just want to add a field to a single log, you should instead call
+ * This function is made to be used with [withLoggingContextInternal], to add fields to all logs
+ * within a scope. If you just want to add a field to a single log, you should instead call
  * [LogBuilder.addField] on one of [Logger]'s methods (see example on
  * [addField][LogBuilder.addField]).
  *
@@ -172,8 +172,8 @@ internal inline fun <reified ValueT> createLogstashField(
  * Constructs a [LogField], a key-value pair for adding structured data to logs, with the given
  * pre-serialized JSON value.
  *
- * This function is made to be used with [withLoggingContext], to add fields to all logs within a
- * scope. If you just want to add a field to a single log, you should instead call
+ * This function is made to be used with [withLoggingContextInternal], to add fields to all logs
+ * within a scope. If you just want to add a field to a single log, you should instead call
  * [LogBuilder.addRawJsonField] on one of [Logger]'s methods (see example on
  * [addRawJsonField][LogBuilder.addRawJsonField]).
  *

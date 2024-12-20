@@ -10,9 +10,9 @@ package dev.hermannm.devlog
  * exception log. In this case, one may typically resort to string concatenation, but this class
  * allows you to have the benefits of structured logging for exceptions as well.
  *
- * The exception also includes any log fields from [withLoggingContext], from the scope in which the
- * exception is constructed. If you don't want this behavior, you can create a custom exception and
- * implement the [WithLogFields] interface.
+ * The exception also includes any log fields from [withLoggingContextInternal], from the scope in
+ * which the exception is constructed. If you don't want this behavior, you can create a custom
+ * exception and implement the [WithLogFields] interface.
  *
  * ### Example
  *
@@ -66,7 +66,7 @@ open class ExceptionWithLogFields(
   final override val logFields: List<LogField> = combineFieldsWithLoggingContext(logFields)
 }
 
-/** Combines the given log fields with any fields from [withLoggingContext]. */
+/** Combines the given log fields with any fields from [withLoggingContextInternal]. */
 private fun combineFieldsWithLoggingContext(logFields: List<LogField>): List<LogField> {
   val contextFields = getLogFieldsFromContext()
 
@@ -97,8 +97,8 @@ private fun combineFieldsWithLoggingContext(logFields: List<LogField>): List<Log
  * exception log. In this case, one may typically resort to string concatenation, but this interface
  * allows you to have the benefits of structured logging for exceptions as well.
  *
- * If you want to include log fields from [withLoggingContext] on the exception, you should instead
- * throw or extend the [ExceptionWithLogFields] base class.
+ * If you want to include log fields from [withLoggingContextInternal] on the exception, you should
+ * instead throw or extend the [ExceptionWithLogFields] base class.
  *
  * ### Example
  *
