@@ -267,7 +267,7 @@ internal constructor(
 
 enum class LogLevel(
     @PublishedApi internal val slf4jLevel: Slf4jLevel,
-    @PublishedApi internal val logbackLevel: LogbackLevel,
+    internal val logbackLevel: LogbackLevel,
 ) {
   INFO(Slf4jLevel.INFO, LogbackLevel.INFO),
   WARN(Slf4jLevel.WARN, LogbackLevel.WARN),
