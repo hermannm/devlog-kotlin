@@ -1,5 +1,6 @@
 package dev.hermannm.devlog
 
+import ch.qos.logback.classic.Level as LogbackLevel
 import ch.qos.logback.classic.Logger as LogbackLogger
 import ch.qos.logback.classic.spi.LoggingEvent as LogbackEvent
 import ch.qos.logback.classic.spi.ThrowableProxy
@@ -9,8 +10,8 @@ import org.slf4j.Logger as Slf4jLogger
 import org.slf4j.Marker
 import org.slf4j.event.DefaultLoggingEvent as Slf4jEvent
 import org.slf4j.event.Level as Slf4jLevel
-import org.slf4j.event.LoggingEvent
-import org.slf4j.spi.DefaultLoggingEventBuilder as Slf4jLogEventBuilder
+import org.slf4j.event.Level
+import org.slf4j.spi.LocationAwareLogger
 import org.slf4j.spi.LoggingEventAware
 
 /**
@@ -48,8 +49,8 @@ internal constructor(
    * trace in the log.
    */
   var cause: Throwable?
-    set(value) = logEvent.setCauseException(value)
-    get() = logEvent.getCauseException()
+    set(value) = logEvent.setThrowable(value)
+    get() = logEvent.getThrowable()
 
   /**
    * Adds a [log field][LogField] (structured key-value data) to the log.
@@ -103,7 +104,7 @@ internal constructor(
       serializer: SerializationStrategy<ValueT>? = null,
   ) {
     if (!keyAdded(key)) {
-      logEvent.addLogMarker(createLogstashField(key, value, serializer))
+      logEvent.addMarker(createLogstashField(key, value, serializer))
     }
   }
 
@@ -144,7 +145,7 @@ internal constructor(
    */
   fun addRawJsonField(key: String, json: String, validJson: Boolean = false) {
     if (!keyAdded(key)) {
-      logEvent.addLogMarker(createRawJsonLogstashField(key, json, validJson))
+      logEvent.addMarker(createRawJsonLogstashField(key, json, validJson))
     }
   }
 
@@ -157,13 +158,13 @@ internal constructor(
    */
   fun addPreconstructedField(field: LogField) {
     if (!keyAdded(field.key)) {
-      logEvent.addLogMarker(field.logstashField)
+      logEvent.addMarker(field.logstashField)
     }
   }
 
   @PublishedApi
   internal fun finalizeAndLog(message: String, logger: Slf4jLogger) {
-    logEvent.setLogMessage(message)
+    logEvent.setMessage(message)
 
     // Add fields from cause exception first, as we prioritize them over context fields
     addFieldsFromCauseException()
@@ -178,7 +179,7 @@ internal constructor(
     getLogFieldsFromContext().forEachReversed { logstashField ->
       // Don't add fields with keys that have already been added
       if (!keyAdded(logstashField.fieldName)) {
-        logEvent.addLogMarker(logstashField)
+        logEvent.addMarker(logstashField)
       }
     }
   }
@@ -204,7 +205,7 @@ internal constructor(
         exception.logFields.forEach { field ->
           // Don't add fields with keys that have already been added
           if (!keyAdded(field.key)) {
-            logEvent.addLogMarker(field.logstashField)
+            logEvent.addMarker(field.logstashField)
           }
         }
       }
@@ -216,7 +217,7 @@ internal constructor(
 
   @PublishedApi
   internal fun keyAdded(key: String): Boolean {
-    val addedFields = logEvent.getLogMarkers() ?: return false
+    val addedFields = logEvent.getMarkers() ?: return false
 
     return addedFields.any { logstashField ->
       logstashField is SingleFieldAppendingMarker && logstashField.fieldName == key
@@ -233,60 +234,86 @@ internal constructor(
   }
 }
 
+/**
+ * The purpose of [LogBuilder] is to build a log event. We could store intermediate state on
+ * `LogBuilder`, and then use that to construct a log event when the builder is finished. But if we
+ * instead construct the log event in-place on `LogBuilder`, we can avoid allocations on the hot
+ * path.
+ *
+ * SLF4J has support for building log events, through the [org.slf4j.event.LoggingEvent] interface,
+ * [org.slf4j.event.DefaultLoggingEvent] implementation, and [LoggingEventAware] logger interface.
+ * And [LogbackLogger] implements `LoggingEventAware` - great! Except Logback uses a different event
+ * format internally, so in its implementation of [LoggingEventAware.log], it has to map from the
+ * SLF4J event to its own event format. Not only does this allocate a new event, it also
+ * re-allocates the log marker list - this defeats the purpose of constructing our log event
+ * in-place on `LogBuilder`.
+ *
+ * So to optimize for the common SLF4J + Logback combination, we construct the log event on
+ * Logback's format in [LogEvent.Logback], so we can log it directly. However, we still want to be
+ * compatible with alternative SLF4J implementations, so we implement SLF4J's format in
+ * [LogEvent.Slf4j]. [LogEvent] is the common interface between the two, so that [LogBuilder] can
+ * call this interface without having to care about the underlying implementation.
+ */
 @PublishedApi
 internal sealed interface LogEvent {
   companion object {
     fun create(level: LogLevel, logger: Slf4jLogger): LogEvent {
       return when (logger) {
-        is LogbackLogger -> Logback(level, logger)
-        else -> Slf4j(level, logger)
+        is LogbackLogger -> Logback(level.logbackLevel, logger)
+        else -> Slf4j(level.slf4jLevel, logger)
       }
     }
   }
 
-  fun setLogMessage(message: String)
+  /** Already implemented by [LogbackEvent.setMessage] and [Slf4jEvent.setMessage]. */
+  fun setMessage(message: String)
 
-  fun setCauseException(cause: Throwable?)
+  /**
+   * Already implemented by [Slf4jEvent.setThrowable], must be implemented for Logback using
+   * [LogbackEvent.setThrowableProxy].
+   */
+  fun setThrowable(cause: Throwable?)
 
-  fun getCauseException(): Throwable?
+  /**
+   * Already implemented by [Slf4jEvent.getThrowable], must be implemented for Logback using
+   * [LogbackEvent.getThrowableProxy].
+   */
+  fun getThrowable(): Throwable?
 
-  fun addLogMarker(marker: Marker)
+  /** Already implemented by [LogbackEvent.addMarker] and [Slf4jEvent.addMarker]. */
+  fun addMarker(marker: Marker)
 
-  fun getLogMarkers(): List<Marker>?
+  /**
+   * Returns null if no markers have been added yet.
+   *
+   * Already implemented by [Slf4jEvent.getMarkers], must be implemented for Logback using
+   * [LogbackEvent.getMarkerList].
+   */
+  fun getMarkers(): List<Marker>?
 
+  /** Must be implemented for both Logback and SLF4J. */
   fun log(logger: Slf4jLogger)
 
-  class Logback(level: LogLevel, logger: LogbackLogger) :
+  /** Extends Logback's custom log event class to implement [LogEvent]. */
+  private class Logback(level: LogbackLevel, logger: LogbackLogger) :
       LogEvent,
       LogbackEvent(
           LogBuilder.FULLY_QUALIFIED_CLASS_NAME,
           logger,
-          level.logbackLevel,
+          level,
           null, // message (we set this when finalizing the log)
           null, // throwable (may be set by LogBuilder)
           null, // argArray (we don't use this)
       ) {
-    override fun setLogMessage(message: String) {
-      this.message = message
-    }
-
-    override fun setCauseException(cause: Throwable?) {
-      if (cause != null && this.throwableProxy == null) {
-        this.setThrowableProxy(ThrowableProxy(cause))
+    override fun setThrowable(cause: Throwable?) {
+      if (cause != null && throwableProxy == null) {
+        setThrowableProxy(ThrowableProxy(cause))
       }
     }
 
-    override fun getCauseException(): Throwable? {
-      return (this.throwableProxy as? ThrowableProxy)?.throwable
-    }
+    override fun getThrowable(): Throwable? = (throwableProxy as? ThrowableProxy)?.throwable
 
-    override fun addLogMarker(marker: Marker) {
-      this.addMarker(marker)
-    }
-
-    override fun getLogMarkers(): List<Marker>? {
-      return this.markerList
-    }
+    override fun getMarkers(): List<Marker>? = markerList
 
     override fun log(logger: Slf4jLogger) {
       // Safe to cast here, since we only construct this class when the logger is a LogbackLogger
@@ -294,52 +321,77 @@ internal sealed interface LogEvent {
     }
   }
 
-  class Slf4j(level: LogLevel, logger: Slf4jLogger) :
-      LogEvent, Slf4jEvent(level.slf4jLevel, logger) {
+  /** Extends SLF4J's log event class to implement [LogEvent]. */
+  private class Slf4j(level: Slf4jLevel, logger: Slf4jLogger) :
+      LogEvent,
+      Slf4jEvent(
+          level,
+          logger,
+      ) {
     init {
-      this.callerBoundary = LogBuilder.FULLY_QUALIFIED_CLASS_NAME
-    }
-
-    override fun setLogMessage(message: String) {
-      this.message = message
-    }
-
-    override fun setCauseException(cause: Throwable?) {
-      if (cause != null) {
-        this.throwable = cause
-      }
-    }
-
-    override fun getCauseException(): Throwable? {
-      return this.throwable
-    }
-
-    override fun addLogMarker(marker: Marker) {
-      this.addMarker(marker)
-    }
-
-    override fun getLogMarkers(): List<Marker>? {
-      return this.markers
+      super.setCallerBoundary(LogBuilder.FULLY_QUALIFIED_CLASS_NAME)
     }
 
     override fun log(logger: Slf4jLogger) {
       when (logger) {
-        is LoggingEventAware -> {
-          logger.log(this)
-        }
-        else -> {
-          Slf4jLogBuilderAdapter(logger, this.level).log(this)
-        }
+        // If logger is LoggingEventAware, we can just log the event directly
+        is LoggingEventAware -> logger.log(this)
+        // If logger is LocationAware, we want to use that interface so the logger implementation
+        // can show the correct file location of where the log was made
+        is LocationAwareLogger -> logWithLocationAwareApi(logger)
+        // Otherwise, we fall back to the base SLF4J Logger API
+        else -> logWithBasicSlf4jApi(logger)
       }
     }
-  }
-}
 
-internal class Slf4jLogBuilderAdapter(
-    logger: Slf4jLogger,
-    level: Slf4jLevel,
-) : Slf4jLogEventBuilder(logger, level) {
-  public override fun log(logEvent: LoggingEvent) {
-    super.log(logEvent)
+    private fun logWithLocationAwareApi(logger: LocationAwareLogger) {
+      val message = mergeMessageAndMarkers()
+      logger.log(
+          null, // Marker (this old API only takes 1 marker, so we must merge them into message)
+          callerBoundary, // Fully qualified class name of class making log (set in constructor)
+          level.toInt(),
+          message,
+          null, // argArray (we don't use this)
+          throwable,
+      )
+    }
+
+    private fun logWithBasicSlf4jApi(logger: Slf4jLogger) {
+      // Basic SLF4J API only takes 1 marker, so we must merge them into message
+      val message = mergeMessageAndMarkers()
+      // level should never be null here, since we pass it in the constructor
+      when (level!!) {
+        Level.INFO ->
+            if (throwable == null) logger.info(message) else logger.info(message, throwable)
+        Level.WARN ->
+            if (throwable == null) logger.warn(message) else logger.warn(message, throwable)
+        Level.ERROR ->
+            if (throwable == null) logger.error(message) else logger.error(message, throwable)
+        Level.DEBUG ->
+            if (throwable == null) logger.debug(message) else logger.debug(message, throwable)
+        Level.TRACE ->
+            if (throwable == null) logger.trace(message) else logger.trace(message, throwable)
+      }
+    }
+
+    private fun mergeMessageAndMarkers(): String {
+      val markers = getMarkers()
+      // If there are no markers, we can just return the message as-is
+      if (markers.isNullOrEmpty()) {
+        return message
+      }
+
+      val builder = StringBuilder()
+      builder.append(message)
+
+      builder.append(" [")
+      markers.forEach { marker ->
+        builder.append(marker)
+        builder.append(", ")
+      }
+      builder.append(']')
+
+      return builder.toString()
+    }
   }
 }
