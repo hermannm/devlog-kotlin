@@ -385,9 +385,11 @@ internal sealed interface LogEvent {
       builder.append(message)
 
       builder.append(" [")
-      markers.forEach { marker ->
+      markers.forEachIndexed { index, marker ->
         builder.append(marker)
-        builder.append(", ")
+        if (index != markers.size - 1) {
+          builder.append(", ")
+        }
       }
       builder.append(']')
 
