@@ -1,9 +1,9 @@
 package dev.hermannm.devlog
 
 import kotlin.concurrent.getOrSet
-import net.logstash.logback.marker.SingleFieldAppendingMarker
+import org.slf4j.event.KeyValuePair
 
-@PublishedApi internal val loggingContext = ThreadLocal<ArrayList<SingleFieldAppendingMarker>>()
+@PublishedApi internal val loggingContext = ThreadLocal<ArrayList<KeyValuePair>>()
 
 /**
  * Adds the given [log fields][LogField] to every log made by a [Logger] in the context of the given
@@ -48,7 +48,7 @@ inline fun <ReturnT> withLoggingContext(vararg logFields: LogField, block: () ->
   return withLoggingContextInternal(
       size = logFields.size,
       addLogFieldsToContext = { context ->
-        logFields.forEachReversed { field -> context.add(field.logstashField) }
+        logFields.forEachReversed { field -> context.add(field.keyValuePair) }
       },
       block = block,
   )
@@ -101,7 +101,7 @@ inline fun <ReturnT> withLoggingContext(logFields: List<LogField>, block: () -> 
   return withLoggingContextInternal(
       size = logFields.size,
       addLogFieldsToContext = { context ->
-        logFields.forEachReversed { field -> context.add(field.logstashField) }
+        logFields.forEachReversed { field -> context.add(field.keyValuePair) }
       },
       block = block,
   )
@@ -125,7 +125,7 @@ internal inline fun <ReturnT> withLoggingContextInternal(
      * fields to show in reverse order to how they were passed. So to counteract that, this function
      * should add fields to the logging context here in reverse order.
      */
-    addLogFieldsToContext: (ArrayList<SingleFieldAppendingMarker>) -> Unit,
+    addLogFieldsToContext: (ArrayList<KeyValuePair>) -> Unit,
     block: () -> ReturnT
 ): ReturnT {
   // Passing 0 log fields to withLoggingContext would be strange, but it may happen if fields are
@@ -225,7 +225,7 @@ fun getLoggingContext(): List<LogField> {
  * We use this instead of [getLoggingContext] internally, as we can avoid copying the list when we
  * know that we don't pass it between threads.
  */
-internal fun getLogFieldsFromContext(): List<SingleFieldAppendingMarker> {
+internal fun getLogFieldsFromContext(): List<KeyValuePair> {
   // loggingContext list will be null if withLoggingContext has not been called in this thread
   return loggingContext.get() ?: emptyList()
 }

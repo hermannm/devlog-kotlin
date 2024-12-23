@@ -5,10 +5,9 @@ import ch.qos.logback.classic.Logger as LogbackLogger
 import ch.qos.logback.classic.spi.LoggingEvent as LogbackEvent
 import ch.qos.logback.classic.spi.ThrowableProxy
 import kotlinx.serialization.SerializationStrategy
-import net.logstash.logback.marker.SingleFieldAppendingMarker
 import org.slf4j.Logger as Slf4jLogger
-import org.slf4j.Marker
 import org.slf4j.event.DefaultLoggingEvent as Slf4jEvent
+import org.slf4j.event.KeyValuePair
 import org.slf4j.event.Level as Slf4jLevel
 import org.slf4j.event.Level
 import org.slf4j.spi.LocationAwareLogger
@@ -108,7 +107,7 @@ internal constructor(
       serializer: SerializationStrategy<ValueT>? = null,
   ) {
     if (!keyAdded(key)) {
-      logEvent.addMarker(createLogstashField(key, value, serializer))
+      logEvent.addKeyValuePair(createKeyValuePair(key, value, serializer))
     }
   }
 
@@ -149,7 +148,7 @@ internal constructor(
    */
   fun addRawJsonField(key: String, json: String, validJson: Boolean = false) {
     if (!keyAdded(key)) {
-      logEvent.addMarker(createRawJsonLogstashField(key, json, validJson))
+      logEvent.addKeyValuePair(createRawJsonKeyValuePair(key, json, validJson))
     }
   }
 
@@ -162,7 +161,7 @@ internal constructor(
    */
   fun addPreconstructedField(field: LogField) {
     if (!keyAdded(field.key)) {
-      logEvent.addMarker(field.logstashField)
+      logEvent.addKeyValuePair(field.keyValuePair)
     }
   }
 
@@ -180,10 +179,10 @@ internal constructor(
   /** Adds log fields from [withLoggingContext]. */
   private fun addFieldsFromContext() {
     // Add context fields in reverse, so newest field shows first
-    getLogFieldsFromContext().forEachReversed { logstashField ->
+    getLogFieldsFromContext().forEachReversed { field ->
       // Don't add fields with keys that have already been added
-      if (!keyAdded(logstashField.fieldName)) {
-        logEvent.addMarker(logstashField)
+      if (!keyAdded(field.key)) {
+        logEvent.addKeyValuePair(field)
       }
     }
   }
@@ -209,7 +208,7 @@ internal constructor(
         exception.logFields.forEach { field ->
           // Don't add fields with keys that have already been added
           if (!keyAdded(field.key)) {
-            logEvent.addMarker(field.logstashField)
+            logEvent.addKeyValuePair(field.keyValuePair)
           }
         }
       }
@@ -221,11 +220,9 @@ internal constructor(
 
   @PublishedApi
   internal fun keyAdded(key: String): Boolean {
-    val addedFields = logEvent.getMarkers() ?: return false
+    val addedFields = logEvent.getKeyValuePairs() ?: return false
 
-    return addedFields.any { logstashField ->
-      logstashField is SingleFieldAppendingMarker && logstashField.fieldName == key
-    }
+    return addedFields.any { field -> field.key == key }
   }
 
   internal companion object {
@@ -248,9 +245,8 @@ internal constructor(
  * [org.slf4j.event.DefaultLoggingEvent] implementation, and [LoggingEventAware] logger interface.
  * And [LogbackLogger] implements `LoggingEventAware` - great! Except Logback uses a different event
  * format internally, so in its implementation of [LoggingEventAware.log], it has to map from the
- * SLF4J event to its own event format. Not only does this allocate a new event, it also
- * re-allocates the log marker list - this defeats the purpose of constructing our log event
- * in-place on `LogBuilder`.
+ * SLF4J event to its own event format. This allocates a new event, defating the purpose of
+ * constructing our log event in-place on `LogBuilder`.
  *
  * So to optimize for the common SLF4J + Logback combination, we construct the log event on
  * Logback's format in [LogEvent.Logback], so we can log it directly. However, we still want to be
@@ -284,16 +280,18 @@ internal sealed interface LogEvent {
    */
   fun getThrowable(): Throwable?
 
-  /** Already implemented by [LogbackEvent.addMarker] and [Slf4jEvent.addMarker]. */
-  fun addMarker(marker: Marker)
+  /**
+   * Already implemented by [LogbackEvent.addKeyValuePair], must be implemented for SLF4J using
+   * [Slf4jEvent.addKeyValue].
+   */
+  fun addKeyValuePair(keyValue: KeyValuePair)
 
   /**
-   * Returns null if no markers have been added yet.
+   * Returns null if no key-value pairs have been added yet.
    *
-   * Already implemented by [Slf4jEvent.getMarkers], must be implemented for Logback using
-   * [LogbackEvent.getMarkerList].
+   * Already implemented by [LogbackEvent.getKeyValuePairs] and [Slf4jEvent.getKeyValuePairs].
    */
-  fun getMarkers(): List<Marker>?
+  fun getKeyValuePairs(): List<KeyValuePair>?
 
   /** Must be implemented for both Logback and SLF4J. */
   fun log(logger: Slf4jLogger)
@@ -327,8 +325,6 @@ internal sealed interface LogEvent {
 
     override fun getThrowable(): Throwable? = (throwableProxy as? ThrowableProxy)?.throwable
 
-    override fun getMarkers(): List<Marker>? = markerList
-
     override fun log(logger: Slf4jLogger) {
       // Safe to cast here, since we only construct this class when the logger is a LogbackLogger
       (logger as LogbackLogger).callAppenders(this)
@@ -346,6 +342,10 @@ internal sealed interface LogEvent {
       super.setCallerBoundary(LogBuilder.FULLY_QUALIFIED_CLASS_NAME)
     }
 
+    override fun addKeyValuePair(keyValue: KeyValuePair) {
+      super.addKeyValue(keyValue.key, keyValue.value)
+    }
+
     override fun log(logger: Slf4jLogger) {
       when (logger) {
         // If logger is LoggingEventAware, we can just log the event directly
@@ -359,9 +359,9 @@ internal sealed interface LogEvent {
     }
 
     private fun logWithLocationAwareApi(logger: LocationAwareLogger) {
-      val message = mergeMessageAndMarkers()
+      val message = mergeMessageAndKeyValuePairs()
       logger.log(
-          null, // Marker (this old API only takes 1 marker, so we must merge them into message)
+          null, // marker (we don't use this)
           callerBoundary, // Fully qualified class name of class making log (set in constructor)
           level.toInt(),
           message,
@@ -371,8 +371,8 @@ internal sealed interface LogEvent {
     }
 
     private fun logWithBasicSlf4jApi(logger: Slf4jLogger) {
-      // Basic SLF4J API only takes 1 marker, so we must merge them into message
-      val message = mergeMessageAndMarkers()
+      // Basic SLF4J API doesn't take KeyValuePair, so we must merge them into message
+      val message = mergeMessageAndKeyValuePairs()
       // level should never be null here, since we pass it in the constructor
       when (level!!) {
         Level.INFO ->
@@ -388,10 +388,10 @@ internal sealed interface LogEvent {
       }
     }
 
-    private fun mergeMessageAndMarkers(): String {
-      val markers = getMarkers()
-      // If there are no markers, we can just return the message as-is
-      if (markers.isNullOrEmpty()) {
+    private fun mergeMessageAndKeyValuePairs(): String {
+      val keyValuePairs = this.keyValuePairs
+      // If there are no key-value pairs, we can just return the message as-is
+      if (keyValuePairs.isNullOrEmpty()) {
         return message
       }
 
@@ -399,9 +399,11 @@ internal sealed interface LogEvent {
       builder.append(message)
 
       builder.append(" [")
-      markers.forEachIndexed { index, marker ->
-        builder.append(marker)
-        if (index != markers.size - 1) {
+      keyValuePairs.forEachIndexed { index, keyValuePair ->
+        builder.append(keyValuePair.key)
+        builder.append('=')
+        builder.append(keyValuePair.value)
+        if (index != keyValuePairs.size - 1) {
           builder.append(", ")
         }
       }

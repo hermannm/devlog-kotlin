@@ -46,14 +46,15 @@
     <!-- Logging -->
     <slf4j.version>2.0.15</slf4j.version>
     <logback.version>1.5.15</logback.version>
-    <logstash-logback-encoder.version>8.0</logstash-logback-encoder.version>
 
     <!-- Serialization -->
     <kotlinx-serialization.version>1.7.3</kotlinx-serialization.version>
+    <jackson.version>2.18.2</jackson.version>
 
     <!-- Testing -->
     <junit.version>5.11.4</junit.version>
     <kotest.version>5.9.1</kotest.version>
+    <logstash-logback-encoder.version>8.0</logstash-logback-encoder.version>
 
     <!-- Maven plugins -->
     <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
@@ -97,17 +98,17 @@
       <artifactId>logback-classic</artifactId>
       <version>${logback.version}</version>
     </dependency>
-    <dependency>
-      <groupId>net.logstash.logback</groupId>
-      <artifactId>logstash-logback-encoder</artifactId>
-      <version>${logstash-logback-encoder.version}</version>
-    </dependency>
 
     <!-- Serialization -->
     <dependency>
       <groupId>org.jetbrains.kotlinx</groupId>
       <artifactId>kotlinx-serialization-json</artifactId>
       <version>${kotlinx-serialization.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
     </dependency>
 
     <!-- Testing -->
@@ -127,6 +128,12 @@
       <groupId>io.kotest</groupId>
       <artifactId>kotest-assertions-core-jvm</artifactId>
       <version>${kotest.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.logstash.logback</groupId>
+      <artifactId>logstash-logback-encoder</artifactId>
+      <version>${logstash-logback-encoder.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

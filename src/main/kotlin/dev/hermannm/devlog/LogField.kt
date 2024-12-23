@@ -1,5 +1,9 @@
 package dev.hermannm.devlog
 
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import java.math.BigDecimal
 import java.net.URI
 import java.net.URL
@@ -9,9 +13,7 @@ import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import net.logstash.logback.marker.ObjectAppendingMarker
-import net.logstash.logback.marker.RawJsonAppendingMarker
-import net.logstash.logback.marker.SingleFieldAppendingMarker
+import org.slf4j.event.KeyValuePair
 
 /**
  * A log field is a key-value pair for adding structured data to logs.
@@ -67,36 +69,22 @@ import net.logstash.logback.marker.SingleFieldAppendingMarker
 class LogField
 @PublishedApi
 internal constructor(
-    /**
-     * We use a "marker" for the field here instead of [KeyValuePair][org.slf4j.event.KeyValuePair],
-     * as this allows us to use [RawJsonAppendingMarker] to pass pre-serialized JSON to
-     * `logstash-logback-encoder`. We want this for 2 reasons:
-     * 1. To use `kotlinx.serialization` field value serialization, instead of Jackson.
-     *     - When we use `kotlinx.serialization` generally in our application, some of our objects
-     *       may be serializable with `kotlinx` but fail to serialize with Jackson. Since we
-     *       typically don't test Jackson serialization when we use `kotlinx`, such serialization
-     *       failures are often not discovered before the system is deployed.
-     *     - By default, when `logstash-logback-encoder` fails to serialize a log field value with
-     *       Jackson, it _drops the entire log_ (!). This can make it difficult to reason about what
-     *       happened to a system in production, as a log being dropped may lead you to believe that
-     *       a given code path was not executed.
-     *     - To avoid this issue, we always fall back to `toString()` if we fail to serialize a log
-     *       field value, and never drop logs.
-     * 2. To support adding fields with raw JSON ([rawJsonField]/[LogBuilder.addRawJsonField]).
-     */
-    @PublishedApi internal val logstashField: SingleFieldAppendingMarker,
+    @PublishedApi internal val keyValuePair: KeyValuePair,
 ) {
   // We don't expose this publically, as we don't necessarily want to bind ourselves to this API
   internal val key: String
-    get() = logstashField.fieldName
+    get() = keyValuePair.key
 
   // We override toString, equals and hashCode manually here instead of using a data class, since we
   // don't want the data class copy/componentN methods to be part of our API.
-  override fun toString() = logstashField.toString()
+  //
+  // We would prefer to make this an inline value class, but that unfortunately doesn't work with
+  // varargs yet in Kotlin, which we use in withLoggingContext.
+  override fun toString() = keyValuePair.toString()
 
-  override fun equals(other: Any?) = other is LogField && other.logstashField == this.logstashField
+  override fun equals(other: Any?) = other is LogField && other.keyValuePair == this.keyValuePair
 
-  override fun hashCode() = logstashField.hashCode()
+  override fun hashCode() = keyValuePair.hashCode()
 }
 
 /**
@@ -127,7 +115,7 @@ inline fun <reified ValueT> field(
     value: ValueT,
     serializer: SerializationStrategy<ValueT>? = null
 ): LogField {
-  return LogField(createLogstashField(key, value, serializer))
+  return LogField(createKeyValuePair(key, value, serializer))
 }
 
 /**
@@ -135,36 +123,36 @@ inline fun <reified ValueT> field(
  * this in [LogBuilder.addField], where we don't need the wrapper.
  */
 @PublishedApi
-internal inline fun <reified ValueT> createLogstashField(
+internal inline fun <reified ValueT> createKeyValuePair(
     key: String,
     value: ValueT,
     serializer: SerializationStrategy<ValueT>?
-): SingleFieldAppendingMarker {
+): KeyValuePair {
   try {
     if (serializer != null) {
       val serializedValue = logFieldJson.encodeToString(serializer, value)
-      return RawJsonAppendingMarker(key, serializedValue)
+      return KeyValuePair(key, RawJsonValue(serializedValue))
     }
 
     return when (ValueT::class) {
       // Special case for String to avoid redundant serialization
-      String::class -> ObjectAppendingMarker(key, value)
+      String::class -> KeyValuePair(key, value)
       // Special cases for common types that kotlinx.serialization doesn't handle by default.
       // If more cases are added here, you should add them to the list in the docstring for `field`.
       Instant::class,
       UUID::class,
       URI::class,
       URL::class,
-      BigDecimal::class -> ObjectAppendingMarker(key, value.toString())
+      BigDecimal::class -> KeyValuePair(key, value.toString())
       else -> {
         val serializedValue = logFieldJson.encodeToString(value)
-        RawJsonAppendingMarker(key, serializedValue)
+        KeyValuePair(key, RawJsonValue(serializedValue))
       }
     }
   } catch (_: Exception) {
     // We don't want to ever throw an exception from constructing a log field, which may happen if
     // serialization fails, for example. So in these cases we fall back to toString().
-    return ObjectAppendingMarker(key, value.toString())
+    return KeyValuePair(key, value.toString())
   }
 }
 
@@ -210,18 +198,18 @@ internal inline fun <reified ValueT> createLogstashField(
  * ```
  */
 fun rawJsonField(key: String, json: String, validJson: Boolean = false): LogField {
-  return LogField(createRawJsonLogstashField(key, json, validJson))
+  return LogField(createRawJsonKeyValuePair(key, json, validJson))
 }
 
 /**
  * Implementation for [rawJsonField], but without wrapping the return type in the [LogField] class.
  * We use this in [LogBuilder.addRawJsonField], where we don't need the wrapper.
  */
-internal fun createRawJsonLogstashField(
+internal fun createRawJsonKeyValuePair(
     key: String,
     json: String,
     validJson: Boolean
-): SingleFieldAppendingMarker {
+): KeyValuePair {
   try {
     // Some log platforms (e.g. AWS CloudWatch) use newlines as the separator between log messages.
     // So if the JSON string has unescaped newlines, we must re-parse the JSON.
@@ -229,7 +217,7 @@ internal fun createRawJsonLogstashField(
 
     // If we assume the JSON is valid, and there are no unescaped newlines, we can return it as-is.
     if (validJson && !containsNewlines) {
-      return RawJsonAppendingMarker(key, json)
+      return KeyValuePair(key, RawJsonValue(json))
     }
 
     // If we do not assume that the JSON is valid, we must try to decode it.
@@ -238,15 +226,32 @@ internal fun createRawJsonLogstashField(
     // If we successfully decoded the JSON, and it does not contain unescaped newlines, we can
     // return it as-is.
     if (!containsNewlines) {
-      return RawJsonAppendingMarker(key, json)
+      return KeyValuePair(key, RawJsonValue(json))
     }
 
     // If the JSON did contain unescaped newlines, then we need to re-encode to escape them.
     val encoded = logFieldJson.encodeToString(JsonElement.serializer(), decoded)
-    return RawJsonAppendingMarker(key, encoded)
+    return KeyValuePair(key, RawJsonValue(encoded))
   } catch (_: Exception) {
     // If we failed to decode/re-encode the JSON string, we return it as a non-JSON string.
-    return ObjectAppendingMarker(key, json)
+    return KeyValuePair(key, json)
+  }
+}
+
+@JsonSerialize(using = RawJsonSerializer::class)
+@PublishedApi
+@JvmInline
+internal value class RawJsonValue(internal val json: String) {
+  override fun toString() = json
+}
+
+internal class RawJsonSerializer : JsonSerializer<RawJsonValue>() {
+  override fun serialize(
+      value: RawJsonValue,
+      generator: JsonGenerator,
+      serializers: SerializerProvider
+  ) {
+    generator.writeRawValue(value.json)
   }
 }
 

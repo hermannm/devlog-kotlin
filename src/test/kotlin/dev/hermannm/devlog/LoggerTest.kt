@@ -11,9 +11,6 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.serialization.Serializable
-import net.logstash.logback.marker.ObjectAppendingMarker
-import net.logstash.logback.marker.RawJsonAppendingMarker
-import net.logstash.logback.marker.SingleFieldAppendingMarker
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -21,6 +18,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.slf4j.LoggerFactory as Slf4jLoggerFactory
+import org.slf4j.event.KeyValuePair
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class LoggerTest {
@@ -184,7 +182,7 @@ internal class LoggerTest {
     logAppender.list shouldHaveSize 1
     val logEvent = logAppender.list.first()
     logEvent.message shouldBe "Test"
-    logEvent.markerList.shouldBeNull()
+    logEvent.keyValuePairs.shouldBeNull()
     logEvent.throwableProxy.shouldBeNull()
   }
 
@@ -325,10 +323,10 @@ internal class LoggerTest {
       val fieldValue2: User = User(id = 1, name = "John Doe"),
       val cause: Exception = Exception("Something went wrong"),
       val expectedMessage: String = message,
-      val expectedFields: List<SingleFieldAppendingMarker>? =
+      val expectedFields: List<KeyValuePair>? =
           listOf(
-              ObjectAppendingMarker(fieldKey1, fieldValue1),
-              RawJsonAppendingMarker(fieldKey2, """{"id":1,"name":"John Doe"}"""),
+              KeyValuePair(fieldKey1, fieldValue1),
+              KeyValuePair(fieldKey2, RawJsonValue("""{"id":1,"name":"John Doe"}""")),
           ),
       val shouldHaveCorrectFileLocation: Boolean = true,
   ) {
@@ -373,7 +371,7 @@ internal class LoggerTest {
     val throwableProxy = logEvent.throwableProxy.shouldBeInstanceOf<ThrowableProxy>()
     throwableProxy.throwable shouldBe test.cause
 
-    logEvent.markerList shouldBe test.expectedFields
+    logEvent.keyValuePairs shouldBe test.expectedFields
   }
 
   private val loggerConstructedInsideClass = Logger {}
