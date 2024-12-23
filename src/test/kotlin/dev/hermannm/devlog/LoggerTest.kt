@@ -286,13 +286,32 @@ internal class LoggerTest {
     }
   }
 
-  /** See comment in [LogBuilder.cause] setter. */
+  /** See comment in [LogEvent.Logback.setThrowable]. */
   @Test
   fun `cause exception can be set to null`() {
     log.error {
       cause = null
       "Test"
     }
+  }
+
+  /** See comment in [LogBuilder.cause] setter and [LogEvent.Logback.setThrowable]. */
+  @Test
+  fun `setting cause multiple times only keeps the first non-null exception`() {
+    val exception1 = Exception("Exception 1")
+    val exception2 = Exception("Exception 2")
+
+    log.error {
+      cause = null
+      cause = exception1
+      cause = exception2
+      "Test"
+    }
+
+    logAppender.list shouldHaveSize 1
+    val logEvent = logAppender.list.first()
+    val cause = logEvent.throwableProxy.shouldBeInstanceOf<ThrowableProxy>().throwable
+    cause shouldBe exception1
   }
 
   data class LoggerTestCase(
