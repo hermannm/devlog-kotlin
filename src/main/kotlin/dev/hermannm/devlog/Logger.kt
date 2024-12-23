@@ -28,7 +28,7 @@ import org.slf4j.event.Level as Slf4jLevel
 @JvmInline // Use inline value class, to avoid redundant indirection when we just wrap SLF4J
 value class Logger
 internal constructor(
-    @PublishedApi internal val innerLogger: Slf4jLogger,
+    @PublishedApi internal val underlyingLogger: Slf4jLogger,
 ) {
   constructor(name: String) : this(Slf4jLoggerFactory.getLogger(name))
 
@@ -62,7 +62,7 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun info(buildLog: LogBuilder.() -> String) {
-    if (innerLogger.isInfoEnabled) {
+    if (underlyingLogger.isInfoEnabled) {
       log(LogLevel.INFO, buildLog)
     }
   }
@@ -100,7 +100,7 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun warn(buildLog: LogBuilder.() -> String) {
-    if (innerLogger.isWarnEnabled) {
+    if (underlyingLogger.isWarnEnabled) {
       log(LogLevel.WARN, buildLog)
     }
   }
@@ -138,7 +138,7 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun error(buildLog: LogBuilder.() -> String) {
-    if (innerLogger.isErrorEnabled) {
+    if (underlyingLogger.isErrorEnabled) {
       log(LogLevel.ERROR, buildLog)
     }
   }
@@ -171,7 +171,7 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun debug(buildLog: LogBuilder.() -> String) {
-    if (innerLogger.isDebugEnabled) {
+    if (underlyingLogger.isDebugEnabled) {
       log(LogLevel.DEBUG, buildLog)
     }
   }
@@ -204,7 +204,7 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun trace(buildLog: LogBuilder.() -> String) {
-    if (innerLogger.isTraceEnabled) {
+    if (underlyingLogger.isTraceEnabled) {
       log(LogLevel.TRACE, buildLog)
     }
   }
@@ -245,7 +245,7 @@ internal constructor(
    * performance gain in this case. File, class and method names will still be correct.
    */
   inline fun at(level: LogLevel, buildLog: LogBuilder.() -> String) {
-    if (innerLogger.isEnabledForLevel(level.slf4jLevel)) {
+    if (underlyingLogger.isEnabledForLevel(level.slf4jLevel)) {
       log(level, buildLog)
     }
   }
@@ -259,9 +259,9 @@ internal constructor(
     // We want to call buildLog here in the inline method, to avoid allocating a function object for
     // it. But having too much code inline can be costly, so we use separate non-inline methods
     // for initialization and finalization of the log.
-    val builder = LogBuilder(LogEvent.create(level, innerLogger))
+    val builder = LogBuilder(LogEvent.create(level, underlyingLogger))
     val message = builder.buildLog()
-    builder.finalizeAndLog(message, innerLogger)
+    builder.finalizeAndLog(message, underlyingLogger)
   }
 }
 
