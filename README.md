@@ -115,7 +115,7 @@ fun example() {
 
 ### Setting up with Logback
 
-This library is primarily designed and optimized for working with Logback, though it will work for
+This library is primarily designed and optimized for working with Logback, though it will work with
 other SLF4J logger implementations as well.
 
 When using Logback, you can output logs as JSON with
