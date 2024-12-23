@@ -115,9 +115,12 @@ fun example() {
 
 ### Setting up with Logback
 
-This library is designed to work with Logback and the
-[`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder) for JSON output.
-You can configure this logger by creating a `logback.xml` file under `src/main/resources`:
+This library is primarily designed and optimized for working with Logback, though it will work for
+other SLF4J logger implementations as well.
+
+When using Logback, you can output logs as JSON with
+[`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder). This can be
+configured by creating a `logback.xml` file under `src/main/resources`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
