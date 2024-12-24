@@ -20,10 +20,16 @@ internal interface LogHandler<LogEventT : LogEvent> {
     fun get(name: String): LogHandler<*> {
       val underlyingLogger = Slf4jLoggerFactory.getLogger(name)
 
-      return when (underlyingLogger) {
-        is LogbackLogger -> LogbackLogHandler(underlyingLogger)
-        else -> Slf4jLogHandler(underlyingLogger)
+      try {
+        if (underlyingLogger is LogbackLogger) {
+          return LogbackLogHandler(underlyingLogger)
+        }
+      } catch (_: Throwable) {
+        // The above will fail if Logback is not on the classpath. This likely means that the user
+        // has chosen a different SLF4J implementation, in which case we want to just use that.
       }
+
+      return Slf4jLogHandler(underlyingLogger)
     }
   }
 }
@@ -100,6 +106,7 @@ internal value class Slf4jLogHandler(
   }
 
   private fun logWithLocationAwareApi(logger: LocationAwareLogger, event: Slf4jLogEvent) {
+    // Location-aware SLF4J API doesn't take KeyValuePair, so we must merge them into message
     val message = event.mergeMessageAndKeyValuePairs()
     logger.log(
         null, // marker (we don't use this)

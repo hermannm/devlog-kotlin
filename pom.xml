@@ -97,6 +97,12 @@
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <version>${logback.version}</version>
+      <!--
+        This library works for any SLF4J logger implementation, but makes some optimizations for Logback. If the user
+        chooses Logback as their logger implementation, we can apply these optimizations, but if they don't, then we
+        don't want to load Logback, as that can interfere with other SLF4J logger implementations on the classpath.
+      -->
+      <optional>true</optional>
     </dependency>
 
     <!-- Serialization -->
