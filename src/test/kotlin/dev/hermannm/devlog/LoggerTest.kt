@@ -26,7 +26,7 @@ internal class LoggerTest {
   private val logAppender = ListAppender<ILoggingEvent>()
   private val testLoggerName = "LoggerTest"
   private val logbackLogger = Slf4jLoggerFactory.getLogger(testLoggerName) as LogbackLogger
-  private val log = Logger(logbackLogger)
+  private val log = Logger(LogbackLogHandler(logbackLogger))
 
   @BeforeAll
   fun setup() {
@@ -219,7 +219,7 @@ internal class LoggerTest {
   fun `Logger constructor with name parameter`() {
     val testName = "LoggerWithCustomName"
     val logger = Logger(name = testName)
-    logger.underlyingLogger.name shouldBe testName
+    logger.logHandler.underlyingLogger.name shouldBe testName
   }
 
   @Test
@@ -227,17 +227,19 @@ internal class LoggerTest {
     // All loggers in this file should have this name (since file name and class name here are the
     // same), whether it's constructed inside the class, outside, or on a companion object.
     val expectedName = "dev.hermannm.devlog.LoggerTest"
-    loggerConstructedInsideClass.underlyingLogger.name shouldBe expectedName
-    loggerConstructedOutsideClass.underlyingLogger.name shouldBe expectedName
-    loggerConstructedOnCompanionObject.underlyingLogger.name shouldBe expectedName
+    loggerConstructedInsideClass.logHandler.underlyingLogger.name shouldBe expectedName
+    loggerConstructedOutsideClass.logHandler.underlyingLogger.name shouldBe expectedName
+    loggerConstructedOnCompanionObject.logHandler.underlyingLogger.name shouldBe expectedName
 
     // Logger constructed in separate file should be named after that file.
-    loggerConstructedInOtherFile.underlyingLogger.name shouldBe "dev.hermannm.devlog.TestUtils"
+    loggerConstructedInOtherFile.logHandler.underlyingLogger.name shouldBe
+        "dev.hermannm.devlog.TestUtils"
   }
 
   @Test
-  fun `fully qualified class name used for logger caller data has expected value`() {
-    LogBuilder.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.LogBuilder"
+  fun `fully qualified class names used for logger caller data has expected value`() {
+    LogbackLogHandler.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.LogbackLogHandler"
+    Slf4jLogHandler.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.Slf4jLogHandler"
   }
 
   @ParameterizedTest
@@ -315,7 +317,7 @@ internal class LoggerTest {
   data class LoggerTestCase(
       val name: String,
       val logger: Logger,
-      val loggerName: String = logger.underlyingLogger.name,
+      val loggerName: String = logger.logHandler.underlyingLogger.name,
       val message: String = "Test message",
       val fieldKey1: String = "key1",
       val fieldValue1: String = "value1",
@@ -341,17 +343,17 @@ internal class LoggerTest {
           LoggerTestCase("Logback logger", log),
           LoggerTestCase(
               "Event-aware SLF4J logger",
-              logger = Logger(EventAwareSlf4jLogger(logbackLogger)),
+              logger = Logger(Slf4jLogHandler(EventAwareSlf4jLogger(logbackLogger))),
           ),
           LoggerTestCase(
               "Location-aware SLF4J logger",
-              logger = Logger(LocationAwareSlf4jLogger(logbackLogger)),
+              logger = Logger(Slf4jLogHandler(LocationAwareSlf4jLogger(logbackLogger))),
               expectedMessage = """Test message [key1=value1, key2={"id":1,"name":"John Doe"}]""",
               expectedFields = null,
           ),
           LoggerTestCase(
               "Plain SLF4J logger",
-              logger = Logger(PlainSlf4jLogger(logbackLogger)),
+              logger = Logger(Slf4jLogHandler(PlainSlf4jLogger(logbackLogger))),
               expectedMessage = """Test message [key1=value1, key2={"id":1,"name":"John Doe"}]""",
               expectedFields = null,
               // The plain SLF4J logger does not implement location-aware logging, so we don't
@@ -366,7 +368,7 @@ internal class LoggerTest {
 
     logEvent.loggerName shouldBe test.loggerName
     logEvent.message shouldBe test.expectedMessage
-    logEvent.level shouldBe expectedLogLevel.logbackLevel
+    logEvent.level.toString() shouldBe expectedLogLevel.toString()
 
     val throwableProxy = logEvent.throwableProxy.shouldBeInstanceOf<ThrowableProxy>()
     throwableProxy.throwable shouldBe test.cause

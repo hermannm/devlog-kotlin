@@ -1,17 +1,6 @@
 package dev.hermannm.devlog
 
-import ch.qos.logback.classic.Level as LogbackLevel
-import ch.qos.logback.classic.Logger as LogbackLogger
-import ch.qos.logback.classic.spi.LoggingEvent as LogbackEvent
-import ch.qos.logback.classic.spi.ThrowableProxy
 import kotlinx.serialization.SerializationStrategy
-import org.slf4j.Logger as Slf4jLogger
-import org.slf4j.event.DefaultLoggingEvent as Slf4jEvent
-import org.slf4j.event.KeyValuePair
-import org.slf4j.event.Level as Slf4jLevel
-import org.slf4j.event.Level
-import org.slf4j.spi.LocationAwareLogger
-import org.slf4j.spi.LoggingEventAware
 
 /**
  * Class used in the logging methods on [Logger], allowing you to set a [cause] exception and
@@ -166,14 +155,12 @@ internal constructor(
   }
 
   @PublishedApi
-  internal fun finalizeAndLog(message: String, logger: Slf4jLogger) {
+  internal fun finalize(message: String) {
     logEvent.setMessage(message)
 
     // Add fields from cause exception first, as we prioritize them over context fields
     addFieldsFromCauseException()
     addFieldsFromContext()
-
-    logEvent.log(logger)
   }
 
   /** Adds log fields from [withLoggingContext]. */
@@ -223,193 +210,5 @@ internal constructor(
     val addedFields = logEvent.getKeyValuePairs() ?: return false
 
     return addedFields.any { field -> field.key == key }
-  }
-
-  internal companion object {
-    /**
-     * Passed to the [LogEvent] when logging to indicate which class made the log. The logger
-     * implementation (e.g. Logback) can use this to set the correct location information on the
-     * log, if the user has enabled caller data.
-     */
-    internal val FULLY_QUALIFIED_CLASS_NAME = LogBuilder::class.java.name
-  }
-}
-
-/**
- * The purpose of [LogBuilder] is to build a log event. We could store intermediate state on
- * `LogBuilder`, and then use that to construct a log event when the builder is finished. But if we
- * instead construct the log event in-place on `LogBuilder`, we can avoid allocations on the hot
- * path.
- *
- * SLF4J has support for building log events, through the [org.slf4j.event.LoggingEvent] interface,
- * [org.slf4j.event.DefaultLoggingEvent] implementation, and [LoggingEventAware] logger interface.
- * And [LogbackLogger] implements `LoggingEventAware` - great! Except Logback uses a different event
- * format internally, so in its implementation of [LoggingEventAware.log], it has to map from the
- * SLF4J event to its own event format. This allocates a new event, defating the purpose of
- * constructing our log event in-place on `LogBuilder`.
- *
- * So to optimize for the common SLF4J + Logback combination, we construct the log event on
- * Logback's format in [LogEvent.Logback], so we can log it directly. However, we still want to be
- * compatible with alternative SLF4J implementations, so we implement SLF4J's format in
- * [LogEvent.Slf4j]. [LogEvent] is the common interface between the two, so that [LogBuilder] can
- * call this interface without having to care about the underlying implementation.
- */
-@PublishedApi
-internal sealed interface LogEvent {
-  companion object {
-    fun create(level: LogLevel, logger: Slf4jLogger): LogEvent {
-      return when (logger) {
-        is LogbackLogger -> Logback(level.logbackLevel, logger)
-        else -> Slf4j(level.slf4jLevel, logger)
-      }
-    }
-  }
-
-  /** Already implemented by [LogbackEvent.setMessage] and [Slf4jEvent.setMessage]. */
-  fun setMessage(message: String)
-
-  /**
-   * Already implemented by [Slf4jEvent.setThrowable], must be implemented for Logback using
-   * [LogbackEvent.setThrowableProxy].
-   */
-  fun setThrowable(cause: Throwable?)
-
-  /**
-   * Already implemented by [Slf4jEvent.getThrowable], must be implemented for Logback using
-   * [LogbackEvent.getThrowableProxy].
-   */
-  fun getThrowable(): Throwable?
-
-  /**
-   * Already implemented by [LogbackEvent.addKeyValuePair], must be implemented for SLF4J using
-   * [Slf4jEvent.addKeyValue].
-   */
-  fun addKeyValuePair(keyValue: KeyValuePair)
-
-  /**
-   * Returns null if no key-value pairs have been added yet.
-   *
-   * Already implemented by [LogbackEvent.getKeyValuePairs] and [Slf4jEvent.getKeyValuePairs].
-   */
-  fun getKeyValuePairs(): List<KeyValuePair>?
-
-  /** Must be implemented for both Logback and SLF4J. */
-  fun log(logger: Slf4jLogger)
-
-  /** Extends Logback's custom log event class to implement [LogEvent]. */
-  private class Logback(level: LogbackLevel, logger: LogbackLogger) :
-      LogEvent,
-      LogbackEvent(
-          LogBuilder.FULLY_QUALIFIED_CLASS_NAME,
-          logger,
-          level,
-          null, // message (we set this when finalizing the log)
-          null, // throwable (may be set by LogBuilder)
-          null, // argArray (we don't use this)
-      ) {
-    override fun setThrowable(cause: Throwable?) {
-      /**
-       * Passing null to [ThrowableProxy] will throw, so we must only call it if cause is not null.
-       * We still want to allow passing null here, to support the case where the user has a cause
-       * exception that may or not be null.
-       *
-       * Calling [LogbackEvent.setThrowableProxy] twice on the same event will also throw - and at
-       * the time of writing, there is no way to just overwrite the previous throwableProxy. We
-       * would rather ignore the second cause exception than throw an exception from our logger
-       * method, so we only set throwableProxy here if it has not already been set.
-       */
-      if (cause != null && throwableProxy == null) {
-        setThrowableProxy(ThrowableProxy(cause))
-      }
-    }
-
-    override fun getThrowable(): Throwable? = (throwableProxy as? ThrowableProxy)?.throwable
-
-    override fun log(logger: Slf4jLogger) {
-      // Safe to cast here, since we only construct this class when the logger is a LogbackLogger
-      (logger as LogbackLogger).callAppenders(this)
-    }
-  }
-
-  /** Extends SLF4J's log event class to implement [LogEvent]. */
-  private class Slf4j(level: Slf4jLevel, logger: Slf4jLogger) :
-      LogEvent,
-      Slf4jEvent(
-          level,
-          logger,
-      ) {
-    init {
-      super.setCallerBoundary(LogBuilder.FULLY_QUALIFIED_CLASS_NAME)
-    }
-
-    override fun addKeyValuePair(keyValue: KeyValuePair) {
-      super.addKeyValue(keyValue.key, keyValue.value)
-    }
-
-    override fun log(logger: Slf4jLogger) {
-      when (logger) {
-        // If logger is LoggingEventAware, we can just log the event directly
-        is LoggingEventAware -> logger.log(this)
-        // If logger is LocationAware, we want to use that interface so the logger implementation
-        // can show the correct file location of where the log was made
-        is LocationAwareLogger -> logWithLocationAwareApi(logger)
-        // Otherwise, we fall back to the base SLF4J Logger API
-        else -> logWithBasicSlf4jApi(logger)
-      }
-    }
-
-    private fun logWithLocationAwareApi(logger: LocationAwareLogger) {
-      val message = mergeMessageAndKeyValuePairs()
-      logger.log(
-          null, // marker (we don't use this)
-          callerBoundary, // Fully qualified class name of class making log (set in constructor)
-          level.toInt(),
-          message,
-          null, // argArray (we don't use this)
-          throwable,
-      )
-    }
-
-    private fun logWithBasicSlf4jApi(logger: Slf4jLogger) {
-      // Basic SLF4J API doesn't take KeyValuePair, so we must merge them into message
-      val message = mergeMessageAndKeyValuePairs()
-      // level should never be null here, since we pass it in the constructor
-      when (level!!) {
-        Level.INFO ->
-            if (throwable == null) logger.info(message) else logger.info(message, throwable)
-        Level.WARN ->
-            if (throwable == null) logger.warn(message) else logger.warn(message, throwable)
-        Level.ERROR ->
-            if (throwable == null) logger.error(message) else logger.error(message, throwable)
-        Level.DEBUG ->
-            if (throwable == null) logger.debug(message) else logger.debug(message, throwable)
-        Level.TRACE ->
-            if (throwable == null) logger.trace(message) else logger.trace(message, throwable)
-      }
-    }
-
-    private fun mergeMessageAndKeyValuePairs(): String {
-      val keyValuePairs = this.keyValuePairs
-      // If there are no key-value pairs, we can just return the message as-is
-      if (keyValuePairs.isNullOrEmpty()) {
-        return message
-      }
-
-      val builder = StringBuilder()
-      builder.append(message)
-
-      builder.append(" [")
-      keyValuePairs.forEachIndexed { index, keyValuePair ->
-        builder.append(keyValuePair.key)
-        builder.append('=')
-        builder.append(keyValuePair.value)
-        if (index != keyValuePairs.size - 1) {
-          builder.append(", ")
-        }
-      }
-      builder.append(']')
-
-      return builder.toString()
-    }
   }
 }
