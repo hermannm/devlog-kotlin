@@ -137,6 +137,14 @@ internal class PlainSlf4jLogger(
   }
 }
 
+internal fun Logger.getName(): String {
+  return when (logHandler) {
+    is LogbackLogHandler -> logHandler.logbackLogger.name
+    is Slf4jLogHandler -> logHandler.slf4jLogger.name
+    else -> throw Exception("Unknown LogHandler impl '${logHandler.javaClass.name}'")
+  }
+}
+
 /**
  * Used in [LoggerTest] to test that the logger gets the expected name from the file it's
  * constructed in.

@@ -10,8 +10,6 @@ import org.slf4j.spi.LoggingEventAware
 
 @PublishedApi
 internal interface LogHandler<LogEventT : LogEvent> {
-  val underlyingLogger: Slf4jLogger
-
   fun createLogEventIfEnabled(level: LogLevel): LogEventT?
 
   fun log(event: LogEventT)
@@ -36,24 +34,24 @@ internal interface LogHandler<LogEventT : LogEvent> {
 
 @JvmInline
 internal value class LogbackLogHandler(
-    override val underlyingLogger: LogbackLogger,
+    internal val logbackLogger: LogbackLogger,
 ) : LogHandler<LogbackLogEvent> {
   override fun createLogEventIfEnabled(level: LogLevel): LogbackLogEvent? {
     val logbackLevel = level.toLogback()
 
-    if (!underlyingLogger.isEnabledFor(logbackLevel)) {
+    if (!logbackLogger.isEnabledFor(logbackLevel)) {
       return null
     }
 
     return LogbackLogEvent(
         logbackLevel,
-        underlyingLogger,
+        logbackLogger,
         logHandlerClassName = FULLY_QUALIFIED_CLASS_NAME,
     )
   }
 
   override fun log(event: LogbackLogEvent) {
-    underlyingLogger.callAppenders(event)
+    logbackLogger.callAppenders(event)
   }
 
   private fun LogLevel.toLogback(): LogbackLevel {
@@ -77,31 +75,31 @@ internal value class LogbackLogHandler(
 
 @JvmInline
 internal value class Slf4jLogHandler(
-    override val underlyingLogger: Slf4jLogger,
+    internal val slf4jLogger: Slf4jLogger,
 ) : LogHandler<Slf4jLogEvent> {
   override fun createLogEventIfEnabled(level: LogLevel): Slf4jLogEvent? {
     val slf4jLevel = level.toSlf4j()
 
-    if (!underlyingLogger.isEnabledForLevel(slf4jLevel)) {
+    if (!slf4jLogger.isEnabledForLevel(slf4jLevel)) {
       return null
     }
 
     return Slf4jLogEvent(
         slf4jLevel,
-        underlyingLogger,
+        slf4jLogger,
         logHandlerClassName = FULLY_QUALIFIED_CLASS_NAME,
     )
   }
 
   override fun log(event: Slf4jLogEvent) {
-    when (underlyingLogger) {
+    when (slf4jLogger) {
       // If logger is LoggingEventAware, we can just log the event directly
-      is LoggingEventAware -> underlyingLogger.log(event)
+      is LoggingEventAware -> slf4jLogger.log(event)
       // If logger is LocationAware, we want to use that interface so the logger implementation
       // can show the correct file location of where the log was made
-      is LocationAwareLogger -> logWithLocationAwareApi(underlyingLogger, event)
+      is LocationAwareLogger -> logWithLocationAwareApi(slf4jLogger, event)
       // Otherwise, we fall back to the base SLF4J Logger API
-      else -> logWithBasicSlf4jApi(underlyingLogger, event)
+      else -> logWithBasicSlf4jApi(slf4jLogger, event)
     }
   }
 

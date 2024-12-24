@@ -219,7 +219,7 @@ internal class LoggerTest {
   fun `Logger constructor with name parameter`() {
     val testName = "LoggerWithCustomName"
     val logger = Logger(name = testName)
-    logger.logHandler.underlyingLogger.name shouldBe testName
+    logger.getName() shouldBe testName
   }
 
   @Test
@@ -227,13 +227,12 @@ internal class LoggerTest {
     // All loggers in this file should have this name (since file name and class name here are the
     // same), whether it's constructed inside the class, outside, or on a companion object.
     val expectedName = "dev.hermannm.devlog.LoggerTest"
-    loggerConstructedInsideClass.logHandler.underlyingLogger.name shouldBe expectedName
-    loggerConstructedOutsideClass.logHandler.underlyingLogger.name shouldBe expectedName
-    loggerConstructedOnCompanionObject.logHandler.underlyingLogger.name shouldBe expectedName
+    loggerConstructedInsideClass.getName() shouldBe expectedName
+    loggerConstructedOutsideClass.getName() shouldBe expectedName
+    loggerConstructedOnCompanionObject.getName() shouldBe expectedName
 
     // Logger constructed in separate file should be named after that file.
-    loggerConstructedInOtherFile.logHandler.underlyingLogger.name shouldBe
-        "dev.hermannm.devlog.TestUtils"
+    loggerConstructedInOtherFile.getName() shouldBe "dev.hermannm.devlog.TestUtils"
   }
 
   @Test
@@ -286,7 +285,7 @@ internal class LoggerTest {
     }
   }
 
-  /** See comment in [LogEvent.Logback.setThrowable]. */
+  /** See comment in [LogbackLogEvent.setThrowable]. */
   @Test
   fun `cause exception can be set to null`() {
     log.error {
@@ -295,7 +294,7 @@ internal class LoggerTest {
     }
   }
 
-  /** See comment in [LogBuilder.cause] setter and [LogEvent.Logback.setThrowable]. */
+  /** See comment in [LogBuilder.cause] setter and [LogbackLogEvent.setThrowable]. */
   @Test
   fun `setting cause multiple times only keeps the first non-null exception`() {
     val exception1 = Exception("Exception 1")
@@ -317,7 +316,7 @@ internal class LoggerTest {
   data class LoggerTestCase(
       val name: String,
       val logger: Logger,
-      val loggerName: String = logger.logHandler.underlyingLogger.name,
+      val loggerName: String = logger.getName(),
       val message: String = "Test message",
       val fieldKey1: String = "key1",
       val fieldValue1: String = "value1",
