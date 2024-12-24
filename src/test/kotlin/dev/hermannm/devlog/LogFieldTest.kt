@@ -14,7 +14,7 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encoding.Encoder
 import org.junit.jupiter.api.Test
 
-private val log = Logger {}
+private val log = getLogger {}
 
 class LogFieldTest {
   @Test

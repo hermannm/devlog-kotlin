@@ -17,11 +17,11 @@ import org.slf4j.event.KeyValuePair
  * ### Example
  *
  * ```
- * import dev.hermannm.devlog.Logger
  * import dev.hermannm.devlog.field
+ * import dev.hermannm.devlog.getLogger
  * import dev.hermannm.devlog.withLoggingContext
  *
- * private val log = Logger {}
+ * private val log = getLogger {}
  *
  * fun example(event: Event) {
  *   withLoggingContext(field("event", event)) {
@@ -70,11 +70,11 @@ inline fun <ReturnT> withLoggingContext(vararg logFields: LogField, block: () ->
  * ### Example
  *
  * ```
- * import dev.hermannm.devlog.Logger
  * import dev.hermannm.devlog.field
+ * import dev.hermannm.devlog.getLogger
  * import dev.hermannm.devlog.withLoggingContext
  *
- * private val log = Logger {}
+ * private val log = getLogger {}
  *
  * fun example(event: Event) {
  *   withLoggingContext(field("event", event)) {
@@ -161,13 +161,13 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  * ### Example
  *
  * ```
- * import dev.hermannm.devlog.Logger
- * import dev.hermannm.devlog.getLoggingContext
  * import dev.hermannm.devlog.field
+ * import dev.hermannm.devlog.getLogger
+ * import dev.hermannm.devlog.getLoggingContext
  * import dev.hermannm.devlog.withLoggingContext
  * import java.util.concurrent.ExecutorService
  *
- * private val log = Logger {}
+ * private val log = getLogger {}
  *
  * class UserService(
  *     private val userRepository: UserRepository,

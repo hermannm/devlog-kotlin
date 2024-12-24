@@ -37,10 +37,10 @@ import org.slf4j.event.KeyValuePair
  * ### Example
  *
  * ```
- * import dev.hermannm.devlog.Logger
+ * import dev.hermannm.devlog.getLogger
  * import kotlinx.serialization.Serializable
  *
- * private val log = Logger {}
+ * private val log = getLogger {}
  *
  * fun example() {
  *   val user = User(id = 1, name = "John Doe")
@@ -174,11 +174,11 @@ internal inline fun <reified ValueT> createKeyValuePair(
  * ### Example
  *
  * ```
- * import dev.hermannm.devlog.Logger
+ * import dev.hermannm.devlog.getLogger
  * import dev.hermannm.devlog.rawJsonField
  * import dev.hermannm.devlog.withLoggingContext
  *
- * private val log = Logger {}
+ * private val log = getLogger {}
  *
  * fun example() {
  *   val userJson = """{"id":1,"name":"John Doe"}"""

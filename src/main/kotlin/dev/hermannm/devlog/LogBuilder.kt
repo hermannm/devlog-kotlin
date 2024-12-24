@@ -9,7 +9,7 @@ import kotlinx.serialization.SerializationStrategy
  * ### Example
  *
  * ```
- * private val log = Logger {}
+ * private val log = getLogger {}
  *
  * fun example(user: User) {
  *   try {
@@ -61,10 +61,10 @@ internal constructor(
    * ### Example
    *
    * ```
-   * import dev.hermannm.devlog.Logger
+   * import dev.hermannm.devlog.getLogger
    * import kotlinx.serialization.Serializable
    *
-   * private val log = Logger {}
+   * private val log = getLogger {}
    *
    * fun example() {
    *   val user = User(id = 1, name = "John Doe")
@@ -116,9 +116,9 @@ internal constructor(
    * ### Example
    *
    * ```
-   * import dev.hermannm.devlog.Logger
+   * import dev.hermannm.devlog.getLogger
    *
-   * private val log = Logger {}
+   * private val log = getLogger {}
    *
    * fun example() {
    *   val userJson = """{"id":1,"name":"John Doe"}"""

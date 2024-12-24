@@ -13,23 +13,21 @@ internal interface LogHandler<LogEventT : LogEvent> {
   fun createLogEventIfEnabled(level: LogLevel): LogEventT?
 
   fun log(event: LogEventT)
+}
 
-  companion object {
-    fun get(name: String): LogHandler<*> {
-      val underlyingLogger = Slf4jLoggerFactory.getLogger(name)
+internal fun getLogHandler(name: String): LogHandler<*> {
+  val underlyingLogger = Slf4jLoggerFactory.getLogger(name)
 
-      try {
-        if (underlyingLogger is LogbackLogger) {
-          return LogbackLogHandler(underlyingLogger)
-        }
-      } catch (_: Throwable) {
-        // The above will fail if Logback is not on the classpath. This likely means that the user
-        // has chosen a different SLF4J implementation, in which case we want to just use that.
-      }
-
-      return Slf4jLogHandler(underlyingLogger)
+  try {
+    if (underlyingLogger is LogbackLogger) {
+      return LogbackLogHandler(underlyingLogger)
     }
+  } catch (_: Throwable) {
+    // The above will fail if Logback is not on the classpath. This likely means that the user
+    // has chosen a different SLF4J implementation, in which case we want to just use that.
   }
+
+  return Slf4jLogHandler(underlyingLogger)
 }
 
 @JvmInline

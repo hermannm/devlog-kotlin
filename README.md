@@ -21,10 +21,10 @@ by providing an empty lambda, which automatically gives the logger the name of i
 // File Example.kt
 package com.example
 
-import dev.hermannm.devlog.Logger
+import dev.hermannm.devlog.getLogger
 
 // Gets the name "com.example.Example"
-private val log = Logger {}
+private val log = getLogger {}
 ```
 
 `Logger` provides methods for logging at various log levels (`info`, `warn`, `error`, `debug` and
@@ -43,7 +43,8 @@ You can also add _fields_ (structured key-value data) to your logs. The `addFiel
 ```kotlin
 import kotlinx.serialization.Serializable
 
-@Serializable data class User(val id: Long, val name: String)
+@Serializable
+data class User(val id: Long, val name: String)
 
 fun example() {
   val user = User(id = 1, name = "John Doe")
@@ -153,7 +154,7 @@ See the [Usage docs](https://github.com/logfellow/logstash-logback-encoder#usage
 Credits to the [kotlin-logging library by Ohad Shai](https://github.com/oshai/kotlin-logging)
 (licensed under
 [Apache 2.0](https://github.com/oshai/kotlin-logging/blob/c91fe6ab71b9d3470fae71fb28c453006de4e584/LICENSE)),
-which inspired the `Logger {}` syntax using a lambda to get the logger name.
+which inspired the `getLogger {}` syntax using a lambda to get the logger name.
 [This kotlin-logging issue](https://github.com/oshai/kotlin-logging/issues/34) (by
 [kosiakk](https://github.com/kosiakk)) also inspired the implementation using `inline` methods for
 minimal overhead.

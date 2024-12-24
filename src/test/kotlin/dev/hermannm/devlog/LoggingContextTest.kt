@@ -6,7 +6,7 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import org.junit.jupiter.api.Test
 
-private val log = Logger {}
+private val log = getLogger {}
 
 class LoggingContextTest {
   @Test

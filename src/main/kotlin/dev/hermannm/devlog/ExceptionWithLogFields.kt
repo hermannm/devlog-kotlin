@@ -28,7 +28,7 @@ package dev.hermannm.devlog
  *   }
  * }
  *
- * private val log = Logger {}
+ * private val log = getLogger {}
  *
  * fun example(user: User) {
  *   try {
@@ -103,9 +103,9 @@ private fun combineFieldsWithLoggingContext(logFields: List<LogField>): List<Log
  * ### Example
  *
  * ```
- * import dev.hermannm.devlog.Logger
  * import dev.hermannm.devlog.WithLogFields
  * import dev.hermannm.devlog.field
+ * import dev.hermannm.devlog.getLogger
  *
  * class InvalidUserData(user: User) : RuntimeException(), WithLogFields {
  *   override val message = "Invalid user data"
@@ -118,7 +118,7 @@ private fun combineFieldsWithLoggingContext(logFields: List<LogField>): List<Log
  *   }
  * }
  *
- * private val log = Logger {}
+ * private val log = getLogger {}
  *
  * fun example(user: User) {
  *   try {

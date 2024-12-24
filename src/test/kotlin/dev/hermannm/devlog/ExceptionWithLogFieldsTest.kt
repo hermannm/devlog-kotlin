@@ -3,7 +3,7 @@ package dev.hermannm.devlog
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 
-private val log = Logger {}
+private val log = getLogger {}
 
 class ExceptionWithLogFieldsTest {
   @Test

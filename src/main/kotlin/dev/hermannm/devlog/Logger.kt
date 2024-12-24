@@ -1,34 +1,79 @@
 package dev.hermannm.devlog
 
 /**
- * A logger provides methods for logging at various log levels ([info], [warn], [error], [debug] and
- * [trace]). It has a given logger name, typically the same as the class that the logger is attached
- * to (e.g. `com.example.ExampleClass`), which is added to the log so you can see where it
- * originated from.
+ * Returns a [Logger], using the given lambda to automatically give the logger the name of its
+ * containing class (or file, if defined at the top level).
  *
- * The easiest way to construct a logger is by providing an empty lambda argument:
- * ```
- * private val log = Logger {}
- * ```
+ * ### Example
  *
- * This will automatically give the logger the name of its containing class. If it's at the top
- * level in a file, it will take the file name as if it were a class (e.g. a logger defined in
- * `Example.kt` in package `com.example` will get the name `com.example.Example`).
- *
- * Alternatively, you can provide a custom name to the logger:
  * ```
- * private val log = Logger(name = "com.example.Example")
+ * // In file Example.kt
+ * package com.example
+ *
+ * import dev.hermannm.devlog.getLogger
+ *
+ * // Gets the name "com.example.Example"
+ * private val log = getLogger {}
+ *
+ * fun example() {
+ *   log.info { "Example message" }
+ * }
  * ```
  */
-@JvmInline // Use inline value class, to avoid redundant indirection when we just wrap SLF4J
+fun getLogger(emptyLambdaToGetName: () -> Unit): Logger {
+  return getLogger(name = getClassNameFromFunction(emptyLambdaToGetName))
+}
+
+/**
+ * Returns a [Logger] with the given name.
+ *
+ * The name should follow fully qualified class name format, like `com.example.Example`, to enable
+ * per-package log level filtering.
+ *
+ * To set the name automatically from the containing class/file, you can use the [getLogger]
+ * overload with an empty lambda.
+ */
+fun getLogger(name: String): Logger {
+  val logHandler = getLogHandler(name)
+  return Logger(logHandler)
+}
+
+/**
+ * A logger provides methods for logging at various log levels ([info], [warn], [error], [debug] and
+ * [trace]). It has a logger name, typically the same as the class that the logger is attached to
+ * (e.g. `com.example.Example`), which is added to the log so you can see where it originated from.
+ *
+ * The easiest way to construct a logger is by calling [getLogger] with an empty lambda argument.
+ * This automatically gives the logger the name of its containing class (or file, if defined at the
+ * top level).
+ *
+ * ```
+ * // In file Example.kt
+ * package com.example
+ *
+ * import dev.hermannm.devlog.getLogger
+ *
+ * // Gets the name "com.example.Example"
+ * private val log = getLogger {}
+ *
+ * fun example() {
+ *   log.info { "Example message" }
+ * }
+ * ```
+ *
+ * Alternatively, you can provide a custom name to `getLogger`. The name should follow fully
+ * qualified class name format, like `com.example.Example`, to enable per-package log level
+ * filtering.
+ *
+ * ```
+ * private val log = getLogger(name = "com.example.Example")
+ * ```
+ */
+@JvmInline // Use inline value class, to avoid redundant indirection when we just wrap a LogHandler
 value class Logger
 internal constructor(
     @PublishedApi internal val logHandler: LogHandler<*>,
 ) {
-  constructor(name: String) : this(LogHandler.get(name))
-
-  constructor(function: () -> Unit) : this(name = getClassNameFromFunction(function))
-
   /**
    * Logs the message returned by the given function at the INFO log level, if enabled.
    *
@@ -38,7 +83,7 @@ internal constructor(
    * ### Example
    *
    * ```
-   * private val log = Logger {}
+   * private val log = getLogger {}
    *
    * fun example(user: User) {
    *   log.info {
@@ -69,7 +114,7 @@ internal constructor(
    * ### Example
    *
    * ```
-   * private val log = Logger {}
+   * private val log = getLogger {}
    *
    * fun example(user: User) {
    *   try {
@@ -105,7 +150,7 @@ internal constructor(
    * ### Example
    *
    * ```
-   * private val log = Logger {}
+   * private val log = getLogger {}
    *
    * fun example(user: User) {
    *   try {
@@ -141,7 +186,7 @@ internal constructor(
    * ### Example
    *
    * ```
-   * private val log = Logger {}
+   * private val log = getLogger {}
    *
    * fun example(user: User) {
    *   log.debug {
@@ -172,7 +217,7 @@ internal constructor(
    * ### Example
    *
    * ```
-   * private val log = Logger {}
+   * private val log = getLogger {}
    *
    * fun example(user: User) {
    *   log.trace {
@@ -205,7 +250,7 @@ internal constructor(
    * ### Example
    *
    * ```
-   * private val log = Logger {}
+   * private val log = getLogger {}
    *
    * fun example(user: User) {
    *   try {
