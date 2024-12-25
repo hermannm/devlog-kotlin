@@ -21,7 +21,7 @@
     <kotlin.version>2.0.21</kotlin.version>
 
     <!-- Logging -->
-    <devlog-kotlin.version>0.2.1</devlog-kotlin.version>
+    <devlog-kotlin.version>0.2.1-SNAPSHOT</devlog-kotlin.version>
     <slf4j.version>2.0.15</slf4j.version>
 
     <!-- Serialization -->
@@ -37,6 +37,13 @@
     <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
     <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
   </properties>
+
+  <repositories>
+    <repository>
+      <id>local-maven-repo</id>
+      <url>file:///${project.basedir}/local-maven-repo</url>
+    </repository>
+  </repositories>
 
   <dependencyManagement>
     <dependencies>
@@ -56,6 +63,12 @@
       <groupId>org.jetbrains.kotlin</groupId>
       <artifactId>kotlin-stdlib</artifactId>
       <version>${kotlin.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>dev.hermannm</groupId>
+      <artifactId>devlog-kotlin</artifactId>
+      <version>${devlog-kotlin.version}</version>
     </dependency>
 
     <!-- Serialization -->
@@ -166,7 +179,6 @@
                 <banDuplicatePomDependencyVersions/>
                 <dependencyConvergence/>
                 <requireUpperBoundDeps/>
-                <banDynamicVersions/>
               </rules>
             </configuration>
           </execution>

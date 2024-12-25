@@ -18,3 +18,7 @@ target/
 
 # Exclude example test directory, which we use to create examples for docstrings
 /src/test/kotlin/dev/hermannm/devlog/example
+
+# Exclude local Maven repository used for integration tests
+# (will be generated when running mvn verify)
+local-maven-repo/
