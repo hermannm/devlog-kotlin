@@ -240,6 +240,11 @@ internal class LoggerTest {
     LogEvent.CALLER_BOUNDARY shouldBe "dev.hermannm.devlog.LogBuilder"
   }
 
+  @Test
+  fun `Logback is loaded in tests`() {
+    LogEvent.LOGBACK_IS_ON_CLASSPATH shouldBe true
+  }
+
   @ParameterizedTest
   @MethodSource("getLoggerTestCases")
   fun `log has expected file location`(test: LoggerTestCase) {

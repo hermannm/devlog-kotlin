@@ -35,17 +35,30 @@ internal interface LogEvent {
   companion object {
     @PublishedApi
     internal fun create(level: LogLevel, logger: Slf4jLogger): LogEvent {
-      try {
-        if (logger is LogbackLogger) {
-          return LogbackLogEvent(level, logger)
-        }
-      } catch (_: Throwable) {
-        // The above will fail if Logback is not on the classpath. This likely means that the user
-        // has chosen a different SLF4J implementation, in which case we want to just use that.
+      if (LOGBACK_IS_ON_CLASSPATH && logger is LogbackLogger) {
+        return LogbackLogEvent(level, logger)
       }
 
       return Slf4jLogEvent(level, logger)
     }
+
+    /**
+     * We want to support using this library without having Logback on the classpath at all (hence
+     * we mark it as an optional dependency in the POM). This is because if the user has chosen a
+     * different SLF4J implementation, loading Logback can interfere with that.
+     *
+     * If the user has not added Logback as a dependency, the below class loading will fail, and
+     * we'll stick to only using SLF4J. We cache the result in this field instead of doing the
+     * try/catch every time in [LogEvent.create], as that would pay the cost of the exception every
+     * time for non-Logback implementations.
+     */
+    internal val LOGBACK_IS_ON_CLASSPATH =
+        try {
+          Class.forName("ch.qos.logback.classic.Logger")
+          true
+        } catch (_: Throwable) {
+          false
+        }
 
     /**
      * SLF4J has the concept of a "caller boundary": the fully qualified class name of the logger
