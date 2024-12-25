@@ -1,9 +1,9 @@
 package dev.hermannm.devlog
 
 import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.JsonSerializer
+import com.fasterxml.jackson.databind.JsonSerializable
 import com.fasterxml.jackson.databind.SerializerProvider
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.jsontype.TypeSerializer
 import java.math.BigDecimal
 import java.net.URI
 import java.net.URL
@@ -238,20 +238,22 @@ internal fun createRawJsonKeyValuePair(
   }
 }
 
-@JsonSerialize(using = RawJsonSerializer::class)
 @PublishedApi
 @JvmInline
-internal value class RawJsonValue(internal val json: String) {
+internal value class RawJsonValue(private val json: String) : JsonSerializable {
   override fun toString() = json
-}
 
-internal class RawJsonSerializer : JsonSerializer<RawJsonValue>() {
-  override fun serialize(
-      value: RawJsonValue,
+  override fun serialize(generator: JsonGenerator, serializers: SerializerProvider) {
+    generator.writeRawValue(json)
+  }
+
+  override fun serializeWithType(
       generator: JsonGenerator,
-      serializers: SerializerProvider
+      serializers: SerializerProvider,
+      typeSerializer: TypeSerializer
   ) {
-    generator.writeRawValue(value.json)
+    // Since we don't know what type the raw JSON is, we can only redirect to normal serialization
+    serialize(generator, serializers)
   }
 }
 
