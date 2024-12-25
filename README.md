@@ -7,15 +7,15 @@ Published on Maven Central: https://central.sonatype.com/artifact/dev.hermannm/d
 **Contents:**
 
 - [Usage](#usage)
-  - [Setting up with Logback](#setting-up-with-logback)
+- [Adding to your project](#adding-to-your-project)
 - [Implementation](#implementation)
 - [Credits](#credits)
 
 ## Usage
 
-The `Logger` class is the entry point to `devlog-kotlin`'s logging API. You can construct a `Logger`
-by providing an empty lambda, which automatically gives the logger the name of its containing class
-(or file, if defined at the top level).
+The `Logger` class is the entry point to `devlog-kotlin`'s logging API. You can get a `Logger` by
+calling `getLogger`, with an empty lambda to automatically give the logger the name of its
+containing class (or file, if defined at the top level).
 
 ```kotlin
 // File Example.kt
@@ -56,10 +56,9 @@ fun example() {
 }
 ```
 
-When outputting logs as JSON (using [`logstash-logback-encoder`](#setting-up-with-logback)), the
-key/value given to `addField` is added to the logged JSON object (see below). This allows you to
-filter and query on the field in the log analysis tool of your choice, in a more structured manner
-than if you were to just use string concatenation.
+When outputting logs as JSON, the key/value given to `addField` is added to the logged JSON object
+(see below). This allows you to filter and query on the field in the log analysis tool of your
+choice, in a more structured manner than if you were to just use string concatenation.
 
 <!-- prettier-ignore -->
 ```jsonc
@@ -114,14 +113,50 @@ fun example() {
 }
 ```
 
-### Setting up with Logback
+## Adding to your project
 
-This library is primarily designed and optimized for working with Logback, though it will work with
-other SLF4J logger implementations as well.
+Like SLF4J, `devlog-kotlin` only provides a logging _API_, and you have to add a logging
+_implementation_ to actually output logs. Any SLF4J logger implementation will work, but the
+library is specially optimized for Logback.
 
-When using Logback, you can output logs as JSON with
-[`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder). This can be
-configured by creating a `logback.xml` file under `src/main/resources`:
+To set up `devlog-kotlin` with Logback and JSON output, add the following dependencies:
+
+- **Gradle:**
+  ```kotlin
+  dependencies {
+    // Logger API
+    implementation("dev.hermannm:devlog-kotlin:0.2.1")
+    // Logger implementation
+    implementation("ch.qos.logback:logback-classic:1.5.15")
+    // JSON encoding of logs
+    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
+  }
+  ```
+- **Maven:**
+  ```xml
+  <dependencies>
+    <!-- Logger API -->
+    <dependency>
+      <groupId>dev.hermannm</groupId>
+      <artifactId>devlog-kotlin</artifactId>
+      <version>0.2.1</version>
+    </dependency>
+    <!-- Logger implementation -->
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.5.15</version>
+    </dependency>
+    <!-- JSON encoding of logs -->
+    <dependency>
+      <groupId>net.logstash.logback</groupId>
+      <artifactId>logstash-logback-encoder</artifactId>
+      <version>8.0</version>
+    </dependency>
+  </dependencies>
+  ```
+
+Then, configure Logback with a `logback.xml` file under `src/main/resources`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -136,8 +171,11 @@ configured by creating a `logback.xml` file under `src/main/resources`:
 </configuration>
 ```
 
-See the [Usage docs](https://github.com/logfellow/logstash-logback-encoder#usage) for
-`logstash-logback-encoder` for more configuration options.
+For more configuration options, see:
+
+- [The Configuration chapter of the Logback manual](https://logback.qos.ch/manual/configuration.html)
+- [The Usage docs of `logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder#usage)
+  (the library to use for JSON encoding of logs)
 
 ## Implementation
 
