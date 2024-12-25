@@ -1,11 +1,10 @@
 package dev.hermannm.devlog.integrationtest.jul
 
 import dev.hermannm.devlog.getLogger
+import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.assertions.withClue
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import kotlinx.serialization.Serializable
@@ -16,12 +15,12 @@ private val log = getLogger {}
 /** Tests the slf4j-jdk14 implementation, which uses java.util.logging (commonly called JUL). */
 class JulLoggerTest {
   @Test
-  fun infoLog() {
+  fun log() {
     @Serializable data class User(val id: Long, val name: String)
 
     val user = User(id = 1, name = "John Doe")
 
-    // JDK14 logger outputs to stderr by default
+    // java.util.logging logger outputs to stderr by default
     val output = captureStderr {
       log.info {
         addField("user", user)
@@ -38,7 +37,7 @@ class JulLoggerTest {
     // from the package name (included in log output) up to the trailing newline
     output.substring(indexOfPackageName).removeSuffix("\n") shouldBe
         """
-          dev.hermannm.devlog.integrationtest.jul.JulLoggerTest infoLog
+          dev.hermannm.devlog.integrationtest.jul.JulLoggerTest log
           INFO: Test [user={"id":1,"name":"John Doe"}]
         """
             .trimIndent()
@@ -46,15 +45,7 @@ class JulLoggerTest {
 
   @Test
   fun `Logback should not be on classpath`() {
-    var exception: Throwable? = null
-
-    try {
-      Class.forName("ch.qos.logback.classic.Logger")
-    } catch (e: Throwable) {
-      exception = e
-    }
-
-    exception.shouldNotBeNull().shouldBeInstanceOf<ClassNotFoundException>()
+    shouldThrowExactly<ClassNotFoundException> { Class.forName("ch.qos.logback.classic.Logger") }
   }
 }
 
