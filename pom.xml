@@ -240,7 +240,10 @@
         </executions>
       </plugin>
 
-      <!-- Install JAR in integration-tests/local-maven-repo, so integration tests can use it -->
+      <!--
+        Install JAR in integration-tests/local-maven-repo, so integration tests can use it.
+        See integration-tests/README.md for more on how integration tests are set up here.
+      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-install-plugin</artifactId>
@@ -263,7 +266,10 @@
         </executions>
       </plugin>
 
-      <!-- Run integration tests from integration-tests subdirectory -->
+      <!--
+        Run integration tests from integration-tests subdirectory.
+        See integration-tests/README.md for more on how integration tests are set up here.
+      -->
       <plugin>
         <artifactId>exec-maven-plugin</artifactId>
         <groupId>org.codehaus.mojo</groupId>

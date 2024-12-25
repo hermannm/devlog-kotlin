@@ -10,6 +10,7 @@
 
   <modules>
     <module>jul</module>
+    <module>logback</module>
   </modules>
 
   <properties>
