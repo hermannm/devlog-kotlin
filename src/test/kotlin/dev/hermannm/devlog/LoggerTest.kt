@@ -26,7 +26,7 @@ internal class LoggerTest {
   private val logAppender = ListAppender<ILoggingEvent>()
   private val testLoggerName = "LoggerTest"
   private val logbackLogger = Slf4jLoggerFactory.getLogger(testLoggerName) as LogbackLogger
-  private val log = Logger(LogbackLogHandler(logbackLogger))
+  private val log = Logger(logbackLogger)
 
   @BeforeAll
   fun setup() {
@@ -219,7 +219,7 @@ internal class LoggerTest {
   fun `Logger constructor with name parameter`() {
     val testName = "LoggerWithCustomName"
     val logger = getLogger(name = testName)
-    logger.getName() shouldBe testName
+    logger.underlyingLogger.name shouldBe testName
   }
 
   @Test
@@ -227,18 +227,17 @@ internal class LoggerTest {
     // All loggers in this file should have this name (since file name and class name here are the
     // same), whether it's constructed inside the class, outside, or on a companion object.
     val expectedName = "dev.hermannm.devlog.LoggerTest"
-    loggerInsideClass.getName() shouldBe expectedName
-    loggerOutsideClass.getName() shouldBe expectedName
-    loggerOnCompanionObject.getName() shouldBe expectedName
+    loggerInsideClass.underlyingLogger.name shouldBe expectedName
+    loggerOutsideClass.underlyingLogger.name shouldBe expectedName
+    loggerOnCompanionObject.underlyingLogger.name shouldBe expectedName
 
     // Logger constructed in separate file should be named after that file.
-    loggerInOtherFile.getName() shouldBe "dev.hermannm.devlog.TestUtils"
+    loggerInOtherFile.underlyingLogger.name shouldBe "dev.hermannm.devlog.TestUtils"
   }
 
   @Test
-  fun `fully qualified class names used for logger caller data has expected value`() {
-    LogbackLogHandler.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.LogbackLogHandler"
-    Slf4jLogHandler.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.Slf4jLogHandler"
+  fun `log event caller boundary hsa expected value`() {
+    LogEvent.CALLER_BOUNDARY shouldBe "dev.hermannm.devlog.LogBuilder"
   }
 
   @ParameterizedTest
@@ -316,7 +315,7 @@ internal class LoggerTest {
   data class LoggerTestCase(
       val name: String,
       val logger: Logger,
-      val loggerName: String = logger.getName(),
+      val loggerName: String = logger.underlyingLogger.name,
       val message: String = "Test message",
       val fieldKey1: String = "key1",
       val fieldValue1: String = "value1",
@@ -342,17 +341,17 @@ internal class LoggerTest {
           LoggerTestCase("Logback logger", log),
           LoggerTestCase(
               "Event-aware SLF4J logger",
-              logger = Logger(Slf4jLogHandler(EventAwareSlf4jLogger(logbackLogger))),
+              logger = Logger(EventAwareSlf4jLogger(logbackLogger)),
           ),
           LoggerTestCase(
               "Location-aware SLF4J logger",
-              logger = Logger(Slf4jLogHandler(LocationAwareSlf4jLogger(logbackLogger))),
+              logger = Logger(LocationAwareSlf4jLogger(logbackLogger)),
               expectedMessage = """Test message [key1=value1, key2={"id":1,"name":"John Doe"}]""",
               expectedFields = null,
           ),
           LoggerTestCase(
               "Plain SLF4J logger",
-              logger = Logger(Slf4jLogHandler(PlainSlf4jLogger(logbackLogger))),
+              logger = Logger(PlainSlf4jLogger(logbackLogger)),
               expectedMessage = """Test message [key1=value1, key2={"id":1,"name":"John Doe"}]""",
               expectedFields = null,
               // The plain SLF4J logger does not implement location-aware logging, so we don't
