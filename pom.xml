@@ -61,6 +61,8 @@
     <ktfmt.version>0.43</ktfmt.version>
     <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
     <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
+    <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
+    <exec-maven-plugin.version>3.5.0</exec-maven-plugin.version>
     <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
     <dokka-maven-plugin.version>1.9.20</dokka-maven-plugin.version>
     <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
@@ -238,6 +240,58 @@
         </executions>
       </plugin>
 
+      <!-- Generate uber-JAR for integration tests -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>${maven-shade-plugin.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <phase>package</phase>
+            <configuration>
+              <outputFile>./integration-tests/target/devlog-kotlin-${project.version}.jar</outputFile>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <artifactSet>
+                <excludes>
+                  <!--
+                    Maven shade plugin does not exclude optional dependencies by default,
+                    so we must do it manually
+                  -->
+                  <exclude>ch.qos.logback:logback-classic</exclude>
+                </excludes>
+              </artifactSet>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Run integration tests from integration-tests subdirectory -->
+      <plugin>
+        <artifactId>exec-maven-plugin</artifactId>
+        <groupId>org.codehaus.mojo</groupId>
+        <version>${exec-maven-plugin.version}</version>
+        <executions>
+          <execution><!-- Run our version calculation script -->
+            <id>integration-tests</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>mvn</executable>
+              <arguments>
+                <argument>test</argument>
+                <argument>-f=./integration-tests</argument>
+                <argument>-Dstyle.color=always</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
       <!-- Generates source file JARs, required for publishing to Maven Central -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -306,6 +360,9 @@
         <configuration>
           <publishingServerId>central</publishingServerId>
           <deploymentName>${project.artifactId} v${project.version}</deploymentName>
+          <excludeArtifacts>
+            devlog-kotlin-integration-tests,devlog-kotlin-integration-test-jul
+          </excludeArtifacts>
         </configuration>
       </plugin>
     </plugins>
