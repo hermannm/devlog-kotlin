@@ -24,6 +24,7 @@ class LogbackLoggerTest {
       }
     }
 
+    output shouldContain """"level":"INFO""""
     output shouldContain """"message":"Test""""
     output shouldContain """"user":{"id":1,"name":"John Doe"}"""
   }
