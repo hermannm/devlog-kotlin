@@ -1,7 +1,6 @@
 package dev.hermannm.devlog
 
 import kotlinx.serialization.SerializationStrategy
-import org.slf4j.Logger as Slf4jLogger
 
 /**
  * Class used in the logging methods on [Logger], allowing you to set a [cause] exception and
@@ -156,14 +155,12 @@ internal constructor(
   }
 
   @PublishedApi
-  internal fun finalizeAndLog(message: String, logger: Slf4jLogger) {
+  internal fun finalize(message: String) {
     logEvent.setMessage(message)
 
     // Add fields from cause exception first, as we prioritize them over context fields
     addFieldsFromCauseException()
     addFieldsFromContext()
-
-    logEvent.log(logger)
   }
 
   /** Adds log fields from [withLoggingContext]. */

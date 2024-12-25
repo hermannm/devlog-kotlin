@@ -298,11 +298,14 @@ internal constructor(
   internal inline fun log(level: LogLevel, buildLog: LogBuilder.() -> String) {
     val builder = LogBuilder(LogEvent.create(level, underlyingLogger))
     val message = builder.buildLog()
-    builder.finalizeAndLog(message, underlyingLogger)
+    builder.finalize(message)
+    builder.logEvent.log(underlyingLogger)
   }
 }
 
-enum class LogLevel(@PublishedApi internal val slf4jLevel: Slf4jLevel) {
+enum class LogLevel(
+    @PublishedApi internal val slf4jLevel: Slf4jLevel,
+) {
   INFO(Slf4jLevel.INFO),
   WARN(Slf4jLevel.WARN),
   ERROR(Slf4jLevel.ERROR),

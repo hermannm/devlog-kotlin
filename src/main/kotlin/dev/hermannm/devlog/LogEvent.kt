@@ -59,19 +59,6 @@ internal interface LogEvent {
         } catch (_: Throwable) {
           false
         }
-
-    /**
-     * SLF4J has the concept of a "caller boundary": the fully qualified class name of the logger
-     * class that made the log. This is used by logger implementations, such as Logback, when the
-     * user enables "caller info": showing the location in the source code where the log was made.
-     * Logback then knows to exclude stack trace elements up to this caller boundary, since the user
-     * wants to see where in _their_ code the log was made, not the location in the logging library.
-     *
-     * In our case, the caller boundary is in fact not [Logger], but [LogBuilder]. This is because
-     * all the methods on `Logger` are `inline` - so the logger method actually called by user code
-     * at runtime is [LogBuilder.finalizeAndLog].
-     */
-    internal val CALLER_BOUNDARY = LogBuilder::class.java.name
   }
 
   /** Already implemented by [BaseLogbackEvent.setMessage] and [BaseSlf4jEvent.setMessage]. */
@@ -114,7 +101,7 @@ internal class LogbackLogEvent(
 ) :
     LogEvent,
     BaseLogbackEvent(
-        LogEvent.CALLER_BOUNDARY,
+        FULLY_QUALIFIED_CLASS_NAME,
         logger,
         level.toLogback(),
         null, // message (we set this when finalizing the log)
@@ -145,6 +132,21 @@ internal class LogbackLogEvent(
     // to a concrete class is fast, and we don't want to increase the allocated size of the event.
     (logger as LogbackLogger).callAppenders(this)
   }
+
+  internal companion object {
+    /**
+     * SLF4J has the concept of a "caller boundary": the fully qualified class name of the logger
+     * class that made the log. This is used by logger implementations, such as Logback, when the
+     * user enables "caller info": showing the location in the source code where the log was made.
+     * Logback then knows to exclude stack trace elements up to this caller boundary, since the user
+     * wants to see where in _their_ code the log was made, not the location in the logging library.
+     *
+     * In our case, the caller boundary is in fact not [Logger], but our [LogEvent] implementations.
+     * This is because all the methods on `Logger` are `inline` - so the logger method actually
+     * called by user code at runtime is [LogbackLogEvent.log]/[Slf4jLogEvent.log].
+     */
+    internal val FULLY_QUALIFIED_CLASS_NAME = LogbackLogEvent::class.java.name
+  }
 }
 
 /**
@@ -171,7 +173,7 @@ internal class Slf4jLogEvent(level: LogLevel, logger: Slf4jLogger) :
         logger,
     ) {
   init {
-    super.setCallerBoundary(LogEvent.CALLER_BOUNDARY)
+    super.setCallerBoundary(FULLY_QUALIFIED_CLASS_NAME)
   }
 
   override fun addKeyValuePair(keyValue: KeyValuePair) {
@@ -245,5 +247,10 @@ internal class Slf4jLogEvent(level: LogLevel, logger: Slf4jLogger) :
     builder.append(']')
 
     return builder.toString()
+  }
+
+  internal companion object {
+    /** See [LogbackLogEvent.FULLY_QUALIFIED_CLASS_NAME]. */
+    internal val FULLY_QUALIFIED_CLASS_NAME = Slf4jLogEvent::class.java.name
   }
 }

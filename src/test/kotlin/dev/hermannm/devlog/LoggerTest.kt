@@ -235,16 +235,6 @@ internal class LoggerTest {
     loggerInOtherFile.underlyingLogger.name shouldBe "dev.hermannm.devlog.TestUtils"
   }
 
-  @Test
-  fun `log event caller boundary hsa expected value`() {
-    LogEvent.CALLER_BOUNDARY shouldBe "dev.hermannm.devlog.LogBuilder"
-  }
-
-  @Test
-  fun `Logback is loaded in tests`() {
-    LogEvent.LOGBACK_IS_ON_CLASSPATH shouldBe true
-  }
-
   @ParameterizedTest
   @MethodSource("getLoggerTestCases")
   fun `log has expected file location`(test: LoggerTestCase) {
@@ -264,6 +254,17 @@ internal class LoggerTest {
       caller.className shouldBe "dev.hermannm.devlog.LoggerTest"
       caller.methodName shouldBe "log has expected file location"
     }
+  }
+
+  @Test
+  fun `log event caller boundaries have expected values`() {
+    LogbackLogEvent.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.LogbackLogEvent"
+    Slf4jLogEvent.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.Slf4jLogEvent"
+  }
+
+  @Test
+  fun `Logback is loaded in tests`() {
+    LogEvent.LOGBACK_IS_ON_CLASSPATH shouldBe true
   }
 
   @Test
