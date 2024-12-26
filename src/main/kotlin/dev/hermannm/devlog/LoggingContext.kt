@@ -196,13 +196,13 @@ fun getLoggingContext(): List<LogField> {
  * - To store context fields in order from newest to oldest, in an efficient manner. This precludes
  *   the use of [ArrayList], since adding to the beginning of an `ArrayList` involves shifting all
  *   existing elements further back.
- * - To initialize the logging context with an existing array, if it is empty. This is because
+ * - To initialize the logging context with an existing array. We want this because
  *   [withLoggingContext] uses a `vararg`, which gives us an [Array]. In the common case of the
  *   logging context being empty, we would like to use that array directly to avoid copying it. This
- *   precludes the use of [ArrayDeque], since that can't be constructed with an existing array
+ *   precludes the use of [ArrayDeque], since that can't be constructed from an existing array
  *   without copying.
  *
- * To achieve this, we use an array in the thread-local [LoggingContext.contextFields], and expose
+ * To achieve these goals, we manage our own array in [LoggingContext.contextFields], and expose
  * [addFields] and [popFields] methods to add/remove fields. See [popFields] docstring for why the
  * elements of the array are nullable.
  */
@@ -305,8 +305,8 @@ internal object LoggingContext {
   }
 
   /**
-   * Returns the thread-local context field array. Will be null if it has not yet been set in this
-   * thread.
+   * Returns the thread-local context field array. Will be null if we're not currently inside any
+   * logging context.
    *
    * This method is only meant for internal use by [LoggingContext] and in tests. To get a more
    * friendly API for working with context fields that deals with nulls for you, call [getFields].
@@ -325,9 +325,9 @@ internal object LoggingContext {
    */
   @JvmInline
   internal value class ContextFields(private val fields: Array<LogField?>?) {
-    fun isEmpty(): Boolean = fields.isNullOrEmpty()
+    internal fun isEmpty(): Boolean = fields.isNullOrEmpty()
 
-    val size: Int
+    internal val size: Int
       get() {
         if (fields == null) {
           return 0
@@ -335,7 +335,7 @@ internal object LoggingContext {
         return fields.size - fields.startIndexOfNonNullFields()
       }
 
-    inline fun forEach(action: (LogField) -> Unit) {
+    internal inline fun forEach(action: (LogField) -> Unit) {
       if (fields == null) {
         return
       }
