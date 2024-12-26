@@ -8,12 +8,12 @@ import java.math.BigDecimal
 import java.net.URI
 import java.net.URL
 import java.time.Instant
+import java.util.Objects
 import java.util.UUID
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import org.slf4j.event.KeyValuePair
 
 /**
  * A log field is a key-value pair for adding structured data to logs.
@@ -69,22 +69,17 @@ import org.slf4j.event.KeyValuePair
 class LogField
 @PublishedApi
 internal constructor(
-    @PublishedApi internal val keyValuePair: KeyValuePair,
+    internal val key: String,
+    internal val value: LogFieldValue,
 ) {
-  // We don't expose this publically, as we don't necessarily want to bind ourselves to this API
-  internal val key: String
-    get() = keyValuePair.key
-
   // We override toString, equals and hashCode manually here instead of using a data class, since we
   // don't want the data class copy/componentN methods to be part of our API.
-  //
-  // We would prefer to make this an inline value class, but that unfortunately doesn't work with
-  // varargs yet in Kotlin, which we use in withLoggingContext.
-  override fun toString() = keyValuePair.toString()
+  override fun toString() = "${key}=${value}"
 
-  override fun equals(other: Any?) = other is LogField && other.keyValuePair == this.keyValuePair
+  override fun equals(other: Any?) =
+      other is LogField && this.key == other.key && this.value == other.value
 
-  override fun hashCode() = keyValuePair.hashCode()
+  override fun hashCode() = Objects.hash(key, value)
 }
 
 /**
@@ -115,44 +110,43 @@ inline fun <reified ValueT> field(
     value: ValueT,
     serializer: SerializationStrategy<ValueT>? = null
 ): LogField {
-  return LogField(createKeyValuePair(key, value, serializer))
+  return LogField(key, value = encodeFieldValue(value, serializer))
 }
 
-/**
- * Implementation for [field], but without wrapping the return type in the [LogField] class. We use
- * this in [LogBuilder.addField], where we don't need the wrapper.
- */
 @PublishedApi
-internal inline fun <reified ValueT> createKeyValuePair(
-    key: String,
+internal inline fun <reified ValueT> encodeFieldValue(
     value: ValueT,
     serializer: SerializationStrategy<ValueT>?
-): KeyValuePair {
+): LogFieldValue {
   try {
+    if (value == null) {
+      return null
+    }
+
     if (serializer != null) {
       val serializedValue = logFieldJson.encodeToString(serializer, value)
-      return KeyValuePair(key, RawJsonValue(serializedValue))
+      return RawJson(serializedValue)
     }
 
     return when (ValueT::class) {
       // Special case for String to avoid redundant serialization
-      String::class -> KeyValuePair(key, value)
+      String::class -> value
       // Special cases for common types that kotlinx.serialization doesn't handle by default.
       // If more cases are added here, you should add them to the list in the docstring for `field`.
       Instant::class,
       UUID::class,
       URI::class,
       URL::class,
-      BigDecimal::class -> KeyValuePair(key, value.toString())
+      BigDecimal::class -> value.toString()
       else -> {
         val serializedValue = logFieldJson.encodeToString(value)
-        KeyValuePair(key, RawJsonValue(serializedValue))
+        RawJson(serializedValue)
       }
     }
   } catch (_: Exception) {
     // We don't want to ever throw an exception from constructing a log field, which may happen if
     // serialization fails, for example. So in these cases we fall back to toString().
-    return KeyValuePair(key, value.toString())
+    return value.toString()
   }
 }
 
@@ -198,18 +192,10 @@ internal inline fun <reified ValueT> createKeyValuePair(
  * ```
  */
 fun rawJsonField(key: String, json: String, validJson: Boolean = false): LogField {
-  return LogField(createRawJsonKeyValuePair(key, json, validJson))
+  return LogField(key, value = rawJsonFieldValue(json, validJson))
 }
 
-/**
- * Implementation for [rawJsonField], but without wrapping the return type in the [LogField] class.
- * We use this in [LogBuilder.addRawJsonField], where we don't need the wrapper.
- */
-internal fun createRawJsonKeyValuePair(
-    key: String,
-    json: String,
-    validJson: Boolean
-): KeyValuePair {
+internal fun rawJsonFieldValue(json: String, validJson: Boolean): LogFieldValue {
   try {
     // Some log platforms (e.g. AWS CloudWatch) use newlines as the separator between log messages.
     // So if the JSON string has unescaped newlines, we must re-parse the JSON.
@@ -217,7 +203,7 @@ internal fun createRawJsonKeyValuePair(
 
     // If we assume the JSON is valid, and there are no unescaped newlines, we can return it as-is.
     if (validJson && !containsNewlines) {
-      return KeyValuePair(key, RawJsonValue(json))
+      return RawJson(json)
     }
 
     // If we do not assume that the JSON is valid, we must try to decode it.
@@ -226,21 +212,33 @@ internal fun createRawJsonKeyValuePair(
     // If we successfully decoded the JSON, and it does not contain unescaped newlines, we can
     // return it as-is.
     if (!containsNewlines) {
-      return KeyValuePair(key, RawJsonValue(json))
+      return RawJson(json)
     }
 
     // If the JSON did contain unescaped newlines, then we need to re-encode to escape them.
     val encoded = logFieldJson.encodeToString(JsonElement.serializer(), decoded)
-    return KeyValuePair(key, RawJsonValue(encoded))
+    return RawJson(encoded)
   } catch (_: Exception) {
     // If we failed to decode/re-encode the JSON string, we return it as a non-JSON string.
-    return KeyValuePair(key, json)
+    return json
   }
 }
 
+/**
+ * A log field value is either:
+ * - A [RawJson] value, serialized in [encodeFieldValue] or passed directly to [rawJsonFieldValue]
+ * - A `String` or other primitive type that we assume the logger implementation can handle
+ * - `null`
+ *
+ * We don't use an interface or sealed class for this, to avoid allocating redundant wrapper
+ * objects. We could wrap this in an inline value class, but experimenting with that proved to be
+ * more cumbersome than worthwhile.
+ */
+internal typealias LogFieldValue = Any?
+
 @PublishedApi
 @JvmInline
-internal value class RawJsonValue(private val json: String) : JsonSerializable {
+internal value class RawJson(private val json: String) : JsonSerializable {
   override fun toString() = json
 
   override fun serialize(generator: JsonGenerator, serializers: SerializerProvider) {

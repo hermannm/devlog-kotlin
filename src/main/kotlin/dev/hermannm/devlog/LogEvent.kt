@@ -77,10 +77,10 @@ internal interface LogEvent {
   fun getThrowable(): Throwable?
 
   /**
-   * Already implemented by [BaseLogbackEvent.addKeyValuePair], must be implemented for SLF4J using
-   * [BaseSlf4jEvent.addKeyValue].
+   * Already implemented by [BaseSlf4jEvent.addKeyValue], must be implemented for Logback using
+   * [BaseLogbackEvent.addKeyValuePair].
    */
-  fun addKeyValuePair(keyValue: KeyValuePair)
+  fun addKeyValue(key: String, value: Any?)
 
   /**
    * Returns null if no key-value pairs have been added yet.
@@ -125,6 +125,10 @@ internal class LogbackLogEvent(
   }
 
   override fun getThrowable(): Throwable? = (throwableProxy as? ThrowableProxy)?.throwable
+
+  override fun addKeyValue(key: String, value: Any?) {
+    super.addKeyValuePair(KeyValuePair(key, value))
+  }
 
   override fun log(logger: Slf4jLogger) {
     // Safe to cast here, since we only construct this event if the logger is a LogbackLogger.
@@ -174,10 +178,6 @@ internal class Slf4jLogEvent(level: LogLevel, logger: Slf4jLogger) :
     ) {
   init {
     super.setCallerBoundary(FULLY_QUALIFIED_CLASS_NAME)
-  }
-
-  override fun addKeyValuePair(keyValue: KeyValuePair) {
-    super.addKeyValue(keyValue.key, keyValue.value)
   }
 
   override fun log(logger: Slf4jLogger) {

@@ -332,7 +332,7 @@ internal class LoggerTest {
       val expectedFields: List<KeyValuePair>? =
           listOf(
               KeyValuePair(fieldKey1, fieldValue1),
-              KeyValuePair(fieldKey2, RawJsonValue("""{"id":1,"name":"John Doe"}""")),
+              KeyValuePair(fieldKey2, RawJson("""{"id":1,"name":"John Doe"}""")),
           ),
       val shouldHaveCorrectFileLocation: Boolean = true,
   ) {

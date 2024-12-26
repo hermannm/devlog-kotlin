@@ -96,7 +96,7 @@ internal constructor(
       serializer: SerializationStrategy<ValueT>? = null,
   ) {
     if (!keyAdded(key)) {
-      logEvent.addKeyValuePair(createKeyValuePair(key, value, serializer))
+      logEvent.addKeyValue(key, encodeFieldValue(value, serializer))
     }
   }
 
@@ -137,7 +137,7 @@ internal constructor(
    */
   fun addRawJsonField(key: String, json: String, validJson: Boolean = false) {
     if (!keyAdded(key)) {
-      logEvent.addKeyValuePair(createRawJsonKeyValuePair(key, json, validJson))
+      logEvent.addKeyValue(key, rawJsonFieldValue(json, validJson))
     }
   }
 
@@ -150,7 +150,7 @@ internal constructor(
    */
   fun addPreconstructedField(field: LogField) {
     if (!keyAdded(field.key)) {
-      logEvent.addKeyValuePair(field.keyValuePair)
+      logEvent.addKeyValue(field.key, field.value)
     }
   }
 
@@ -169,7 +169,7 @@ internal constructor(
     getLogFieldsFromContext().forEachReversed { field ->
       // Don't add fields with keys that have already been added
       if (!keyAdded(field.key)) {
-        logEvent.addKeyValuePair(field)
+        logEvent.addKeyValue(field.key, field.value)
       }
     }
   }
@@ -195,7 +195,7 @@ internal constructor(
         exception.logFields.forEach { field ->
           // Don't add fields with keys that have already been added
           if (!keyAdded(field.key)) {
-            logEvent.addKeyValuePair(field.keyValuePair)
+            logEvent.addKeyValue(field.key, field.value)
           }
         }
       }

@@ -1,9 +1,8 @@
 package dev.hermannm.devlog
 
 import kotlin.concurrent.getOrSet
-import org.slf4j.event.KeyValuePair
 
-@PublishedApi internal val loggingContext = ThreadLocal<ArrayList<KeyValuePair>>()
+@PublishedApi internal val loggingContext = ThreadLocal<ArrayList<LogField>>()
 
 /**
  * Adds the given [log fields][LogField] to every log made by a [Logger] in the context of the given
@@ -48,7 +47,7 @@ inline fun <ReturnT> withLoggingContext(vararg logFields: LogField, block: () ->
   return withLoggingContextInternal(
       size = logFields.size,
       addLogFieldsToContext = { context ->
-        logFields.forEachReversed { field -> context.add(field.keyValuePair) }
+        logFields.forEachReversed { field -> context.add(field) }
       },
       block = block,
   )
@@ -101,7 +100,7 @@ inline fun <ReturnT> withLoggingContext(logFields: List<LogField>, block: () -> 
   return withLoggingContextInternal(
       size = logFields.size,
       addLogFieldsToContext = { context ->
-        logFields.forEachReversed { field -> context.add(field.keyValuePair) }
+        logFields.forEachReversed { field -> context.add(field) }
       },
       block = block,
   )
@@ -125,7 +124,7 @@ internal inline fun <ReturnT> withLoggingContextInternal(
      * fields to show in reverse order to how they were passed. So to counteract that, this function
      * should add fields to the logging context here in reverse order.
      */
-    addLogFieldsToContext: (ArrayList<KeyValuePair>) -> Unit,
+    addLogFieldsToContext: (ArrayList<LogField>) -> Unit,
     block: () -> ReturnT
 ): ReturnT {
   // Passing 0 log fields to withLoggingContext would be strange, but it may happen if fields are
@@ -217,15 +216,15 @@ fun getLoggingContext(): List<LogField> {
     return emptyList()
   }
 
-  // `map` copies the list
-  return loggingContext.map { field -> LogField(field) }
+  // This constructor copies the list
+  return ArrayList(loggingContext)
 }
 
 /**
  * We use this instead of [getLoggingContext] internally, as we can avoid copying the list when we
  * know that we don't pass it between threads.
  */
-internal fun getLogFieldsFromContext(): List<KeyValuePair> {
+internal fun getLogFieldsFromContext(): List<LogField> {
   // loggingContext list will be null if withLoggingContext has not been called in this thread
   return loggingContext.get() ?: emptyList()
 }

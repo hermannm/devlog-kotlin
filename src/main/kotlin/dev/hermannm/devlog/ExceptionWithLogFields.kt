@@ -83,7 +83,7 @@ private fun combineFieldsWithLoggingContext(logFields: List<LogField>): List<Log
   // Add exception log fields first, so they show first in the log output
   combinedFields.addAll(logFields)
   // Add context fields in reverse, so newest field shows first
-  contextFields.forEachReversed { field -> combinedFields.add(LogField(field)) }
+  contextFields.forEachReversed { field -> combinedFields.add(field) }
   return combinedFields
 }
 
