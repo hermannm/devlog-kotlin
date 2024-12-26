@@ -256,6 +256,8 @@
             </goals>
             <configuration>
               <file>./target/devlog-kotlin-${project.version}.jar</file>
+              <sources>./target/devlog-kotlin-${project.version}-sources.jar</sources>
+              <javadoc>./target/devlog-kotlin-${project.version}-javadoc.jar</javadoc>
               <groupId>${project.groupId}</groupId>
               <artifactId>${project.artifactId}</artifactId>
               <version>${project.version}-SNAPSHOT</version>
