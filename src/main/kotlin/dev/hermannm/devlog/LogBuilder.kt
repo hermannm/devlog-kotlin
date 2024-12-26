@@ -165,8 +165,7 @@ internal constructor(
 
   /** Adds log fields from [withLoggingContext]. */
   private fun addFieldsFromContext() {
-    // Add context fields in reverse, so newest field shows first
-    getLogFieldsFromContext().forEachReversed { field ->
+    LoggingContext.getFields().forEach { field ->
       // Don't add fields with keys that have already been added
       if (!keyAdded(field.key)) {
         logEvent.addKeyValue(field.key, field.value)
