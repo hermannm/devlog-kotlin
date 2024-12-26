@@ -25,8 +25,7 @@ class Log4jLoggerTest {
     }
 
     output shouldContain """"log.level":"INFO""""
-    output shouldContain """"message":"Test""""
-    output shouldContain """"user":"{\"id\":1,\"name\":\"John Doe\"}""""
+    output shouldContain """"message":"Test [user={\"id\":1,\"name\":\"John Doe\"}]""""
   }
 
   @Test

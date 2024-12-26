@@ -41,8 +41,8 @@ internal constructor(
    * LoggingEvent API).
    */
   var cause: Throwable?
-    set(value) = logEvent.setCause(value)
-    get() = logEvent.getCause()
+    set(value) = logEvent.setThrowable(value)
+    get() = logEvent.getThrowable()
 
   /**
    * Adds a [log field][LogField] (structured key-value data) to the log.
@@ -95,7 +95,7 @@ internal constructor(
       value: ValueT,
       serializer: SerializationStrategy<ValueT>? = null,
   ) {
-    if (!logEvent.isKeyAdded(key)) {
+    if (!keyAdded(key)) {
       logEvent.addKeyValuePair(createKeyValuePair(key, value, serializer))
     }
   }
@@ -136,7 +136,7 @@ internal constructor(
    * ```
    */
   fun addRawJsonField(key: String, json: String, validJson: Boolean = false) {
-    if (!logEvent.isKeyAdded(key)) {
+    if (!keyAdded(key)) {
       logEvent.addKeyValuePair(createRawJsonKeyValuePair(key, json, validJson))
     }
   }
@@ -149,7 +149,7 @@ internal constructor(
    *   [withLoggingContext]
    */
   fun addPreconstructedField(field: LogField) {
-    if (!logEvent.isKeyAdded(field.key)) {
+    if (!keyAdded(field.key)) {
       logEvent.addKeyValuePair(field.keyValuePair)
     }
   }
@@ -168,7 +168,7 @@ internal constructor(
     // Add context fields in reverse, so newest field shows first
     getLogFieldsFromContext().forEachReversed { field ->
       // Don't add fields with keys that have already been added
-      if (!logEvent.isKeyAdded(field.key)) {
+      if (!keyAdded(field.key)) {
         logEvent.addKeyValuePair(field)
       }
     }
@@ -194,7 +194,7 @@ internal constructor(
       if (exception is WithLogFields) {
         exception.logFields.forEach { field ->
           // Don't add fields with keys that have already been added
-          if (!logEvent.isKeyAdded(field.key)) {
+          if (!keyAdded(field.key)) {
             logEvent.addKeyValuePair(field.keyValuePair)
           }
         }
@@ -203,5 +203,12 @@ internal constructor(
       exception = exception.cause
       depth++
     }
+  }
+
+  @PublishedApi
+  internal fun keyAdded(key: String): Boolean {
+    val addedFields = logEvent.getKeyValuePairs() ?: return false
+
+    return addedFields.any { field -> field.key == key }
   }
 }
