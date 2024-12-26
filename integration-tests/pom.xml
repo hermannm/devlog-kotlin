@@ -44,6 +44,11 @@
     <repository>
       <id>local-maven-repo</id>
       <url>file:///${project.basedir}/local-maven-repo</url>
+      <snapshots>
+        <!-- We always want to re-fetch this, since it's stored locally anyway, and we don't want a stale cache -->
+        <updatePolicy>always</updatePolicy>
+        <checksumPolicy>ignore</checksumPolicy>
+      </snapshots>
     </repository>
   </repositories>
 
