@@ -155,6 +155,24 @@ class LogFieldTest {
   }
 
   @Test
+  fun `null field value is allowed`() {
+    val nullValue: String? = null
+
+    val logFields = captureLogFields {
+      log.info {
+        addField("key", nullValue)
+        "Test"
+      }
+    }
+
+    logFields shouldBe
+        """
+          "key":null
+        """
+            .trimIndent()
+  }
+
+  @Test
   fun `addRawJsonField works for valid JSON`() {
     val userJson = """{"id":1,"name":"John Doe"}"""
 

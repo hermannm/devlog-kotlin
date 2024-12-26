@@ -120,7 +120,7 @@ internal inline fun <reified ValueT> encodeFieldValue(
 ): LogFieldValue {
   try {
     if (value == null) {
-      return null
+      return RawJson.NULL
     }
 
     if (serializer != null) {
@@ -228,13 +228,12 @@ internal fun rawJsonFieldValue(json: String, validJson: Boolean): LogFieldValue 
  * A log field value is either:
  * - A [RawJson] value, serialized in [encodeFieldValue] or passed directly to [rawJsonFieldValue]
  * - A `String` or other primitive type that we assume the logger implementation can handle
- * - `null`
  *
  * We don't use an interface or sealed class for this, to avoid allocating redundant wrapper
  * objects. We could wrap this in an inline value class, but experimenting with that proved to be
  * more cumbersome than worthwhile.
  */
-internal typealias LogFieldValue = Any?
+internal typealias LogFieldValue = Any
 
 @PublishedApi
 @JvmInline
@@ -252,6 +251,18 @@ internal value class RawJson(private val json: String) : JsonSerializable {
   ) {
     // Since we don't know what type the raw JSON is, we can only redirect to normal serialization
     serialize(generator, serializers)
+  }
+
+  @PublishedApi
+  internal companion object {
+    /**
+     * SLF4J supports null values in `KeyValuePair`s, and it's up to the logger implementation for
+     * how to handle it. In the case of Logback and `logstash-logback-encoder`, key-value pairs with
+     * `null` values are omitted entirely. But this can be confusing for the user, since they may
+     * think the log field was omitted due to some error. So in this library, we instead use a JSON
+     * `null` as the value for null log fields.
+     */
+    @PublishedApi internal val NULL = RawJson("null")
   }
 }
 
