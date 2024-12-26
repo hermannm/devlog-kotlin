@@ -290,7 +290,7 @@ internal class LoggerTest {
     }
   }
 
-  /** See comment in [LogbackLogEvent.setThrowable]. */
+  /** See comment in [LogbackLogEvent.setCause]. */
   @Test
   fun `cause exception can be set to null`() {
     log.error {
@@ -299,7 +299,7 @@ internal class LoggerTest {
     }
   }
 
-  /** See comment in [LogBuilder.cause] setter and [LogbackLogEvent.setThrowable]. */
+  /** See comment in [LogBuilder.cause] setter and [LogbackLogEvent.setCause]. */
   @Test
   fun `setting cause multiple times only keeps the first non-null exception`() {
     val exception1 = Exception("Exception 1")
@@ -352,13 +352,14 @@ internal class LoggerTest {
           LoggerTestCase(
               "Location-aware SLF4J logger",
               logger = Logger(LocationAwareSlf4jLogger(logbackLogger)),
-              expectedMessage = """Test message [key1=value1, key2={"id":1,"name":"John Doe"}]""",
+              // Default key-value format used by SLF4J when logger has no special key-value support
+              expectedMessage = """key1=value1 key2={"id":1,"name":"John Doe"} Test message""",
               expectedFields = null,
           ),
           LoggerTestCase(
               "Plain SLF4J logger",
               logger = Logger(PlainSlf4jLogger(logbackLogger)),
-              expectedMessage = """Test message [key1=value1, key2={"id":1,"name":"John Doe"}]""",
+              expectedMessage = """key1=value1 key2={"id":1,"name":"John Doe"} Test message""",
               expectedFields = null,
               // The plain SLF4J logger does not implement location-aware logging, so we don't
               // expect it to have correct file location

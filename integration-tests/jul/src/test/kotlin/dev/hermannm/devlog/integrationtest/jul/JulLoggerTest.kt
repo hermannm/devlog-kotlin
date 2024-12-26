@@ -38,7 +38,7 @@ class JulLoggerTest {
     output.substring(indexOfPackageName).removeSuffix("\n") shouldBe
         """
           dev.hermannm.devlog.integrationtest.jul.JulLoggerTest log
-          INFO: Test [user={"id":1,"name":"John Doe"}]
+          INFO: user={"id":1,"name":"John Doe"} Test
         """
             .trimIndent()
   }

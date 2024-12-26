@@ -8,8 +8,9 @@ import org.slf4j.Logger as Slf4jLogger
 import org.slf4j.event.DefaultLoggingEvent as BaseSlf4jEvent
 import org.slf4j.event.KeyValuePair
 import org.slf4j.event.Level as Slf4jLevel
-import org.slf4j.spi.LocationAwareLogger
+import org.slf4j.spi.CallerBoundaryAware
 import org.slf4j.spi.LoggingEventAware
+import org.slf4j.spi.LoggingEventBuilder
 
 /**
  * The purpose of [LogBuilder] is to build a log event. We could store intermediate state on
@@ -39,7 +40,7 @@ internal interface LogEvent {
         return LogbackLogEvent(level, logger)
       }
 
-      return Slf4jLogEvent(level, logger)
+      return Slf4jLogEvent(logger.makeLoggingEventBuilder(level.slf4jLevel))
     }
 
     /**
@@ -68,13 +69,13 @@ internal interface LogEvent {
    * Already implemented by [BaseSlf4jEvent.setThrowable], must be implemented for Logback using
    * [BaseLogbackEvent.setThrowableProxy].
    */
-  fun setThrowable(cause: Throwable?)
+  fun setCause(cause: Throwable?)
 
   /**
    * Already implemented by [BaseSlf4jEvent.getThrowable], must be implemented for Logback using
    * [BaseLogbackEvent.getThrowableProxy].
    */
-  fun getThrowable(): Throwable?
+  fun getCause(): Throwable?
 
   /**
    * Already implemented by [BaseLogbackEvent.addKeyValuePair], must be implemented for SLF4J using
@@ -82,13 +83,7 @@ internal interface LogEvent {
    */
   fun addKeyValuePair(keyValue: KeyValuePair)
 
-  /**
-   * Returns null if no key-value pairs have been added yet.
-   *
-   * Already implemented by [BaseLogbackEvent.getKeyValuePairs] and
-   * [BaseSlf4jEvent.getKeyValuePairs].
-   */
-  fun getKeyValuePairs(): List<KeyValuePair>?
+  fun isKeyAdded(key: String): Boolean
 
   /** Must be implemented for both Logback and SLF4J. */
   fun log(logger: Slf4jLogger)
@@ -108,7 +103,7 @@ internal class LogbackLogEvent(
         null, // throwable (may be set by LogBuilder)
         null, // argArray (we don't use this)
     ) {
-  override fun setThrowable(cause: Throwable?) {
+  override fun setCause(cause: Throwable?) {
     /**
      * Passing null to [ThrowableProxy] will throw, so we must only call it if cause is not null. We
      * still want to allow passing null here, to support the case where the user has a cause
@@ -124,7 +119,14 @@ internal class LogbackLogEvent(
     }
   }
 
-  override fun getThrowable(): Throwable? = (throwableProxy as? ThrowableProxy)?.throwable
+  override fun getCause(): Throwable? = (throwableProxy as? ThrowableProxy)?.throwable
+
+  override fun isKeyAdded(key: String): Boolean {
+    // keyValuePairs will be null if none have been added yet
+    val addedFields = keyValuePairs ?: return false
+
+    return addedFields.any { field -> field.key == key }
+  }
 
   override fun log(logger: Slf4jLogger) {
     // Safe to cast here, since we only construct this event if the logger is a LogbackLogger.
@@ -165,88 +167,45 @@ internal fun LogLevel.toLogback(): LogbackLevel {
   }
 }
 
-/** Extends SLF4J's log event class to implement [LogEvent]. */
-internal class Slf4jLogEvent(level: LogLevel, logger: Slf4jLogger) :
-    LogEvent,
-    BaseSlf4jEvent(
-        level.slf4jLevel,
-        logger,
-    ) {
+/** Wraps SLF4J's log event builder interface to implement [LogEvent]. */
+internal class Slf4jLogEvent(
+    private val eventBuilder: LoggingEventBuilder,
+    private var addedFieldKeys: ArrayList<String>? = null,
+    private var cause: Throwable? = null,
+) : LogEvent {
   init {
-    super.setCallerBoundary(FULLY_QUALIFIED_CLASS_NAME)
+    if (eventBuilder is CallerBoundaryAware) {
+      eventBuilder.setCallerBoundary(FULLY_QUALIFIED_CLASS_NAME)
+    }
+  }
+
+  override fun setMessage(message: String) {
+    eventBuilder.setMessage(message)
+  }
+
+  override fun getCause(): Throwable? = cause
+
+  override fun setCause(cause: Throwable?) {
+    eventBuilder.setCause(cause)
+    this.cause = cause
   }
 
   override fun addKeyValuePair(keyValue: KeyValuePair) {
-    super.addKeyValue(keyValue.key, keyValue.value)
+    eventBuilder.addKeyValue(keyValue.key, keyValue.value)
+
+    if (addedFieldKeys == null) {
+      addedFieldKeys = ArrayList(4)
+    }
+    // We know this can't be null here, since we never set this back to null after initializing
+    addedFieldKeys!!.add(keyValue.key)
+  }
+
+  override fun isKeyAdded(key: String): Boolean {
+    return addedFieldKeys?.contains(key) ?: false
   }
 
   override fun log(logger: Slf4jLogger) {
-    when (logger) {
-      // If logger is LoggingEventAware, we can just log the event directly
-      is LoggingEventAware -> logger.log(this)
-      // If logger is LocationAware, we want to use that interface so the logger implementation
-      // can show the correct file location of where the log was made
-      is LocationAwareLogger -> logWithLocationAwareApi(logger)
-      // Otherwise, we fall back to the base SLF4J Logger API
-      else -> logWithBasicSlf4jApi(logger)
-    }
-  }
-
-  private fun logWithLocationAwareApi(logger: LocationAwareLogger) {
-    // Location-aware SLF4J API doesn't take KeyValuePair, so we must merge them into message
-    val message = mergeMessageAndKeyValuePairs()
-    logger.log(
-        null, // marker (we don't use this)
-        callerBoundary, // Fully qualified class name of class making log (set in constructor)
-        level.toInt(),
-        message,
-        null, // argArray (we don't use this)
-        throwable,
-    )
-  }
-
-  private fun logWithBasicSlf4jApi(logger: Slf4jLogger) {
-    // Basic SLF4J API doesn't take KeyValuePair, so we must merge them into message
-    val message = mergeMessageAndKeyValuePairs()
-    // level should never be null here, since we pass it in the constructor
-    when (level!!) {
-      // We don't assume that the SLF4J implementation accepts a `null` cause exception in the
-      // overload that takes a throwable. So we only call that overload if `throwable != null`.
-      Slf4jLevel.INFO ->
-          if (throwable == null) logger.info(message) else logger.info(message, throwable)
-      Slf4jLevel.WARN ->
-          if (throwable == null) logger.warn(message) else logger.warn(message, throwable)
-      Slf4jLevel.ERROR ->
-          if (throwable == null) logger.error(message) else logger.error(message, throwable)
-      Slf4jLevel.DEBUG ->
-          if (throwable == null) logger.debug(message) else logger.debug(message, throwable)
-      Slf4jLevel.TRACE ->
-          if (throwable == null) logger.trace(message) else logger.trace(message, throwable)
-    }
-  }
-
-  private fun mergeMessageAndKeyValuePairs(): String {
-    val keyValuePairs = this.keyValuePairs
-    // If there are no key-value pairs, we can just return the message as-is
-    if (keyValuePairs.isNullOrEmpty()) {
-      return message
-    }
-
-    val builder = StringBuilder()
-    builder.append(message)
-
-    builder.append(" [")
-    keyValuePairs.forEachIndexed { index, keyValuePair ->
-      builder.append(keyValuePair.key)
-      builder.append('=')
-      builder.append(keyValuePair.value)
-      if (index != keyValuePairs.size - 1) {
-        builder.append(", ")
-      }
-    }
-    builder.append(']')
-
-    return builder.toString()
+    eventBuilder.log()
   }
 
   internal companion object {
