@@ -7,9 +7,11 @@ import ch.qos.logback.classic.spi.ThrowableProxy
 import ch.qos.logback.core.read.ListAppender
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
+import io.kotest.matchers.date.shouldBeBetween
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import java.time.Instant
 import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
@@ -43,131 +45,131 @@ internal class LoggerTest {
   @ParameterizedTest
   @MethodSource("getLoggerTestCases")
   fun `info log`(test: LoggerTestCase) {
-    test.logger.info {
-      cause = test.cause
-      addField(test.fieldKey1, test.fieldValue1)
-      addField(test.fieldKey2, test.fieldValue2)
-      test.message
+    test.verifyLogOutput(LogLevel.INFO) {
+      test.logger.info {
+        cause = test.cause
+        addField(test.fieldKey1, test.fieldValue1)
+        addField(test.fieldKey2, test.fieldValue2)
+        test.message
+      }
     }
-
-    verifyLogOutput(test, expectedLogLevel = LogLevel.INFO)
   }
 
   @ParameterizedTest
   @MethodSource("getLoggerTestCases")
   fun `warn log`(test: LoggerTestCase) {
-    test.logger.warn {
-      cause = test.cause
-      addField(test.fieldKey1, test.fieldValue1)
-      addField(test.fieldKey2, test.fieldValue2)
-      test.message
+    test.verifyLogOutput(LogLevel.WARN) {
+      test.logger.warn {
+        cause = test.cause
+        addField(test.fieldKey1, test.fieldValue1)
+        addField(test.fieldKey2, test.fieldValue2)
+        test.message
+      }
     }
-
-    verifyLogOutput(test, expectedLogLevel = LogLevel.WARN)
   }
 
   @ParameterizedTest
   @MethodSource("getLoggerTestCases")
   fun `error log`(test: LoggerTestCase) {
-    test.logger.error {
-      cause = test.cause
-      addField(test.fieldKey1, test.fieldValue1)
-      addField(test.fieldKey2, test.fieldValue2)
-      test.message
+    test.verifyLogOutput(LogLevel.ERROR) {
+      test.logger.error {
+        cause = test.cause
+        addField(test.fieldKey1, test.fieldValue1)
+        addField(test.fieldKey2, test.fieldValue2)
+        test.message
+      }
     }
-
-    verifyLogOutput(test, expectedLogLevel = LogLevel.ERROR)
   }
 
   @ParameterizedTest
   @MethodSource("getLoggerTestCases")
   fun `debug log`(test: LoggerTestCase) {
-    test.logger.debug {
-      cause = test.cause
-      addField(test.fieldKey1, test.fieldValue1)
-      addField(test.fieldKey2, test.fieldValue2)
-      test.message
+    test.verifyLogOutput(LogLevel.DEBUG) {
+      test.logger.debug {
+        cause = test.cause
+        addField(test.fieldKey1, test.fieldValue1)
+        addField(test.fieldKey2, test.fieldValue2)
+        test.message
+      }
     }
-
-    verifyLogOutput(test, expectedLogLevel = LogLevel.DEBUG)
   }
 
   @ParameterizedTest
   @MethodSource("getLoggerTestCases")
   fun `trace log`(test: LoggerTestCase) {
-    test.logger.trace {
-      cause = test.cause
-      addField(test.fieldKey1, test.fieldValue1)
-      addField(test.fieldKey2, test.fieldValue2)
-      test.message
+    test.verifyLogOutput(LogLevel.TRACE) {
+      test.logger.trace {
+        cause = test.cause
+        addField(test.fieldKey1, test.fieldValue1)
+        addField(test.fieldKey2, test.fieldValue2)
+        test.message
+      }
     }
-
-    verifyLogOutput(test, expectedLogLevel = LogLevel.TRACE)
   }
 
   @ParameterizedTest
   @MethodSource("getLoggerTestCases")
   fun `info log using 'at' method`(test: LoggerTestCase) {
-    test.logger.at(LogLevel.INFO) {
-      cause = test.cause
-      addField(test.fieldKey1, test.fieldValue1)
-      addField(test.fieldKey2, test.fieldValue2)
-      test.message
+    test.verifyLogOutput(LogLevel.INFO) {
+      test.logger.at(LogLevel.INFO) {
+        cause = test.cause
+        addField(test.fieldKey1, test.fieldValue1)
+        addField(test.fieldKey2, test.fieldValue2)
+        test.message
+      }
     }
-
-    verifyLogOutput(test, expectedLogLevel = LogLevel.INFO)
   }
 
   @ParameterizedTest
   @MethodSource("getLoggerTestCases")
   fun `warn log using 'at' method`(test: LoggerTestCase) {
-    test.logger.at(LogLevel.WARN) {
-      cause = test.cause
-      addField(test.fieldKey1, test.fieldValue1)
-      addField(test.fieldKey2, test.fieldValue2)
-      test.message
+    test.verifyLogOutput(LogLevel.WARN) {
+      test.logger.at(LogLevel.WARN) {
+        cause = test.cause
+        addField(test.fieldKey1, test.fieldValue1)
+        addField(test.fieldKey2, test.fieldValue2)
+        test.message
+      }
     }
-
-    verifyLogOutput(test, expectedLogLevel = LogLevel.WARN)
   }
 
   @ParameterizedTest
   @MethodSource("getLoggerTestCases")
   fun `error log using 'at' method`(test: LoggerTestCase) {
-    test.logger.at(LogLevel.ERROR) {
-      cause = test.cause
-      addField(test.fieldKey1, test.fieldValue1)
-      addField(test.fieldKey2, test.fieldValue2)
-      test.message
+    test.verifyLogOutput(LogLevel.ERROR) {
+      test.logger.at(LogLevel.ERROR) {
+        cause = test.cause
+        addField(test.fieldKey1, test.fieldValue1)
+        addField(test.fieldKey2, test.fieldValue2)
+        test.message
+      }
     }
-
-    verifyLogOutput(test, expectedLogLevel = LogLevel.ERROR)
   }
 
   @ParameterizedTest
   @MethodSource("getLoggerTestCases")
   fun `debug log using 'at' method`(test: LoggerTestCase) {
-    test.logger.at(LogLevel.DEBUG) {
-      cause = test.cause
-      addField(test.fieldKey1, test.fieldValue1)
-      addField(test.fieldKey2, test.fieldValue2)
-      test.message
+    test.verifyLogOutput(LogLevel.DEBUG) {
+      test.logger.at(LogLevel.DEBUG) {
+        cause = test.cause
+        addField(test.fieldKey1, test.fieldValue1)
+        addField(test.fieldKey2, test.fieldValue2)
+        test.message
+      }
     }
-
-    verifyLogOutput(test, expectedLogLevel = LogLevel.DEBUG)
   }
 
   @ParameterizedTest
   @MethodSource("getLoggerTestCases")
   fun `trace log using 'at' method`(test: LoggerTestCase) {
-    test.logger.at(LogLevel.TRACE) {
-      cause = test.cause
-      addField(test.fieldKey1, test.fieldValue1)
-      addField(test.fieldKey2, test.fieldValue2)
-      test.message
+    test.verifyLogOutput(LogLevel.TRACE) {
+      test.logger.at(LogLevel.TRACE) {
+        cause = test.cause
+        addField(test.fieldKey1, test.fieldValue1)
+        addField(test.fieldKey2, test.fieldValue2)
+        test.message
+      }
     }
-
-    verifyLogOutput(test, expectedLogLevel = LogLevel.TRACE)
   }
 
   /**
@@ -366,18 +368,23 @@ internal class LoggerTest {
           ),
       )
 
-  private fun verifyLogOutput(test: LoggerTestCase, expectedLogLevel: LogLevel) {
+  private fun LoggerTestCase.verifyLogOutput(expectedLogLevel: LogLevel, block: () -> Unit) {
+    val timeBefore = Instant.now()
+    block()
+    val timeAfter = Instant.now()
+
     logAppender.list shouldHaveSize 1
     val logEvent = logAppender.list.first()
 
-    logEvent.loggerName shouldBe test.loggerName
-    logEvent.message shouldBe test.expectedMessage
+    logEvent.loggerName shouldBe this.loggerName
+    logEvent.message shouldBe this.expectedMessage
     logEvent.level.toString() shouldBe expectedLogLevel.toString()
+    logEvent.instant.shouldBeBetween(timeBefore, timeAfter)
 
     val throwableProxy = logEvent.throwableProxy.shouldBeInstanceOf<ThrowableProxy>()
-    throwableProxy.throwable shouldBe test.cause
+    throwableProxy.throwable shouldBe this.cause
 
-    logEvent.keyValuePairs shouldBe test.expectedFields
+    logEvent.keyValuePairs shouldBe this.expectedFields
   }
 
   private val loggerInsideClass = getLogger {}
