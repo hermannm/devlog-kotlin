@@ -178,6 +178,7 @@ internal class Slf4jLogEvent(level: LogLevel, logger: Slf4jLogger) :
     ) {
   init {
     super.setCallerBoundary(FULLY_QUALIFIED_CLASS_NAME)
+    super.setTimeStamp(System.currentTimeMillis())
   }
 
   override fun log(logger: Slf4jLogger) {
