@@ -16,6 +16,7 @@
 
   <properties>
     <maven.deploy.skip>true</maven.deploy.skip>
+    <root-path>${project.basedir}/..</root-path>
 
     <log4j.version>2.24.3</log4j.version>
   </properties>

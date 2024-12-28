@@ -41,10 +41,10 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <kotlin.version>2.0.21</kotlin.version>
+    <kotlin.version>2.1.0</kotlin.version>
 
     <!-- Logging -->
-    <slf4j.version>2.0.15</slf4j.version>
+    <slf4j.version>2.0.16</slf4j.version>
     <logback.version>1.5.15</logback.version>
 
     <!-- Serialization -->
@@ -60,11 +60,14 @@
     <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
     <ktfmt.version>0.43</ktfmt.version>
     <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
-    <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
     <maven-install-plugin.version>3.1.3</maven-install-plugin.version>
+    <maven-dependency-plugin.version>3.8.1</maven-dependency-plugin.version>
     <exec-maven-plugin.version>3.5.0</exec-maven-plugin.version>
+    <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
+    <required-maven-version>3.6.3</required-maven-version>
+    <versions-maven-plugin.version>2.18.0</versions-maven-plugin.version>
     <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
-    <dokka-maven-plugin.version>1.9.20</dokka-maven-plugin.version>
+    <dokka-maven-plugin.version>2.0.0</dokka-maven-plugin.version>
     <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
     <central-publishing-maven-plugin.version>0.6.0</central-publishing-maven-plugin.version>
   </properties>
@@ -186,13 +189,6 @@
         </executions>
       </plugin>
 
-      <!-- Testing -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>${maven-surefire-plugin.version}</version>
-      </plugin>
-
       <!-- Formatting with ktfmt -->
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
@@ -217,27 +213,11 @@
         </executions>
       </plugin>
 
-      <!-- Plugin for enforcing proper dependency management -->
+      <!-- Testing -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>${maven-enforcer-plugin.version}</version>
-        <executions>
-          <execution>
-            <id>enforce</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <banDuplicatePomDependencyVersions/>
-                <dependencyConvergence/>
-                <requireUpperBoundDeps/>
-                <banDynamicVersions/>
-              </rules>
-            </configuration>
-          </execution>
-        </executions>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven-surefire-plugin.version}</version>
       </plugin>
 
       <!--
@@ -268,6 +248,29 @@
         </executions>
       </plugin>
 
+      <!-- Purge devlog-kotlin from cache, to make sure we use newest snapshot in integration tests-->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>${maven-dependency-plugin.version}</version>
+        <executions>
+          <execution>
+            <phase>clean</phase>
+            <goals>
+              <goal>purge-local-repository</goal>
+            </goals>
+            <configuration>
+              <manualIncludes>
+                <include>dev.hermannm:devlog-kotlin</include>
+              </manualIncludes>
+              <snapshotsOnly>true</snapshotsOnly>
+              <reResolve>false</reResolve>
+              <actTransitively>false</actTransitively>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
       <!--
         Run integration tests from integration-tests subdirectory.
         See integration-tests/README.md for more on how integration tests are set up here.
@@ -292,6 +295,50 @@
                 <argument>-Dstyle.color=always</argument>
               </arguments>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Plugin for enforcing proper dependency management -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${maven-enforcer-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>enforce</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>${required-maven-version}</version>
+                </requireMavenVersion>
+                <banDuplicatePomDependencyVersions/>
+                <dependencyConvergence/>
+                <requireUpperBoundDeps/>
+                <banDynamicVersions/>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>versions-maven-plugin</artifactId>
+        <version>${versions-maven-plugin.version}</version>
+        <configuration>
+          <rulesUri>file:///${project.basedir}/rules.xml</rulesUri>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <goals>
+              <goal>display-dependency-updates</goal>
+              <goal>display-plugin-updates</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>

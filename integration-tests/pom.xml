@@ -16,11 +16,12 @@
 
   <properties>
     <maven.deploy.skip>true</maven.deploy.skip>
+    <root-path>${basedir}</root-path>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <kotlin.version>2.0.21</kotlin.version>
+    <kotlin.version>2.1.0</kotlin.version>
 
     <!-- Logging -->
     <devlog-kotlin.version>0.2.1-SNAPSHOT</devlog-kotlin.version>
@@ -38,15 +39,15 @@
     <ktfmt.version>0.43</ktfmt.version>
     <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
     <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
+    <required-maven-version>3.6.3</required-maven-version>
+    <versions-maven-plugin.version>2.18.0</versions-maven-plugin.version>
   </properties>
 
   <repositories>
     <repository>
       <id>local-maven-repo</id>
-      <url>file:///${project.basedir}/local-maven-repo</url>
+      <url>file:///${root-path}/local-maven-repo</url>
       <snapshots>
-        <!-- We always want to re-fetch this, since it's stored locally anyway, and we don't want a stale cache -->
-        <updatePolicy>always</updatePolicy>
         <checksumPolicy>ignore</checksumPolicy>
       </snapshots>
     </repository>
@@ -147,13 +148,6 @@
         </executions>
       </plugin>
 
-      <!-- Testing -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>${maven-surefire-plugin.version}</version>
-      </plugin>
-
       <!-- Formatting with ktfmt -->
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
@@ -178,6 +172,13 @@
         </executions>
       </plugin>
 
+      <!-- Testing -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven-surefire-plugin.version}</version>
+      </plugin>
+
       <!-- Plugin for enforcing proper dependency management -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -191,11 +192,32 @@
             </goals>
             <configuration>
               <rules>
+                <requireMavenVersion>
+                  <version>${required-maven-version}</version>
+                </requireMavenVersion>
                 <banDuplicatePomDependencyVersions/>
                 <dependencyConvergence/>
                 <requireUpperBoundDeps/>
               </rules>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>versions-maven-plugin</artifactId>
+        <version>${versions-maven-plugin.version}</version>
+        <configuration>
+          <rulesUri>file:///${root-path}/../rules.xml</rulesUri>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <goals>
+              <goal>display-dependency-updates</goal>
+              <goal>display-plugin-updates</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>

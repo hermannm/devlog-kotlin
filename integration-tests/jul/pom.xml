@@ -16,6 +16,7 @@
 
   <properties>
     <maven.deploy.skip>true</maven.deploy.skip>
+    <root-path>${project.basedir}/..</root-path>
   </properties>
 
   <dependencies>
