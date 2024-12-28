@@ -24,7 +24,7 @@
     <kotlin.version>2.1.0</kotlin.version>
 
     <!-- Logging -->
-    <devlog-kotlin.version>0.2.1-SNAPSHOT</devlog-kotlin.version>
+    <devlog-kotlin.version>0.3.0-SNAPSHOT</devlog-kotlin.version>
     <slf4j.version>2.0.16</slf4j.version>
 
     <!-- Serialization -->

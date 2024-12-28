@@ -125,7 +125,7 @@ To set up `devlog-kotlin` with Logback and JSON output, add the following depend
   ```kotlin
   dependencies {
     // Logger API
-    implementation("dev.hermannm:devlog-kotlin:0.2.1")
+    implementation("dev.hermannm:devlog-kotlin:0.3.0")
     // Logger implementation
     implementation("ch.qos.logback:logback-classic:1.5.15")
     // JSON encoding of logs
@@ -139,7 +139,7 @@ To set up `devlog-kotlin` with Logback and JSON output, add the following depend
     <dependency>
       <groupId>dev.hermannm</groupId>
       <artifactId>devlog-kotlin</artifactId>
-      <version>0.2.1</version>
+      <version>0.3.0</version>
     </dependency>
     <!-- Logger implementation -->
     <dependency>
