@@ -412,7 +412,7 @@
           <publishingServerId>central</publishingServerId>
           <deploymentName>${project.artifactId} v${project.version}</deploymentName>
           <excludeArtifacts>
-            devlog-kotlin-integration-tests,devlog-kotlin-integration-test-jul
+            devlog-kotlin-integration-tests,devlog-kotlin-integration-test-jul,devlog-kotlin-integration-test-log4j,devlog-kotlin-integration-test-logback
           </excludeArtifacts>
         </configuration>
       </plugin>
