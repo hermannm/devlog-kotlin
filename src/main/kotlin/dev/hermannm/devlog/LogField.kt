@@ -235,6 +235,14 @@ internal fun rawJsonFieldValue(json: String, validJson: Boolean): LogFieldValue 
  */
 internal typealias LogFieldValue = Any
 
+/**
+ * Wrapper class for a pre-serialized JSON string. It implements [JsonSerializable] from Jackson,
+ * because most JSON-outputting logger implementations will use that library to encode the logs (at
+ * least `logstash-logback-encoder` for Logback does this).
+ *
+ * Since we use this to wrap a value that has already been serialized with `kotlinx.serialization`,
+ * we simply call [JsonGenerator.writeRawValue] in [serialize] to write the JSON string as-is.
+ */
 @PublishedApi
 @JvmInline
 internal value class RawJson(private val json: String) : JsonSerializable {
