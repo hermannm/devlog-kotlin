@@ -180,7 +180,7 @@ internal constructor(
   private fun addFieldsFromCauseException() {
     // The `cause` here is the log event cause exception. But this exception may itself have a
     // `cause` exception, and that may have another one, and so on. We want to go through all these
-    // exceptions to look for log field, so we re-assign this local variable as we iterate through.
+    // exceptions to look for log fields, so we re-assign this local variable as we iterate through.
     var exception = cause
     // Limit the depth of cause exceptions, so we don't expose ourselves to infinite loops.
     // This can happen if:
