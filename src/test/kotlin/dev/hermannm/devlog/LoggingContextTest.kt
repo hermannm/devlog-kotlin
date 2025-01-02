@@ -6,10 +6,12 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 import org.junit.jupiter.api.Test
 
@@ -227,31 +229,31 @@ class LoggingContextTest {
 
   @Test
   fun `getLoggingContext allows passing logging context between threads`() {
-    val executor = Executors.newSingleThreadExecutor()
     val lock = ReentrantLock()
+    // Used to wait for the child thread to complete its log
+    val conditionLatch = CountDownLatch(1)
 
     val logFields = captureLogFields {
-      // Get the future from ExecutorService.submit, so we can wait until the log has completed
-      val future =
-          // Aquire a lock around the outer withLoggingContext in the parent thread, to test that
-          // the logging context works in the child thread even when the outer context has exited
-          lock.withLock {
-            withLoggingContext(field("fieldFromParentThread", "value")) {
-              // Get the parent logging context (the one we just entered)
-              val loggingContext = getLoggingContext()
+      // Aquire a lock around the outer withLoggingContext in the parent thread, to test that
+      // the logging context works in the child thread even when the outer context has exited
+      lock.withLock {
+        withLoggingContext(field("fieldFromParentThread", "value")) {
+          // Get the parent logging context (the one we just entered)
+          val loggingContext = getLoggingContext()
 
-              executor.submit {
-                // Acquire the lock here in the child thread - this will block until the outer
-                // logging context has exited
-                lock.withLock {
-                  // Use the parent logging context here in the child thread
-                  withLoggingContext(loggingContext) { log.error { "Test" } }
-                }
-              }
+          thread {
+            // Acquire the lock here in the child thread - this will block until the outer
+            // logging context has exited
+            lock.withLock {
+              // Use the parent logging context here in the child thread
+              withLoggingContext(loggingContext) { log.error { "Test" } }
+              conditionLatch.countDown()
             }
           }
+        }
+      }
 
-      future.get() // Waits until completed
+      conditionLatch.await() // Waits until completed
     }
 
     logFields shouldBe

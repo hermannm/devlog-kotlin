@@ -1,7 +1,5 @@
 package dev.hermannm.devlog
 
-import dev.hermannm.devlog.LoggingContext.addFields
-import dev.hermannm.devlog.LoggingContext.popFields
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
@@ -133,6 +131,9 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  * [withLoggingContext]). This can be used to pass logging context between threads (see example
  * below).
  *
+ * If you spawn threads using an [ExecutorService], you may instead use [inheritLoggingContext],
+ * which does the logging context copying from parent to child for you.
+ *
  * ### Example
  *
  * ```
@@ -140,14 +141,13 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  * import dev.hermannm.devlog.getLogger
  * import dev.hermannm.devlog.getLoggingContext
  * import dev.hermannm.devlog.withLoggingContext
- * import java.util.concurrent.ExecutorService
+ * import kotlin.concurrent.thread
  *
  * private val log = getLogger {}
  *
  * class UserService(
  *     private val userRepository: UserRepository,
  *     private val emailService: EmailService,
- *     private val executor: ExecutorService,
  * ) {
  *   fun registerUser(user: User) {
  *     withLoggingContext(field("user", user)) {
@@ -156,16 +156,16 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  *     }
  *   }
  *
- *   // In this hypothetical, we don't want sendWelcomeEmail to block registerUser, so we use an
- *   // ExecutorService to spawn a thread.
+ *   // In this hypothetical, we don't want sendWelcomeEmail to block registerUser, so we spawn a
+ *   // thread.
  *   //
  *   // But we want to log if it fails, and include the logging context from the parent thread.
  *   // This is where getLoggingContext comes in.
  *   private fun sendWelcomeEmail(user: User) {
- *     // We call getLoggingContext here, so that we get the context fields from the parent thread
+ *     // We call getLoggingContext here, to copy the context fields from the parent thread
  *     val loggingContext = getLoggingContext()
  *
- *     executor.execute {
+ *     thread {
  *       // We then pass the parent context to withLoggingContext here in the child thread
  *       withLoggingContext(loggingContext) {
  *         try {
@@ -432,8 +432,7 @@ internal object LoggingContext {
      *   when removing the last field in [popFields]. So if the array is not null (which we check
      *   above), there will be at least 1 non-null field.
      */
-    @Suppress("UNCHECKED_CAST")
-    return fieldsCopy as Array<LogField>
+    @Suppress("UNCHECKED_CAST") return fieldsCopy as Array<LogField>
   }
 
   private fun Array<LogField?>.startIndexOfNonNullFields(): Int {
@@ -449,6 +448,17 @@ internal object LoggingContext {
   }
 }
 
+/**
+ * Implementation for [inheritLoggingContext]. Wraps the methods on the given [ExecutorService] that
+ * take a [Callable]/[Runnable] with [wrapCallable]/[wrapRunnable], which copy the logging context
+ * fields from the spawning thread to the spawned tasks.
+ *
+ * In the implementations of [wrapCallable]/[wrapRunnable], we use [LoggingContext.copyFieldArray]
+ * and pass the array directly to [withLoggingContextInternal], instead of using
+ * [getLoggingContext]. This is because `getLoggingContext` requires 2 array copies: one for the
+ * list returned by that function, and a second defensive copy done by `withLoggingContext`. So we
+ * can save an allocation by just making a single array copy.
+ */
 @JvmInline // Inline value class, since we just wrap another ExecutorService
 internal value class ExecutorServiceWithInheritedLoggingContext(
     private val wrappedExecutor: ExecutorService,
