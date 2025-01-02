@@ -1,5 +1,6 @@
 package dev.hermannm.devlog
 
+import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
@@ -7,6 +8,7 @@ import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import java.util.concurrent.Callable
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import org.junit.jupiter.api.Test
@@ -260,9 +262,8 @@ class LoggingContextTest {
   }
 
   @Test
-  fun `ThreadFactory with inheritLoggingContext allows passing logging context between threads`() {
-    val executor =
-        Executors.newSingleThreadExecutor(Executors.defaultThreadFactory().inheritLoggingContext())
+  fun `ExecutorService with inheritLoggingContext allows passing logging context between threads`() {
+    val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
     val lock = ReentrantLock()
 
     val logFields = captureLogFields {
@@ -291,9 +292,8 @@ class LoggingContextTest {
   }
 
   @Test
-  fun `ThreadFactory with inheritLoggingContext does not affect parent thread context`() {
-    val executor =
-        Executors.newSingleThreadExecutor(Executors.defaultThreadFactory().inheritLoggingContext())
+  fun `ExecutorService with inheritLoggingContext does not affect parent thread context`() {
+    val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
 
     /**
      * Use a [CyclicBarrier] here for synchronization points between the two threads in our test.
@@ -328,19 +328,18 @@ class LoggingContextTest {
   }
 
   /**
-   * In [ThreadFactoryWithInheritedLoggingContext.newThread], we only call
-   * [withLoggingContextInternal] if there are fields in the logging context. Otherwise, we just
-   * invoke the runnable directly - we want to test that that works.
+   * In [ExecutorServiceWithInheritedLoggingContext], we only call [withLoggingContextInternal] if
+   * there are fields in the logging context. Otherwise, we just invoke the Runnable/Callable
+   * directly - we want to test that that works.
    */
   @Test
-  fun `ThreadFactory with inheritLoggingContext works when there are no fields in the context`() {
-    val executor =
-        Executors.newSingleThreadExecutor(Executors.defaultThreadFactory().inheritLoggingContext())
+  fun `ExecutorService with inheritLoggingContext works when there are no fields in the context`() {
+    val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
 
     // Verify that there are no fields in parent thread context
     LoggingContext.getFieldArray().shouldBeNull()
 
-    val future =
+    val callableFuture =
         executor.submit(
             Callable {
               // Verify that there are no fields in child thread context
@@ -348,9 +347,18 @@ class LoggingContextTest {
               "Test"
             },
         )
-
-    val result = future.get() // Waits until completed
+    val result = callableFuture.get() // Waits until completed
     result shouldBe "Test"
+
+    // We want to test this with Runnable as well, since ExecutorService takes both.
+    // Since Runnable does not return a result, we use an AtomicBoolean to pass a result.
+    val executed = AtomicBoolean(false)
+
+    @Suppress("RedundantSamConstructor") // We want to explicilty mark the lambda as a Runnable
+    val runnableFuture = executor.submit(Runnable { executed.set(true) })
+    runnableFuture.get()
+
+    executed.get().shouldBeTrue()
   }
 
   /**
