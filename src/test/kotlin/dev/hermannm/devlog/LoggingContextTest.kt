@@ -4,6 +4,8 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
+import java.util.concurrent.Callable
+import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -255,6 +257,100 @@ class LoggingContextTest {
           "fieldFromParentThread":"value"
         """
             .trimIndent()
+  }
+
+  @Test
+  fun `ThreadFactory with inheritLoggingContext allows passing logging context between threads`() {
+    val executor =
+        Executors.newSingleThreadExecutor(Executors.defaultThreadFactory().inheritLoggingContext())
+    val lock = ReentrantLock()
+
+    val logFields = captureLogFields {
+      // Get the future from ExecutorService.submit, so we can wait until the log has completed
+      val future =
+          // Aquire a lock around the outer withLoggingContext in the parent thread, to test that
+          // the logging context works in the child thread even when the outer context has exited
+          lock.withLock {
+            withLoggingContext(field("fieldFromParentThread", "value")) {
+              executor.submit {
+                // Acquire the lock here in the child thread - this will block until the outer
+                // logging context has exited
+                lock.withLock { log.error { "Test" } }
+              }
+            }
+          }
+
+      future.get() // Waits until completed
+    }
+
+    logFields shouldBe
+        """
+          "fieldFromParentThread":"value"
+        """
+            .trimIndent()
+  }
+
+  @Test
+  fun `ThreadFactory with inheritLoggingContext does not affect parent thread context`() {
+    val executor =
+        Executors.newSingleThreadExecutor(Executors.defaultThreadFactory().inheritLoggingContext())
+
+    /**
+     * Use a [CyclicBarrier] here for synchronization points between the two threads in our test.
+     */
+    val barrier = CyclicBarrier(2)
+
+    val parentField = field("parent", true)
+    val childField = field("child", true)
+
+    withLoggingContext(parentField) {
+      LoggingContext.getFieldArray() shouldBe arrayOf(parentField)
+
+      executor.execute {
+        // Mutate the logging context fields here in the child thread
+        LoggingContext.getFieldArray() shouldBe arrayOf(parentField)
+        LoggingContext.getFieldArray()!![0] = childField
+        LoggingContext.getFieldArray() shouldBe arrayOf(childField)
+
+        // 1st synchronization point: The parent thread will reach this after we've mutated the
+        // logging context here in the child thread, so we can verify that the parent's context is
+        // unchanged
+        barrier.await()
+        // 2nd synchronization point: We want to keep this thread running while the parent thread
+        // tests its logging context fields, to keep the child thread context alive
+        barrier.await()
+      }
+
+      barrier.await() // 1st synchronization point
+      LoggingContext.getFieldArray() shouldBe arrayOf(parentField)
+      barrier.await() // 2nd synchronization point
+    }
+  }
+
+  /**
+   * In [ThreadFactoryWithInheritedLoggingContext.newThread], we only call
+   * [withLoggingContextInternal] if there are fields in the logging context. Otherwise, we just
+   * invoke the runnable directly - we want to test that that works.
+   */
+  @Test
+  fun `ThreadFactory with inheritLoggingContext works when there are no fields in the context`() {
+    val executor =
+        Executors.newSingleThreadExecutor(Executors.defaultThreadFactory().inheritLoggingContext())
+
+    // Verify that there are no fields in parent thread context
+    LoggingContext.getFieldArray().shouldBeNull()
+
+    val future =
+        executor.submit(
+            Callable {
+              // Verify that there are no fields in child thread context
+              LoggingContext.getFieldArray().shouldBeNull()
+              "Test"
+            },
+        )
+
+    val result = future.get() // Waits until completed
+    result shouldBe "Test"
   }
 
   /**

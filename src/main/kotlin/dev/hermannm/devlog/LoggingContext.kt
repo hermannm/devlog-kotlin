@@ -1,5 +1,9 @@
 package dev.hermannm.devlog
 
+import dev.hermannm.devlog.LoggingContext.addFields
+import dev.hermannm.devlog.LoggingContext.popFields
+import java.util.concurrent.ThreadFactory
+
 /**
  * Adds the given [log fields][LogField] to every log made by a [Logger] in the context of the given
  * [block].
@@ -192,6 +196,90 @@ fun getLoggingContext(): List<LogField> {
 }
 
 /**
+ * Wraps a [ThreadFactory] in a new implementation that copies logging context fields (from
+ * [withLoggingContext]) from the parent thread when creating new threads. This can be used when
+ * constructing an [ExecutorService][java.util.concurrent.ExecutorService], and you want the child
+ * threads to inherit the logging context fields from their parent thread.
+ *
+ * ### Example
+ *
+ * ```
+ * import dev.hermannm.devlog.field
+ * import dev.hermannm.devlog.getLogger
+ * import dev.hermannm.devlog.inheritLoggingContext
+ * import dev.hermannm.devlog.withLoggingContext
+ * import java.util.concurrent.Executors
+ *
+ * private val log = getLogger {}
+ *
+ * class UserService(
+ *     private val userRepository: UserRepository,
+ *     private val emailService: EmailService,
+ * ) {
+ *   private val executor =
+ *       Executors.newSingleThreadExecutor(
+ *           // Call inheritLoggingContext on the default thread factory, and pass it to the executor
+ *           Executors.defaultThreadFactory().inheritLoggingContext(),
+ *       )
+ *
+ *   fun registerUser(user: User) {
+ *     withLoggingContext(field("user", user)) {
+ *       userRepository.create(user)
+ *       sendWelcomeEmail(user)
+ *     }
+ *   }
+ *
+ *   // In this hypothetical, we don't want sendWelcomeEmail to block registerUser, so we use an
+ *   // ExecutorService to spawn a thread.
+ *   //
+ *   // But we want to log if it fails, and include the logging context from the parent thread.
+ *   // This is where inheritLoggingContext comes in.
+ *   private fun sendWelcomeEmail(user: User) {
+ *     executor.execute {
+ *       try {
+ *         emailService.sendEmail(to = user.email, content = makeWelcomeEmailContent(user))
+ *       } catch (e: Exception) {
+ *         // This log will get the "user" field from the parent logging context
+ *         log.error {
+ *           cause = e
+ *           "Failed to send welcome email to user"
+ *         }
+ *       }
+ *     }
+ *   }
+ * }
+ * ```
+ */
+fun ThreadFactory.inheritLoggingContext(): ThreadFactory {
+  return ThreadFactoryWithInheritedLoggingContext(this)
+}
+
+@JvmInline // Inline value class, since we just wrap another ThreadFactory
+internal value class ThreadFactoryWithInheritedLoggingContext(
+    private val wrappedFactory: ThreadFactory,
+) : ThreadFactory {
+  override fun newThread(runnable: Runnable): Thread {
+    /**
+     * We must copy the field array, so that the new thread does not concurrently modify the parent
+     * thread's context.
+     *
+     * We copy the context field array and pass it directly to [withLoggingContextInternal] here,
+     * instead of calling [getLoggingContext]. This saves us an array copy, since using
+     * `getLoggingContext` first copies the array to a list, and then [withLoggingContext] has to
+     * make an additional defensive copy.
+     */
+    val contextFields = LoggingContext.copyFieldArray()
+
+    return when (contextFields) {
+      // If there were no fields in the logging context, we can just pass the runnable directly
+      null -> wrappedFactory.newThread(runnable)
+      else ->
+          wrappedFactory.newThread { withLoggingContextInternal(contextFields) { runnable.run() } }
+    }
+  }
+}
+
+/**
  * Things we want from our logging context:
  * - To store context fields in order from newest to oldest, in an efficient manner. This precludes
  *   the use of [ArrayList], since adding to the beginning of an `ArrayList` involves shifting all
@@ -346,6 +434,30 @@ internal object LoggingContext {
         }
       }
     }
+  }
+
+  /** Returns null if the logging context fields have not been initialized yet in this thread. */
+  internal fun copyFieldArray(): Array<LogField>? {
+    val fields = getFieldArray() ?: return null
+
+    val fieldsCopy =
+        fields.copyOfRange(
+            fromIndex = fields.startIndexOfNonNullFields(),
+            toIndex = fields.size,
+        )
+
+    /**
+     * This cast is safe, because:
+     * - As explained in the docstring for [popFields], only the first elements in the field array
+     *   will be null. So after we find our first non-null field, all subsequent fields will be
+     *   non-null.
+     * - Since we use `fromIndex = fields.startIndexOfNonNullFields()` above, we know that
+     *   `fieldsCopy` has only non-null fields.
+     * - There can never be _only_ null fields in the array, since we reset the array itself to null
+     *   when removing the last field in [popFields]. So if the array is not null (which we check
+     *   above), there will be at least 1 non-null field.
+     */
+    @Suppress("UNCHECKED_CAST") return fieldsCopy as Array<LogField>
   }
 
   private fun Array<LogField?>.startIndexOfNonNullFields(): Int {
