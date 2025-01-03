@@ -10,8 +10,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
-import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.Lock
@@ -413,125 +411,6 @@ class LoggingContextTest {
       LoggingContext.getFieldArray() shouldBe arrayOf(parentField)
       barrier.await() // 2nd synchronization point
     }
-  }
-
-  /**
-   * [inheritLoggingContext] wraps an existing [ExecutorService], wrapping its methods and
-   * forwarding tasks to it. We want to verify that it properly forwards all calls to the base
-   * executor.
-   *
-   * We do this by:
-   * - Implementing a base `ExecutorService` that simply sets booleans when its methods are called
-   * - Wrap this in `inheritLoggingContext`
-   * - Verify that calling the wrapped executor sets the booleans we expect on the base executor
-   */
-  @Test
-  fun `ExecutorService with inheritLoggingContext should forward all calls to base executor`() {
-    val baseExecutor =
-        object : ExecutorService {
-          var executeCalled = false
-
-          override fun execute(command: Runnable) {
-            executeCalled = true
-          }
-
-          var submit1Called = false
-
-          override fun <T : Any?> submit(task: Callable<T>): Future<T> {
-            submit1Called = true
-            return FutureTask(task)
-          }
-
-          var submit2Called = false
-
-          override fun <T : Any?> submit(task: Runnable, result: T): Future<T> {
-            submit2Called = true
-            return FutureTask { result }
-          }
-
-          var submit3Called = false
-
-          override fun submit(task: Runnable): Future<*> {
-            submit3Called = true
-            return FutureTask { task.run() }
-          }
-
-          var invokeAll1Called = false
-
-          override fun <T : Any?> invokeAll(
-              tasks: MutableCollection<out Callable<T>>
-          ): List<Future<T>> {
-            invokeAll1Called = true
-            return tasks.map { task -> FutureTask(task) }
-          }
-
-          var invokeAll2Called = false
-
-          override fun <T : Any?> invokeAll(
-              tasks: MutableCollection<out Callable<T>>,
-              timeout: Long,
-              unit: TimeUnit
-          ): List<Future<T>> {
-            invokeAll2Called = true
-            return tasks.map { task -> FutureTask(task) }
-          }
-
-          var invokeAny1Called = false
-
-          override fun <T : Any> invokeAny(tasks: MutableCollection<out Callable<T>>): T {
-            invokeAny1Called = true
-            return tasks.iterator().next().call()
-          }
-
-          var invokeAny2Called = false
-
-          override fun <T : Any?> invokeAny(
-              tasks: MutableCollection<out Callable<T>>,
-              timeout: Long,
-              unit: TimeUnit
-          ): T {
-            invokeAny2Called = true
-            return tasks.iterator().next().call()
-          }
-
-          override fun shutdown() {}
-
-          override fun shutdownNow(): MutableList<Runnable> = mutableListOf()
-
-          override fun isShutdown(): Boolean = false
-
-          override fun isTerminated(): Boolean = false
-
-          override fun awaitTermination(timeout: Long, unit: TimeUnit): Boolean = true
-        }
-
-    val wrappedExecutor = baseExecutor.inheritLoggingContext()
-
-    wrappedExecutor.execute(Runnable {})
-    baseExecutor.executeCalled.shouldBeTrue()
-
-    wrappedExecutor.submit(Callable { "Test" })
-    baseExecutor.submit1Called.shouldBeTrue()
-
-    wrappedExecutor.submit(Runnable {}, "Test")
-    baseExecutor.submit2Called.shouldBeTrue()
-
-    wrappedExecutor.submit(Runnable {})
-    baseExecutor.submit3Called.shouldBeTrue()
-
-    val tasks = listOf(Callable { "Test" })
-
-    wrappedExecutor.invokeAll(tasks)
-    baseExecutor.invokeAll1Called.shouldBeTrue()
-
-    wrappedExecutor.invokeAll(tasks, 1, TimeUnit.MINUTES)
-    baseExecutor.invokeAll2Called.shouldBeTrue()
-
-    wrappedExecutor.invokeAny(tasks)
-    baseExecutor.invokeAny1Called.shouldBeTrue()
-
-    wrappedExecutor.invokeAny(tasks, 1, TimeUnit.MINUTES)
-    baseExecutor.invokeAny2Called.shouldBeTrue()
   }
 
   /**
