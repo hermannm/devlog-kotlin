@@ -8,15 +8,26 @@ import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.CyclicBarrier
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 
 private val log = getLogger {}
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+// We want to explicitly use Runnable/Callable when working with ExecutorService
+@Suppress("RedundantSamConstructor")
 class LoggingContextTest {
   @Test
   fun `field from logging context is included in log`() {
@@ -231,7 +242,7 @@ class LoggingContextTest {
   fun `getLoggingContext allows passing logging context between threads`() {
     val lock = ReentrantLock()
     // Used to wait for the child thread to complete its log
-    val conditionLatch = CountDownLatch(1)
+    val latch = CountDownLatch(1)
 
     val logFields = captureLogFields {
       // Aquire a lock around the outer withLoggingContext in the parent thread, to test that
@@ -247,13 +258,13 @@ class LoggingContextTest {
             lock.withLock {
               // Use the parent logging context here in the child thread
               withLoggingContext(loggingContext) { log.error { "Test" } }
-              conditionLatch.countDown()
+              latch.countDown()
             }
           }
         }
       }
 
-      conditionLatch.await() // Waits until completed
+      latch.await() // Waits until completed
     }
 
     logFields shouldBe
@@ -263,27 +274,75 @@ class LoggingContextTest {
             .trimIndent()
   }
 
-  @Test
-  fun `ExecutorService with inheritLoggingContext allows passing logging context between threads`() {
+  /**
+   * [inheritLoggingContext] wraps an [ExecutorService], forwarding calls to the wrapped executor.
+   * We want to verify that all these methods forward appropriately, so we make a test case for each
+   * executor method, and use this as a [MethodSource] on our executor tests to run each test on
+   * every executor method.
+   */
+  class ExecutorTestCase(
+      private val name: String,
+      /**
+       * `invokeAll` and `invokeAny` on [ExecutorService] block the calling thread. This affects how
+       * we run our tests, so we set this flag to true for those cases.
+       */
+      val isBlocking: Boolean = false,
+      val runTask: (ExecutorService, () -> Unit) -> Unit,
+  ) {
+    override fun toString() = name
+  }
+
+  val executorTestCases =
+      listOf(
+          ExecutorTestCase("execute") { executor, task -> executor.execute(Runnable(task)) },
+          ExecutorTestCase("submit with Callable") { executor, task ->
+            executor.submit(Callable(task))
+          },
+          ExecutorTestCase("submit with Runnable") { executor, task ->
+            executor.submit(Runnable(task))
+          },
+          ExecutorTestCase("submit with Runnable and result") { executor, task ->
+            executor.submit(Runnable(task), "Result")
+          },
+          ExecutorTestCase("invokeAll", isBlocking = true) { executor, task ->
+            executor.invokeAll(listOf(Callable(task)))
+          },
+          ExecutorTestCase("invokeAll with timeout", isBlocking = true) { executor, task ->
+            executor.invokeAll(listOf(Callable(task)), 1, TimeUnit.MINUTES)
+          },
+          ExecutorTestCase("invokeAny", isBlocking = true) { executor, task ->
+            executor.invokeAny(listOf(Callable(task)))
+          },
+          ExecutorTestCase("invokeAny with timeout", isBlocking = true) { executor, task ->
+            executor.invokeAny(listOf(Callable(task)), 1, TimeUnit.MINUTES)
+          },
+      )
+
+  @ParameterizedTest
+  @MethodSource("getExecutorTestCases")
+  fun `ExecutorService with inheritLoggingContext allows passing logging context between threads`(
+      test: ExecutorTestCase
+  ) {
     val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
     val lock = ReentrantLock()
+    val latch = CountDownLatch(1) // Used to wait for the child thread to complete its log
 
     val logFields = captureLogFields {
-      // Get the future from ExecutorService.submit, so we can wait until the log has completed
-      val future =
-          // Aquire a lock around the outer withLoggingContext in the parent thread, to test that
-          // the logging context works in the child thread even when the outer context has exited
-          lock.withLock {
-            withLoggingContext(field("fieldFromParentThread", "value")) {
-              executor.submit {
-                // Acquire the lock here in the child thread - this will block until the outer
-                // logging context has exited
-                lock.withLock { log.error { "Test" } }
-              }
-            }
+      // Aquire a lock around the outer withLoggingContext in the parent thread, to test that
+      // the logging context works in the child thread even when the outer context has exited.
+      // Only relevant if the executor method is non-blocking (see ExecutorTestCase.isBlocking).
+      lock.conditionallyLock(!test.isBlocking) {
+        withLoggingContext(field("fieldFromParentThread", "value")) {
+          test.runTask(executor) {
+            // Acquire the lock here in the child thread - this will block until the outer
+            // logging context has exited
+            lock.conditionallyLock(!test.isBlocking) { log.error { "Test" } }
+            latch.countDown()
           }
+        }
+      }
 
-      future.get() // Waits until completed
+      latch.await() // Waits until child thread calls countDown()
     }
 
     logFields shouldBe
@@ -291,15 +350,42 @@ class LoggingContextTest {
           "fieldFromParentThread":"value"
         """
             .trimIndent()
+  }
+
+  /**
+   * In [ExecutorServiceWithInheritedLoggingContext], we only call [withLoggingContextInternal] if
+   * there are fields in the logging context. Otherwise, we just forward the tasks directly - we
+   * want to test that that works.
+   */
+  @ParameterizedTest
+  @MethodSource("getExecutorTestCases")
+  fun `ExecutorService with inheritLoggingContext works when there are no fields in the context`(
+      test: ExecutorTestCase
+  ) {
+    val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
+
+    // Verify that there are no fields in parent thread context
+    LoggingContext.getFieldArray().shouldBeNull()
+
+    val latch = CountDownLatch(1) // Used to wait for the child thread to complete its log
+    val executed = AtomicBoolean(false)
+
+    test.runTask(executor) {
+      // Verify that there are no fields in child thread context
+      LoggingContext.getFieldArray().shouldBeNull()
+      executed.set(true)
+      latch.countDown()
+    }
+
+    latch.await()
+    executed.get().shouldBeTrue()
   }
 
   @Test
   fun `ExecutorService with inheritLoggingContext does not affect parent thread context`() {
     val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
 
-    /**
-     * Use a [CyclicBarrier] here for synchronization points between the two threads in our test.
-     */
+    // Used for synchronization points between the two threads in our test
     val barrier = CyclicBarrier(2)
 
     val parentField = field("parent", true)
@@ -330,37 +416,122 @@ class LoggingContextTest {
   }
 
   /**
-   * In [ExecutorServiceWithInheritedLoggingContext], we only call [withLoggingContextInternal] if
-   * there are fields in the logging context. Otherwise, we just invoke the Runnable/Callable
-   * directly - we want to test that that works.
+   * [inheritLoggingContext] wraps an existing [ExecutorService], wrapping its methods and
+   * forwarding tasks to it. We want to verify that it properly forwards all calls to the base
+   * executor.
+   *
+   * We do this by:
+   * - Implementing a base `ExecutorService` that simply sets booleans when its methods are called
+   * - Wrap this in `inheritLoggingContext`
+   * - Verify that calling the wrapped executor sets the booleans we expect on the base executor
    */
   @Test
-  fun `ExecutorService with inheritLoggingContext works when there are no fields in the context`() {
-    val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
+  fun `ExecutorService with inheritLoggingContext should forward all calls to base executor`() {
+    val baseExecutor =
+        object : ExecutorService {
+          var executeCalled = false
 
-    // Verify that there are no fields in parent thread context
-    LoggingContext.getFieldArray().shouldBeNull()
+          override fun execute(command: Runnable) {
+            executeCalled = true
+          }
 
-    val callableFuture =
-        executor.submit(
-            Callable {
-              // Verify that there are no fields in child thread context
-              LoggingContext.getFieldArray().shouldBeNull()
-              "Test"
-            },
-        )
-    val result = callableFuture.get() // Waits until completed
-    result shouldBe "Test"
+          var submit1Called = false
 
-    // We want to test this with Runnable as well, since ExecutorService takes both.
-    // Since Runnable does not return a result, we use an AtomicBoolean to pass a result.
-    val executed = AtomicBoolean(false)
+          override fun <T : Any?> submit(task: Callable<T>): Future<T> {
+            submit1Called = true
+            return FutureTask(task)
+          }
 
-    @Suppress("RedundantSamConstructor") // We want to explicilty mark the lambda as a Runnable
-    val runnableFuture = executor.submit(Runnable { executed.set(true) })
-    runnableFuture.get()
+          var submit2Called = false
 
-    executed.get().shouldBeTrue()
+          override fun <T : Any?> submit(task: Runnable, result: T): Future<T> {
+            submit2Called = true
+            return FutureTask { result }
+          }
+
+          var submit3Called = false
+
+          override fun submit(task: Runnable): Future<*> {
+            submit3Called = true
+            return FutureTask { task.run() }
+          }
+
+          var invokeAll1Called = false
+
+          override fun <T : Any?> invokeAll(
+              tasks: MutableCollection<out Callable<T>>
+          ): List<Future<T>> {
+            invokeAll1Called = true
+            return tasks.map { task -> FutureTask(task) }
+          }
+
+          var invokeAll2Called = false
+
+          override fun <T : Any?> invokeAll(
+              tasks: MutableCollection<out Callable<T>>,
+              timeout: Long,
+              unit: TimeUnit
+          ): List<Future<T>> {
+            invokeAll2Called = true
+            return tasks.map { task -> FutureTask(task) }
+          }
+
+          var invokeAny1Called = false
+
+          override fun <T : Any> invokeAny(tasks: MutableCollection<out Callable<T>>): T {
+            invokeAny1Called = true
+            return tasks.iterator().next().call()
+          }
+
+          var invokeAny2Called = false
+
+          override fun <T : Any?> invokeAny(
+              tasks: MutableCollection<out Callable<T>>,
+              timeout: Long,
+              unit: TimeUnit
+          ): T {
+            invokeAny2Called = true
+            return tasks.iterator().next().call()
+          }
+
+          override fun shutdown() {}
+
+          override fun shutdownNow(): MutableList<Runnable> = mutableListOf()
+
+          override fun isShutdown(): Boolean = false
+
+          override fun isTerminated(): Boolean = false
+
+          override fun awaitTermination(timeout: Long, unit: TimeUnit): Boolean = true
+        }
+
+    val wrappedExecutor = baseExecutor.inheritLoggingContext()
+
+    wrappedExecutor.execute(Runnable {})
+    baseExecutor.executeCalled.shouldBeTrue()
+
+    wrappedExecutor.submit(Callable { "Test" })
+    baseExecutor.submit1Called.shouldBeTrue()
+
+    wrappedExecutor.submit(Runnable {}, "Test")
+    baseExecutor.submit2Called.shouldBeTrue()
+
+    wrappedExecutor.submit(Runnable {})
+    baseExecutor.submit3Called.shouldBeTrue()
+
+    val tasks = listOf(Callable { "Test" })
+
+    wrappedExecutor.invokeAll(tasks)
+    baseExecutor.invokeAll1Called.shouldBeTrue()
+
+    wrappedExecutor.invokeAll(tasks, 1, TimeUnit.MINUTES)
+    baseExecutor.invokeAll2Called.shouldBeTrue()
+
+    wrappedExecutor.invokeAny(tasks)
+    baseExecutor.invokeAny1Called.shouldBeTrue()
+
+    wrappedExecutor.invokeAny(tasks, 1, TimeUnit.MINUTES)
+    baseExecutor.invokeAny2Called.shouldBeTrue()
   }
 
   /**
@@ -462,5 +633,17 @@ class LoggingContextTest {
     }
 
     withLoggingContext(*fields) { LoggingContext.getFieldArray() shouldNotBeSameInstanceAs fields }
+  }
+}
+
+/**
+ * Acquires the lock around the given block if the given condition is true - otherwise, just calls
+ * the block directly.
+ */
+private inline fun Lock.conditionallyLock(condition: Boolean, block: () -> Unit) {
+  if (condition) {
+    this.withLock(block)
+  } else {
+    block()
   }
 }
