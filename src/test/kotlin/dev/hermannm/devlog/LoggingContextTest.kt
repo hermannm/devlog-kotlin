@@ -24,8 +24,6 @@ import org.junit.jupiter.params.provider.MethodSource
 private val log = getLogger {}
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-// We want to explicitly use Runnable/Callable when working with ExecutorService
-@Suppress("RedundantSamConstructor")
 class LoggingContextTest {
   @Test
   fun `field from logging context is included in log`() {
