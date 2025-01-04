@@ -48,8 +48,8 @@ internal class LoggerTest {
     test.verifyLogOutput(LogLevel.INFO) {
       test.logger.info {
         cause = test.cause
-        addField(test.fieldKey1, test.fieldValue1)
-        addField(test.fieldKey2, test.fieldValue2)
+        field(test.fieldKey1, test.fieldValue1)
+        field(test.fieldKey2, test.fieldValue2)
         test.message
       }
     }
@@ -61,8 +61,8 @@ internal class LoggerTest {
     test.verifyLogOutput(LogLevel.WARN) {
       test.logger.warn {
         cause = test.cause
-        addField(test.fieldKey1, test.fieldValue1)
-        addField(test.fieldKey2, test.fieldValue2)
+        field(test.fieldKey1, test.fieldValue1)
+        field(test.fieldKey2, test.fieldValue2)
         test.message
       }
     }
@@ -74,8 +74,8 @@ internal class LoggerTest {
     test.verifyLogOutput(LogLevel.ERROR) {
       test.logger.error {
         cause = test.cause
-        addField(test.fieldKey1, test.fieldValue1)
-        addField(test.fieldKey2, test.fieldValue2)
+        field(test.fieldKey1, test.fieldValue1)
+        field(test.fieldKey2, test.fieldValue2)
         test.message
       }
     }
@@ -87,8 +87,8 @@ internal class LoggerTest {
     test.verifyLogOutput(LogLevel.DEBUG) {
       test.logger.debug {
         cause = test.cause
-        addField(test.fieldKey1, test.fieldValue1)
-        addField(test.fieldKey2, test.fieldValue2)
+        field(test.fieldKey1, test.fieldValue1)
+        field(test.fieldKey2, test.fieldValue2)
         test.message
       }
     }
@@ -100,8 +100,8 @@ internal class LoggerTest {
     test.verifyLogOutput(LogLevel.TRACE) {
       test.logger.trace {
         cause = test.cause
-        addField(test.fieldKey1, test.fieldValue1)
-        addField(test.fieldKey2, test.fieldValue2)
+        field(test.fieldKey1, test.fieldValue1)
+        field(test.fieldKey2, test.fieldValue2)
         test.message
       }
     }
@@ -113,8 +113,8 @@ internal class LoggerTest {
     test.verifyLogOutput(LogLevel.INFO) {
       test.logger.at(LogLevel.INFO) {
         cause = test.cause
-        addField(test.fieldKey1, test.fieldValue1)
-        addField(test.fieldKey2, test.fieldValue2)
+        field(test.fieldKey1, test.fieldValue1)
+        field(test.fieldKey2, test.fieldValue2)
         test.message
       }
     }
@@ -126,8 +126,8 @@ internal class LoggerTest {
     test.verifyLogOutput(LogLevel.WARN) {
       test.logger.at(LogLevel.WARN) {
         cause = test.cause
-        addField(test.fieldKey1, test.fieldValue1)
-        addField(test.fieldKey2, test.fieldValue2)
+        field(test.fieldKey1, test.fieldValue1)
+        field(test.fieldKey2, test.fieldValue2)
         test.message
       }
     }
@@ -139,8 +139,8 @@ internal class LoggerTest {
     test.verifyLogOutput(LogLevel.ERROR) {
       test.logger.at(LogLevel.ERROR) {
         cause = test.cause
-        addField(test.fieldKey1, test.fieldValue1)
-        addField(test.fieldKey2, test.fieldValue2)
+        field(test.fieldKey1, test.fieldValue1)
+        field(test.fieldKey2, test.fieldValue2)
         test.message
       }
     }
@@ -152,8 +152,8 @@ internal class LoggerTest {
     test.verifyLogOutput(LogLevel.DEBUG) {
       test.logger.at(LogLevel.DEBUG) {
         cause = test.cause
-        addField(test.fieldKey1, test.fieldValue1)
-        addField(test.fieldKey2, test.fieldValue2)
+        field(test.fieldKey1, test.fieldValue1)
+        field(test.fieldKey2, test.fieldValue2)
         test.message
       }
     }
@@ -165,8 +165,8 @@ internal class LoggerTest {
     test.verifyLogOutput(LogLevel.TRACE) {
       test.logger.at(LogLevel.TRACE) {
         cause = test.cause
-        addField(test.fieldKey1, test.fieldValue1)
-        addField(test.fieldKey2, test.fieldValue2)
+        field(test.fieldKey1, test.fieldValue1)
+        field(test.fieldKey2, test.fieldValue2)
         test.message
       }
     }

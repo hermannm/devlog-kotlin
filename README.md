@@ -37,7 +37,7 @@ fun example() {
 }
 ```
 
-You can also add _fields_ (structured key-value data) to your logs. The `addField` method uses
+You can also add _fields_ (structured key-value data) to your logs. The `field` method uses
 `kotlinx.serialization` to serialize the value.
 
 ```kotlin
@@ -50,15 +50,15 @@ fun example() {
   val user = User(id = 1, name = "John Doe")
 
   log.info {
-    addField("user", user)
+    field("user", user)
     "Registered new user"
   }
 }
 ```
 
-When outputting logs as JSON, the key/value given to `addField` is added to the logged JSON object
-(see below). This allows you to filter and query on the field in the log analysis tool of your
-choice, in a more structured manner than if you were to just use string concatenation.
+When outputting logs as JSON, the key/value given to `field` is added to the logged JSON object (see
+below). This allows you to filter and query on the field in the log analysis tool of your choice, in
+a more structured manner than if you were to just use string concatenation.
 
 <!-- prettier-ignore -->
 ```jsonc

@@ -24,9 +24,9 @@ import kotlinx.serialization.json.JsonElement
  * analysis tool of your choice, in a more structured manner than if you were to just use string
  * concatenation.
  *
- * You can add a field to a log by calling [LogBuilder.addField] on one of [Logger]'s methods (see
+ * You can add a field to a log by calling [LogBuilder.field] on one of [Logger]'s methods (see
  * example below). This serializes the value using `kotlinx.serialization`. Alternatively, if you
- * have a value that is already serialized, you can instead call [LogBuilder.addRawJsonField].
+ * have a value that is already serialized, you can instead call [LogBuilder.rawJsonField].
  *
  * If you want to attach fields to all logs within a scope, you can use [withLoggingContext] and
  * pass fields to it with the [field]/[rawJsonField] functions.
@@ -46,7 +46,7 @@ import kotlinx.serialization.json.JsonElement
  *   val user = User(id = 1, name = "John Doe")
  *
  *   log.info {
- *     addField("user", user)
+ *     field("user", user)
  *     "Registered new user"
  *   }
  * }
@@ -87,8 +87,7 @@ internal constructor(
  *
  * This function is made to be used with [withLoggingContext], to add fields to all logs within a
  * scope. If you just want to add a field to a single log, you should instead call
- * [LogBuilder.addField] on one of [Logger]'s methods (see example on
- * [addField][LogBuilder.addField]).
+ * [LogBuilder.field] on one of [Logger]'s methods ([see example][LogBuilder.field]).
  *
  * The value is serialized using `kotlinx.serialization`, so if you pass an object here, it should
  * be annotated with [@Serializable][kotlinx.serialization.Serializable]. Alternatively, you can
@@ -156,8 +155,8 @@ internal inline fun <reified ValueT> encodeFieldValue(
  *
  * This function is made to be used with [withLoggingContext], to add fields to all logs within a
  * scope. If you just want to add a field to a single log, you should instead call
- * [LogBuilder.addRawJsonField] on one of [Logger]'s methods (see example on
- * [addRawJsonField][LogBuilder.addRawJsonField]).
+ * [LogBuilder.rawJsonField] on one of [Logger]'s methods (see example on
+ * [addRawJsonField][LogBuilder.rawJsonField]).
  *
  * By default, this function checks that the given JSON string is actually valid JSON. The reason
  * for this is that giving raw JSON to our log encoder when it is not in fact valid JSON can break

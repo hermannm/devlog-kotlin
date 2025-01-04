@@ -10,14 +10,14 @@ class ExceptionWithLogFieldsTest {
   fun `exception implementing WithLogFields has field included in log`() {
     val logFields = captureLogFields {
       log.error {
-        cause = exceptionWithLogField(field("errorCode", 60))
+        cause = exceptionWithLogField("exceptionField", "value")
         "Test"
       }
     }
 
     logFields shouldBe
         """
-          "errorCode":60
+          "exceptionField":"value"
         """
             .trimIndent()
   }
@@ -27,7 +27,7 @@ class ExceptionWithLogFieldsTest {
     val logFields = captureLogFields {
       try {
         withLoggingContext(field("contextField1", "value"), field("contextField2", "value")) {
-          throw exceptionWithLogField(field("exceptionField", "value"))
+          throw exceptionWithLogField("exceptionField", "value")
         }
       } catch (e: Exception) {
         log.error {
@@ -54,7 +54,7 @@ class ExceptionWithLogFieldsTest {
     val logFields = captureLogFields {
       withLoggingContext(field("contextField", "value")) {
         try {
-          throw exceptionWithLogField(field("exceptionField", "value"))
+          throw exceptionWithLogField("exceptionField", "value")
         } catch (e: Exception) {
           log.error {
             cause = e
@@ -78,7 +78,7 @@ class ExceptionWithLogFieldsTest {
         cause =
             Exception(
                 "Parent exception",
-                exceptionWithLogField(field("childException", true)),
+                exceptionWithLogField("childException", "value"),
             )
         "Test"
       }
@@ -86,7 +86,7 @@ class ExceptionWithLogFieldsTest {
 
     logFields shouldBe
         """
-          "childException":true
+          "childException":"value"
         """
             .trimIndent()
   }
@@ -94,17 +94,14 @@ class ExceptionWithLogFieldsTest {
   @Test
   fun `parent and child exceptions that both implement WithLogFields have their fields merged`() {
     val logFields = captureLogFields {
+      val exception =
+          ExceptionWithLogFields(
+              message = "Parent exception",
+              logFields = listOf(field("parentField1", "value"), field("parentField2", "value")),
+              cause = exceptionWithLogField("childField", "value"),
+          )
       log.error {
-        cause =
-            ExceptionWithLogFields(
-                message = "Parent exception",
-                logFields =
-                    listOf(
-                        field("parentField1", "value"),
-                        field("parentField2", "value"),
-                    ),
-                cause = exceptionWithLogField(field("childField", "value")),
-            )
+        cause = exception
         "Test"
       }
     }
@@ -121,8 +118,8 @@ class ExceptionWithLogFieldsTest {
     val logFields = captureLogFields {
       withLoggingContext(field("contextField", "value")) {
         log.error {
-          cause = exceptionWithLogField(field("exceptionField", "value"))
-          addField("logEventField", "value")
+          cause = exceptionWithLogField("exceptionField", "value")
+          field("logEventField", "value")
           "Test"
         }
       }
@@ -138,16 +135,14 @@ class ExceptionWithLogFieldsTest {
   @Test
   fun `exception with duplicate log fields only includes first field`() {
     val logFields = captureLogFields {
+      val exception =
+          ExceptionWithLogFields(
+              "Test",
+              listOf(field("duplicateKey", "value1"), field("duplicateKey", "value2")),
+              cause = exceptionWithLogField("duplicateKey", "value3"),
+          )
       log.error {
-        cause =
-            ExceptionWithLogFields(
-                "Test",
-                listOf(
-                    field("duplicateKey", "value1"),
-                    field("duplicateKey", "value2"),
-                ),
-                cause = exceptionWithLogField(field("duplicateKey", "value3")),
-            )
+        cause = exception
         "Test"
       }
     }
@@ -167,8 +162,8 @@ class ExceptionWithLogFieldsTest {
   fun `exception log field does not override duplicate log event field`() {
     val logFields = captureLogFields {
       log.error {
-        cause = exceptionWithLogField(field("duplicateKey", "from exception"))
-        addField("duplicateKey", "from log event")
+        cause = exceptionWithLogField("duplicateKey", "from exception")
+        field("duplicateKey", "from log event")
         "Test"
       }
     }
@@ -189,7 +184,7 @@ class ExceptionWithLogFieldsTest {
     val logFields = captureLogFields {
       withLoggingContext(field("duplicateKey", "from context")) {
         log.error {
-          cause = exceptionWithLogField(field("duplicateKey", "from exception"))
+          cause = exceptionWithLogField("duplicateKey", "from exception")
           "Test"
         }
       }
@@ -274,8 +269,8 @@ class ExceptionWithLogFieldsTest {
   }
 }
 
-private fun exceptionWithLogField(field: LogField) =
+private fun exceptionWithLogField(key: String, value: String) =
     ExceptionWithLogFields(
         message = "Test exception",
-        logFields = listOf(field),
+        logFields = listOf(field(key, value)),
     )

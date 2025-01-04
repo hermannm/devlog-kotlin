@@ -23,7 +23,7 @@ class JulLoggerTest {
     // java.util.logging logger outputs to stderr by default
     val output = captureStderr {
       log.info {
-        addField("user", user)
+        field("user", user)
         "Test"
       }
     }

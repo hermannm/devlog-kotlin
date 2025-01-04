@@ -19,7 +19,7 @@ class LogbackLoggerTest {
 
     val output = captureStdout {
       log.info {
-        addField("user", user)
+        field("user", user)
         "Test"
       }
     }

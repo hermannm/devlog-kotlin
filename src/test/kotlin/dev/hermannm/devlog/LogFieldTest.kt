@@ -21,7 +21,7 @@ class LogFieldTest {
   fun `basic log field test`() {
     val logFields = captureLogFields {
       log.info {
-        addField("key", "value")
+        field("key", "value")
         "Test"
       }
     }
@@ -41,7 +41,7 @@ class LogFieldTest {
 
     val logFields = captureLogFields {
       log.info {
-        addField("user", user)
+        field("user", user)
         "Test"
       }
     }
@@ -57,9 +57,9 @@ class LogFieldTest {
   fun `multiple log fields`() {
     val logFields = captureLogFields {
       log.info {
-        addField("first", true)
-        addField("second", listOf("value1", "value2"))
-        addField("third", 10)
+        field("first", true)
+        field("second", listOf("value1", "value2"))
+        field("third", 10)
         "Test"
       }
     }
@@ -75,11 +75,11 @@ class LogFieldTest {
   fun `special-case types`() {
     val logFields = captureLogFields {
       log.info {
-        addField("instant", Instant.parse("2024-12-09T16:38:23Z"))
-        addField("uri", URI.create("https://example.com"))
-        addField("url", URL("https://example.com"))
-        addField("uuid", UUID.fromString("3638dd04-d196-41ad-8b15-5188a22a6ba4"))
-        addField("bigDecimal", BigDecimal("100.0"))
+        field("instant", Instant.parse("2024-12-09T16:38:23Z"))
+        field("uri", URI.create("https://example.com"))
+        field("url", URL("https://example.com"))
+        field("uuid", UUID.fromString("3638dd04-d196-41ad-8b15-5188a22a6ba4"))
+        field("bigDecimal", BigDecimal("100.0"))
         "Test"
       }
     }
@@ -104,7 +104,7 @@ class LogFieldTest {
 
     val logFields = captureLogFields {
       log.info {
-        addField("key", "value", serializer = prefixSerializer)
+        field("key", "value", serializer = prefixSerializer)
         "Test"
       }
     }
@@ -124,7 +124,7 @@ class LogFieldTest {
 
     val logFields = captureLogFields {
       log.info {
-        addField("user", user)
+        field("user", user)
         "Test"
       }
     }
@@ -140,9 +140,9 @@ class LogFieldTest {
   fun `duplicate field keys only includes the first field`() {
     val logFields = captureLogFields {
       log.info {
-        addField("duplicateKey", "value1")
-        addField("duplicateKey", "value2")
-        addField("duplicateKey", "value3")
+        field("duplicateKey", "value1")
+        field("duplicateKey", "value2")
+        field("duplicateKey", "value3")
         "Test"
       }
     }
@@ -160,7 +160,7 @@ class LogFieldTest {
 
     val logFields = captureLogFields {
       log.info {
-        addField("key", nullValue)
+        field("key", nullValue)
         "Test"
       }
     }
@@ -181,7 +181,7 @@ class LogFieldTest {
       withClue({ "assumeValidJson = ${assumeValidJson}" }) {
         val logFields = captureLogFields {
           log.info {
-            addRawJsonField("user", userJson, validJson = assumeValidJson)
+            rawJsonField("user", userJson, validJson = assumeValidJson)
             "Test"
           }
         }
@@ -201,7 +201,7 @@ class LogFieldTest {
 
     val logFields = captureLogFields {
       log.info {
-        addRawJsonField("user", invalidJson)
+        rawJsonField("user", invalidJson)
         "Test"
       }
     }
@@ -225,7 +225,7 @@ class LogFieldTest {
 
     val logFields = captureLogFields {
       log.info {
-        addRawJsonField("user", invalidJson, validJson = true)
+        rawJsonField("user", invalidJson, validJson = true)
         "Test"
       }
     }
@@ -250,7 +250,7 @@ class LogFieldTest {
 
     val logFields = captureLogFields {
       log.info {
-        addRawJsonField("user", jsonWithNewlines)
+        rawJsonField("user", jsonWithNewlines)
         "Test"
       }
     }
@@ -268,7 +268,7 @@ class LogFieldTest {
 
     val logFields = captureLogFields {
       log.info {
-        addPreconstructedField(existingField)
+        existingField(existingField)
         "Test"
       }
     }

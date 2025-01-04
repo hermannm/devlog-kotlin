@@ -122,7 +122,7 @@ class LoggingContextTest {
           field("contextField2", "value"),
       ) {
         log.info {
-          addField("logEventField", "value")
+          field("logEventField", "value")
           "Test"
         }
       }
@@ -179,7 +179,7 @@ class LoggingContextTest {
           field("duplicateKey", "from context"),
       ) {
         log.info {
-          addField("duplicateKey", "from log event")
+          field("duplicateKey", "from log event")
           "Test"
         }
       }

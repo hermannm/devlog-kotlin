@@ -4,7 +4,7 @@ import kotlinx.serialization.SerializationStrategy
 
 /**
  * Class used in the logging methods on [Logger], allowing you to set a [cause] exception and
- * [add structured key-value data][addField] to a log.
+ * [add structured key-value data][field] to a log.
  *
  * ### Example
  *
@@ -16,10 +16,10 @@ import kotlinx.serialization.SerializationStrategy
  *     storeUser(user)
  *   } catch (e: Exception) {
  *     // The lambda argument passed to this logger method has a LogBuilder as its receiver, which
- *     // means that you can set `LogBuilder.cause` and call `LogBuilder.addField` in this scope.
+ *     // means that you can set `LogBuilder.cause` and call `LogBuilder.field` in this scope.
  *     log.error {
  *       cause = e
- *       addField("user", user)
+ *       field("user", user)
  *       "Failed to store user in database"
  *     }
  *   }
@@ -56,7 +56,7 @@ internal constructor(
    * Alternatively, you can pass your own serializer for the value. If serialization fails, we fall
    * back to calling `toString()` on the value.
    *
-   * If you have a value that is already serialized, you should use [addRawJsonField] instead.
+   * If you have a value that is already serialized, you should use [rawJsonField] instead.
    *
    * ### Example
    *
@@ -70,7 +70,7 @@ internal constructor(
    *   val user = User(id = 1, name = "John Doe")
    *
    *   log.info {
-   *     addField("user", user)
+   *     field("user", user)
    *     "Registered new user"
    *   }
    * }
@@ -90,7 +90,7 @@ internal constructor(
    * }
    * ```
    */
-  inline fun <reified ValueT> addField(
+  inline fun <reified ValueT> field(
       key: String,
       value: ValueT,
       serializer: SerializationStrategy<ValueT>? = null,
@@ -135,7 +135,7 @@ internal constructor(
    * {"message":"Registered new user","user":{"id":1,"name":"John Doe"},/* ...timestamp etc. */}
    * ```
    */
-  fun addRawJsonField(key: String, json: String, validJson: Boolean = false) {
+  fun rawJsonField(key: String, json: String, validJson: Boolean = false) {
     if (!keyAdded(key)) {
       logEvent.addKeyValue(key, rawJsonFieldValue(json, validJson))
     }
@@ -143,12 +143,14 @@ internal constructor(
 
   /**
    * Adds the given [log field][LogField] to the log. This is useful when you have a previously
-   * constructed field from the [field][dev.hermannm.devlog.field]/[rawJsonField] functions.
-   * - If you want to create a new field and add it to the log, you should instead call [addField]
+   * constructed field from the
+   * [field][dev.hermannm.devlog.field]/[rawJsonField][dev.hermannm.devlog.rawJsonField] functions.
+   * - If you want to create a new field and add it to the log, you should instead call
+   *   [LogBuilder.field]
    * - If you want to add the field to all logs within a scope, you should instead use
    *   [withLoggingContext]
    */
-  fun addPreconstructedField(field: LogField) {
+  fun existingField(field: LogField) {
     if (!keyAdded(field.key)) {
       logEvent.addKeyValue(field.key, field.value)
     }

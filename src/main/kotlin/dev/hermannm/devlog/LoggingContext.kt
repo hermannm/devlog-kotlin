@@ -1,7 +1,5 @@
 package dev.hermannm.devlog
 
-import dev.hermannm.devlog.LoggingContext.addFields
-import dev.hermannm.devlog.LoggingContext.popFields
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
