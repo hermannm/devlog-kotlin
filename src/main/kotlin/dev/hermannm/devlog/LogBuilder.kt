@@ -41,8 +41,8 @@ internal constructor(
    * LoggingEvent API).
    */
   var cause: Throwable?
-    set(value) = logEvent.setThrowable(value)
-    get() = logEvent.getThrowable()
+    set(value) = logEvent.setCause(value)
+    get() = logEvent.getCause()
 
   /**
    * Adds a [log field][LogField] (structured key-value data) to the log.
@@ -95,8 +95,8 @@ internal constructor(
       value: ValueT,
       serializer: SerializationStrategy<ValueT>? = null,
   ) {
-    if (!keyAdded(key)) {
-      logEvent.addKeyValue(key, encodeFieldValue(value, serializer))
+    if (!logEvent.isFieldKeyAdded(key)) {
+      logEvent.addField(key, encodeFieldValue(value, serializer))
     }
   }
 
@@ -136,8 +136,8 @@ internal constructor(
    * ```
    */
   fun rawJsonField(key: String, json: String, validJson: Boolean = false) {
-    if (!keyAdded(key)) {
-      logEvent.addKeyValue(key, rawJsonFieldValue(json, validJson))
+    if (!logEvent.isFieldKeyAdded(key)) {
+      logEvent.addField(key, rawJsonFieldValue(json, validJson))
     }
   }
 
@@ -151,9 +151,7 @@ internal constructor(
    *   [withLoggingContext]
    */
   fun existingField(field: LogField) {
-    if (!keyAdded(field.key)) {
-      logEvent.addKeyValue(field.key, field.value)
-    }
+    addField(field)
   }
 
   @PublishedApi
@@ -167,12 +165,7 @@ internal constructor(
 
   /** Adds log fields from [withLoggingContext]. */
   private fun addFieldsFromContext() {
-    LoggingContext.getFields().forEach { field ->
-      // Don't add fields with keys that have already been added
-      if (!keyAdded(field.key)) {
-        logEvent.addKeyValue(field.key, field.value)
-      }
-    }
+    LoggingContext.getFields().forEach(::addField)
   }
 
   /**
@@ -193,12 +186,7 @@ internal constructor(
     var depth = 0
     while (exception != null && depth < 10) {
       if (exception is WithLogFields) {
-        exception.logFields.forEach { field ->
-          // Don't add fields with keys that have already been added
-          if (!keyAdded(field.key)) {
-            logEvent.addKeyValue(field.key, field.value)
-          }
-        }
+        exception.logFields.forEach(::addField)
       }
 
       exception = exception.cause
@@ -206,10 +194,10 @@ internal constructor(
     }
   }
 
-  @PublishedApi
-  internal fun keyAdded(key: String): Boolean {
-    val addedFields = logEvent.getKeyValuePairs() ?: return false
-
-    return addedFields.any { field -> field.key == key }
+  private fun addField(field: LogField) {
+    // Don't add fields with keys that have already been added
+    if (!logEvent.isFieldKeyAdded(field.key)) {
+      logEvent.addField(field.key, field.value)
+    }
   }
 }
