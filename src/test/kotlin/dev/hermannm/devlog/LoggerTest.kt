@@ -292,7 +292,7 @@ internal class LoggerTest {
     }
   }
 
-  /** See comment in [LogbackLogEvent.setThrowable]. */
+  /** See comment in [LogbackLogEvent.setCause]. */
   @Test
   fun `cause exception can be set to null`() {
     log.error {
@@ -301,7 +301,7 @@ internal class LoggerTest {
     }
   }
 
-  /** See comment in [LogBuilder.cause] setter and [LogbackLogEvent.setThrowable]. */
+  /** See comment in [LogBuilder.cause] setter and [LogbackLogEvent.setCause]. */
   @Test
   fun `setting cause multiple times only keeps the first non-null exception`() {
     val exception1 = Exception("Exception 1")

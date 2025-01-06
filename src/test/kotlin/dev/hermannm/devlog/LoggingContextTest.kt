@@ -1,10 +1,11 @@
 package dev.hermannm.devlog
 
 import io.kotest.matchers.booleans.shouldBeTrue
-import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.maps.shouldBeEmpty
+import io.kotest.matchers.maps.shouldContainExactly
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.shouldBeSameInstanceAs
-import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.CyclicBarrier
@@ -16,6 +17,9 @@ import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
@@ -27,7 +31,7 @@ private val log = getLogger {}
 class LoggingContextTest {
   @Test
   fun `field from logging context is included in log`() {
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       withLoggingContext(
           field("key", "value"),
       ) {
@@ -35,50 +39,46 @@ class LoggingContextTest {
       }
     }
 
-    logFields shouldBe
-        """
-          "key":"value"
-        """
-            .trimIndent()
+    output.contextFields shouldContainExactly mapOf("key" to JsonPrimitive("value"))
   }
 
   @Test
   fun `logging context applies to all logs in scope`() {
-    val logFields = arrayOfNulls<String>(2)
+    val outputs = arrayOfNulls<LogOutput>(2)
 
     withLoggingContext(
         field("key", "value"),
     ) {
-      logFields[0] = captureLogFields { log.info { "Test" } }
-      logFields[1] = captureLogFields { log.info { "Test 2" } }
+      outputs[0] = captureLogOutput { log.info { "Test" } }
+      outputs[1] = captureLogOutput { log.info { "Test 2" } }
     }
 
-    logFields.forEach {
-      it shouldBe
-          """
-            "key":"value"
-          """
-              .trimIndent()
+    outputs.forEach { output ->
+      output.shouldNotBeNull()
+      output.contextFields shouldContainExactly mapOf("key" to JsonPrimitive("value"))
     }
   }
 
   @Test
   fun `rawJsonField works with logging context`() {
-    val userJson = """{"id":1,"name":"John Doe"}"""
-
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       withLoggingContext(
-          rawJsonField("user", userJson),
+          rawJsonField("user", """{"id":1,"name":"John Doe"}"""),
       ) {
         log.info { "Test" }
       }
     }
 
-    logFields shouldBe
-        """
-          "user":${userJson}
-        """
-            .trimIndent()
+    output.contextFields shouldContainExactly
+        mapOf(
+            "user" to
+                JsonObject(
+                    mapOf(
+                        "id" to JsonPrimitive(1),
+                        "name" to JsonPrimitive("John Doe"),
+                    ),
+                ),
+        )
   }
 
   @Test
@@ -89,13 +89,13 @@ class LoggingContextTest {
       log.info { "Inside scope" }
     }
 
-    val logFields = captureLogFields { log.info { "Outside scope" } }
-    logFields shouldBe ""
+    val output = captureLogOutput { log.info { "Outside scope" } }
+    output.contextFields.shouldBeEmpty()
   }
 
   @Test
   fun `nested logging contexts work`() {
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       withLoggingContext(
           field("outerContext", "value"),
       ) {
@@ -107,40 +107,19 @@ class LoggingContextTest {
       }
     }
 
-    logFields shouldBe
-        """
-          "nestedContext":"value","outerContext":"value"
-        """
-            .trimIndent()
-  }
-
-  @Test
-  fun `multiple context fields combined with log event field have expected order`() {
-    val logFields = captureLogFields {
-      withLoggingContext(
-          field("contextField1", "value"),
-          field("contextField2", "value"),
-      ) {
-        log.info {
-          field("logEventField", "value")
-          "Test"
-        }
-      }
-    }
-
-    logFields shouldBe
-        """
-          "logEventField":"value","contextField1":"value","contextField2":"value"
-        """
-            .trimIndent()
+    output.contextFields shouldContainExactly
+        mapOf(
+            "nestedContext" to JsonPrimitive("value"),
+            "outerContext" to JsonPrimitive("value"),
+        )
   }
 
   @Test
   fun `duplicate context field keys only includes the newest fields`() {
-    var fieldsFromInnerContext: String? = null
+    var outputFromInnerContext: LogOutput? = null
     // We want to verify that after exiting the inner logging context, the fields from the outer
-    // context are used again
-    var fieldsFromOuterContext: String? = null
+    // context are restored
+    var outputFromOuterContext: LogOutput? = null
 
     withLoggingContext(
         field("duplicateKey", "outer"),
@@ -149,23 +128,17 @@ class LoggingContextTest {
           field("duplicateKey", "inner1"),
           field("duplicateKey", "inner2"),
       ) {
-        fieldsFromInnerContext = captureLogFields { log.info { "Test" } }
+        outputFromInnerContext = captureLogOutput { log.info { "Test" } }
       }
 
-      fieldsFromOuterContext = captureLogFields { log.info { "Test" } }
+      outputFromOuterContext = captureLogOutput { log.info { "Test" } }
     }
 
-    fieldsFromInnerContext shouldBe
-        """
-          "duplicateKey":"inner1"
-        """
-            .trimIndent()
+    outputFromInnerContext!!.contextFields shouldContainExactly
+        mapOf("duplicateKey" to JsonPrimitive("inner1"))
 
-    fieldsFromOuterContext shouldBe
-        """
-          "duplicateKey":"outer"
-        """
-            .trimIndent()
+    outputFromOuterContext!!.contextFields shouldContainExactly
+        mapOf("duplicateKey" to JsonPrimitive("outer"))
   }
 
   /**
@@ -174,7 +147,7 @@ class LoggingContextTest {
    */
   @Test
   fun `context field does not override duplicate log event field`() {
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       withLoggingContext(
           field("duplicateKey", "from context"),
       ) {
@@ -185,16 +158,21 @@ class LoggingContextTest {
       }
     }
 
-    logFields shouldBe
+    output.logFields shouldBe
         """
           "duplicateKey":"from log event"
         """
             .trimIndent()
+
+    // We would prefer for log event fields to override context fields, but logstash-logback-encoder
+    // does not have support for that at the time of writing. If the library adds support for that
+    // at some point, we can uncomment this line to test that the context fields are overwritten.
+    // output.contextFields.shouldBeEmpty()
   }
 
   @Test
   fun `passing a list to withLoggingContext works`() {
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       withLoggingContext(
           logFields =
               listOf(
@@ -206,16 +184,16 @@ class LoggingContextTest {
       }
     }
 
-    logFields shouldBe
-        """
-          "key1":"value1","key2":"value2"
-        """
-            .trimIndent()
+    output.contextFields shouldContainExactly
+        mapOf(
+            "key1" to JsonPrimitive("value1"),
+            "key2" to JsonPrimitive("value2"),
+        )
   }
 
   @Test
   fun `passing an empty list to withLoggingContext works`() {
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       withLoggingContext(
           logFields = emptyList(),
       ) {
@@ -223,7 +201,7 @@ class LoggingContextTest {
       }
     }
 
-    logFields shouldBe ""
+    output.contextFields.shouldBeEmpty()
   }
 
   @Test
@@ -236,15 +214,19 @@ class LoggingContextTest {
 
   @Test
   fun `getLoggingContext allows passing logging context between threads`() {
+    @Serializable data class User(val id: Long, val name: String)
+
+    val user = User(id = 1, name = "John Doe")
+
     val lock = ReentrantLock()
     // Used to wait for the child thread to complete its log
     val latch = CountDownLatch(1)
 
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       // Aquire a lock around the outer withLoggingContext in the parent thread, to test that
       // the logging context works in the child thread even when the outer context has exited
       lock.withLock {
-        withLoggingContext(field("fieldFromParentThread", "value")) {
+        withLoggingContext(field("user", user)) {
           // Get the parent logging context (the one we just entered)
           val loggingContext = getLoggingContext()
 
@@ -263,11 +245,16 @@ class LoggingContextTest {
       latch.await() // Waits until completed
     }
 
-    logFields shouldBe
-        """
-          "fieldFromParentThread":"value"
-        """
-            .trimIndent()
+    output.contextFields shouldContainExactly
+        mapOf(
+            "user" to
+                JsonObject(
+                    mapOf(
+                        "id" to JsonPrimitive(1),
+                        "name" to JsonPrimitive("John Doe"),
+                    ),
+                ),
+        )
   }
 
   /**
@@ -323,7 +310,7 @@ class LoggingContextTest {
     val lock = ReentrantLock()
     val latch = CountDownLatch(1) // Used to wait for the child thread to complete its log
 
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       // Aquire a lock around the outer withLoggingContext in the parent thread, to test that
       // the logging context works in the child thread even when the outer context has exited.
       // Only relevant if the executor method is non-blocking (see ExecutorTestCase.isBlocking).
@@ -341,11 +328,8 @@ class LoggingContextTest {
       latch.await() // Waits until child thread calls countDown()
     }
 
-    logFields shouldBe
-        """
-          "fieldFromParentThread":"value"
-        """
-            .trimIndent()
+    output.contextFields shouldContainExactly
+        mapOf("fieldFromParentThread" to JsonPrimitive("value"))
   }
 
   /**
@@ -361,14 +345,14 @@ class LoggingContextTest {
     val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
 
     // Verify that there are no fields in parent thread context
-    LoggingContext.getFieldArray().shouldBeNull()
+    LoggingContext.getFieldList().shouldBeEmpty()
 
     val latch = CountDownLatch(1) // Used to wait for the child thread to complete its log
     val executed = AtomicBoolean(false)
 
     test.runTask(executor) {
       // Verify that there are no fields in child thread context
-      LoggingContext.getFieldArray().shouldBeNull()
+      LoggingContext.getFieldList().shouldBeEmpty()
       executed.set(true)
       latch.countDown()
     }
@@ -384,132 +368,71 @@ class LoggingContextTest {
     // Used for synchronization points between the two threads in our test
     val barrier = CyclicBarrier(2)
 
-    val parentField = field("parent", true)
-    val childField = field("child", true)
+    val parentField = field("parentField", "value")
+    val childField = field("childField", "value")
+
+    // We assert this multiple times below, so we put it in a lambda here for reuse
+    val assertLoggingContextHasOnlyParentField = {
+      LoggingContext.getFieldMap()
+          .shouldNotBeNull()
+          .shouldContainExactly(mapOf("parentField" to "value"))
+    }
 
     withLoggingContext(parentField) {
-      LoggingContext.getFieldArray() shouldBe arrayOf(parentField)
+      assertLoggingContextHasOnlyParentField()
 
       executor.execute {
-        // Mutate the logging context fields here in the child thread
-        LoggingContext.getFieldArray() shouldBe arrayOf(parentField)
-        LoggingContext.getFieldArray()!![0] = childField
-        LoggingContext.getFieldArray() shouldBe arrayOf(childField)
+        assertLoggingContextHasOnlyParentField()
 
-        // 1st synchronization point: The parent thread will reach this after we've mutated the
-        // logging context here in the child thread, so we can verify that the parent's context is
-        // unchanged
-        barrier.await()
-        // 2nd synchronization point: We want to keep this thread running while the parent thread
-        // tests its logging context fields, to keep the child thread context alive
-        barrier.await()
+        withLoggingContext(childField) {
+          LoggingContext.getFieldMap()
+              .shouldNotBeNull()
+              .shouldContainExactly(
+                  mapOf("parentField" to "value", "childField" to "value"),
+              )
+
+          // 1st synchronization point: The parent thread will reach this after we've added to the
+          // logging context here in the child thread, so we can verify that the parent's context is
+          // unchanged
+          barrier.await()
+          // 2nd synchronization point: We want to keep this thread running while the parent thread
+          // tests its logging context fields, to keep the child thread context alive
+          barrier.await()
+        }
       }
 
       barrier.await() // 1st synchronization point
-      LoggingContext.getFieldArray() shouldBe arrayOf(parentField)
+      assertLoggingContextHasOnlyParentField()
       barrier.await() // 2nd synchronization point
     }
   }
 
-  /**
-   * Verifies that the logic explained in the docstrings on [LoggingContext],
-   * [LoggingContext.addFields] and [LoggingContext.popFields] works as expected.
-   */
   @Test
-  fun `logging context field array has expected state in various edge-cases`() {
-    // Before calling withLoggingContext: array should be null
-    LoggingContext.getFieldArray().shouldBeNull()
+  fun `LoggingContext withFieldMap merges given map with existing fields`() {
+    withLoggingContext(field("existingField", "value")) {
+      LoggingContext.getFieldMap()
+          .shouldNotBeNull()
+          .shouldContainExactly(mapOf("existingField" to "value"))
 
-    // Outer context
-    withLoggingContext(field("key1", "value")) {
-      LoggingContext.getFieldArray() shouldBe arrayOf(field("key1", "value"))
-
-      // First nested context: should add fields to beginning of array
-      withLoggingContext(
-          field("key2", "value"),
-          field("key3", "value"),
+      LoggingContext.withFieldMap(
+          mapOf("fieldMap1" to "value", "fieldMap2" to "value"),
       ) {
-        LoggingContext.getFieldArray() shouldBe
-            arrayOf(
-                field("key2", "value"),
-                field("key3", "value"),
-                field("key1", "value"),
+        LoggingContext.getFieldMap()
+            .shouldNotBeNull()
+            .shouldContainExactly(
+                mapOf(
+                    "existingField" to "value",
+                    "fieldMap1" to "value",
+                    "fieldMap2" to "value",
+                ),
             )
       }
 
-      val arrayAfterFirstNestedContext = LoggingContext.getFieldArray()
-      // Key 2 and 3 should be set to null, since we exited their context. But array should not have
-      // been shrunk (which would require a re-allocation) or freed, since we haven't exited the
-      // outer context yet.
-      arrayAfterFirstNestedContext shouldBe arrayOf(null, null, field("key1", "value"))
-
-      // Second nested context: Should use available space in existing array
-      withLoggingContext(field("key4", "value")) {
-        val arrayInsideSecondNestedContext = LoggingContext.getFieldArray()
-        arrayInsideSecondNestedContext shouldBe
-            arrayOf(
-                // New field should be placed right in front of existing fields, and leave empty
-                // space at the front
-                null,
-                field("key4", "value"),
-                field("key1", "value"),
-            )
-        // The same array instance should be re-used when there is available space
-        arrayInsideSecondNestedContext shouldBeSameInstanceAs arrayAfterFirstNestedContext
-
-        // Third nested context: This adds 2 extra fields to the context, exceeding the current
-        // capacity. This should give us a new array with the new fields + existing fields, and
-        // importantly _without_ the null element that the context had in its empty space.
-        withLoggingContext(
-            field("key5", "value"),
-            field("key6", "value"),
-        ) {
-          LoggingContext.getFieldArray() shouldBe
-              arrayOf(
-                  field("key5", "value"),
-                  field("key6", "value"),
-                  field("key4", "value"),
-                  field("key1", "value"),
-              )
-        }
-      }
-
-      // We still haven't exited the outer context, and since our last context had 4 total fields,
-      // there should now be 3 empty spaces + the field from the outer context
-      LoggingContext.getFieldArray() shouldBe arrayOf(null, null, null, field("key1", "value"))
+      // Previous fields should be restored after
+      LoggingContext.getFieldMap()
+          .shouldNotBeNull()
+          .shouldContainExactly(mapOf("existingField" to "value"))
     }
-
-    // Outer context has now exited, so field array should be set to null to free the allocation
-    LoggingContext.getFieldArray().shouldBeNull()
-  }
-
-  /**
-   * Verify that logging context does not redundantly copy input array, to optimize performance
-   * (explained in the second point on the docstring of [LoggingContext]).
-   */
-  @Test
-  fun `logging context field array should not copy array from withLoggingContext`() {
-    val fields = arrayOf(field("key", "value"))
-
-    withLoggingContextInternal(fields) {
-      LoggingContext.getFieldArray() shouldBeSameInstanceAs fields
-    }
-  }
-
-  /**
-   * Sanity check that varargs make a copy of a given array (an important assumption for us, as
-   * explained on [withLoggingContextInternal]).
-   */
-  @Test
-  fun `existing array is copied when passed as vararg`() {
-    val fields = arrayOf(field("key", "value"))
-
-    // Test both named param and spread operator (*) syntax, for good measure
-    withLoggingContext(logFields = fields) {
-      LoggingContext.getFieldArray() shouldNotBeSameInstanceAs fields
-    }
-
-    withLoggingContext(*fields) { LoggingContext.getFieldArray() shouldNotBeSameInstanceAs fields }
   }
 }
 

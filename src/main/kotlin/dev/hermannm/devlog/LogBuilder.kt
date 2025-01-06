@@ -90,13 +90,18 @@ internal constructor(
    * }
    * ```
    */
-  inline fun <reified ValueT> field(
+  inline fun <reified ValueT : Any> field(
       key: String,
-      value: ValueT,
+      value: ValueT?,
       serializer: SerializationStrategy<ValueT>? = null,
   ) {
     if (!logEvent.isFieldKeyAdded(key)) {
-      logEvent.addField(key, encodeFieldValue(value, serializer))
+      encodeFieldValue(
+          value,
+          serializer,
+          onJson = { jsonValue -> logEvent.addField(key, RawJson(jsonValue)) },
+          onString = { stringValue -> logEvent.addField(key, stringValue) },
+      )
     }
   }
 
@@ -137,7 +142,12 @@ internal constructor(
    */
   fun rawJsonField(key: String, json: String, validJson: Boolean = false) {
     if (!logEvent.isFieldKeyAdded(key)) {
-      logEvent.addField(key, rawJsonFieldValue(json, validJson))
+      validateRawJson(
+          json,
+          validJson,
+          onValidJson = { jsonValue -> logEvent.addField(key, RawJson(jsonValue)) },
+          onInvalidJson = { stringValue -> logEvent.addField(key, stringValue) },
+      )
     }
   }
 
@@ -158,14 +168,7 @@ internal constructor(
   internal fun finalize(message: String) {
     logEvent.setMessage(message)
 
-    // Add fields from cause exception first, as we prioritize them over context fields
     addFieldsFromCauseException()
-    addFieldsFromContext()
-  }
-
-  /** Adds log fields from [withLoggingContext]. */
-  private fun addFieldsFromContext() {
-    LoggingContext.getFields().forEach(::addField)
   }
 
   /**
@@ -197,7 +200,10 @@ internal constructor(
   private fun addField(field: LogField) {
     // Don't add fields with keys that have already been added
     if (!logEvent.isFieldKeyAdded(field.key)) {
-      logEvent.addField(field.key, field.value)
+      val value = field.getValueForLog()
+      if (value != null) {
+        logEvent.addField(field.key, value)
+      }
     }
   }
 }

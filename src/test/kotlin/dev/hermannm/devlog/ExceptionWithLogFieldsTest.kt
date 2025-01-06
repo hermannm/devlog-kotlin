@@ -1,6 +1,10 @@
 package dev.hermannm.devlog
 
+import io.kotest.matchers.maps.shouldBeEmpty
+import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Test
 
 private val log = getLogger {}
@@ -8,14 +12,14 @@ private val log = getLogger {}
 class ExceptionWithLogFieldsTest {
   @Test
   fun `exception implementing WithLogFields has field included in log`() {
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       log.error {
         cause = exceptionWithLogField("exceptionField", "value")
         "Test"
       }
     }
 
-    logFields shouldBe
+    output.logFields shouldBe
         """
           "exceptionField":"value"
         """
@@ -24,9 +28,9 @@ class ExceptionWithLogFieldsTest {
 
   @Test
   fun `ExceptionWithLogFields includes fields from logging context`() {
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       try {
-        withLoggingContext(field("contextField1", "value"), field("contextField2", "value")) {
+        withLoggingContext(field("contextField", "value")) {
           throw exceptionWithLogField("exceptionField", "value")
         }
       } catch (e: Exception) {
@@ -37,11 +41,12 @@ class ExceptionWithLogFieldsTest {
       }
     }
 
-    logFields shouldBe
+    output.logFields shouldBe
         """
-          "exceptionField":"value","contextField1":"value","contextField2":"value"
+          "exceptionField":"value","contextField":"value"
         """
             .trimIndent()
+    output.contextFields.shouldBeEmpty()
   }
 
   /**
@@ -51,7 +56,7 @@ class ExceptionWithLogFieldsTest {
    */
   @Test
   fun `ExceptionWithLogFields still includes fields from logging context when caught within that context`() {
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       withLoggingContext(field("contextField", "value")) {
         try {
           throw exceptionWithLogField("exceptionField", "value")
@@ -64,16 +69,17 @@ class ExceptionWithLogFieldsTest {
       }
     }
 
-    logFields shouldBe
+    output.logFields shouldBe
         """
-          "exceptionField":"value","contextField":"value"
+          "exceptionField":"value"
         """
             .trimIndent()
+    output.contextFields shouldContainExactly mapOf("contextField" to JsonPrimitive("value"))
   }
 
   @Test
   fun `child exception that implements WithLogFields`() {
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       log.error {
         cause =
             Exception(
@@ -84,7 +90,7 @@ class ExceptionWithLogFieldsTest {
       }
     }
 
-    logFields shouldBe
+    output.logFields shouldBe
         """
           "childException":"value"
         """
@@ -93,7 +99,7 @@ class ExceptionWithLogFieldsTest {
 
   @Test
   fun `parent and child exceptions that both implement WithLogFields have their fields merged`() {
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       val exception =
           ExceptionWithLogFields(
               message = "Parent exception",
@@ -106,7 +112,7 @@ class ExceptionWithLogFieldsTest {
       }
     }
 
-    logFields shouldBe
+    output.logFields shouldBe
         """
           "parentField1":"value","parentField2":"value","childField":"value"
         """
@@ -115,17 +121,21 @@ class ExceptionWithLogFieldsTest {
 
   @Test
   fun `exception log fields are placed between context and log event fields`() {
-    val logFields = captureLogFields {
-      withLoggingContext(field("contextField", "value")) {
+    val output = captureLogOutput {
+      try {
+        withLoggingContext(field("contextField", "value")) {
+          throw exceptionWithLogField("exceptionField", "value")
+        }
+      } catch (e: Exception) {
         log.error {
-          cause = exceptionWithLogField("exceptionField", "value")
+          cause = e
           field("logEventField", "value")
           "Test"
         }
       }
     }
 
-    logFields shouldBe
+    output.logFields shouldBe
         """
           "logEventField":"value","exceptionField":"value","contextField":"value"
         """
@@ -134,7 +144,7 @@ class ExceptionWithLogFieldsTest {
 
   @Test
   fun `exception with duplicate log fields only includes first field`() {
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       val exception =
           ExceptionWithLogFields(
               "Test",
@@ -147,7 +157,7 @@ class ExceptionWithLogFieldsTest {
       }
     }
 
-    logFields shouldBe
+    output.logFields shouldBe
         """
           "duplicateKey":"value1"
         """
@@ -160,7 +170,7 @@ class ExceptionWithLogFieldsTest {
    */
   @Test
   fun `exception log field does not override duplicate log event field`() {
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       log.error {
         cause = exceptionWithLogField("duplicateKey", "from exception")
         field("duplicateKey", "from log event")
@@ -168,7 +178,7 @@ class ExceptionWithLogFieldsTest {
       }
     }
 
-    logFields shouldBe
+    output.logFields shouldBe
         """
           "duplicateKey":"from log event"
         """
@@ -181,7 +191,7 @@ class ExceptionWithLogFieldsTest {
    */
   @Test
   fun `exception log field overrides duplicate context field`() {
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       withLoggingContext(field("duplicateKey", "from context")) {
         log.error {
           cause = exceptionWithLogField("duplicateKey", "from exception")
@@ -190,9 +200,35 @@ class ExceptionWithLogFieldsTest {
       }
     }
 
-    logFields shouldBe
+    output.logFields shouldBe
         """
           "duplicateKey":"from exception"
+        """
+            .trimIndent()
+  }
+
+  @Test
+  fun `serializable object field works on ExceptionWithLogFields`() {
+    @Serializable data class User(val id: Int, val name: String)
+
+    val user = User(id = 1, name = "John Doe")
+
+    val exception =
+        ExceptionWithLogFields(
+            message = null,
+            logFields = listOf(field("user", user)),
+        )
+
+    val output = captureLogOutput {
+      log.error {
+        cause = exception
+        "Test"
+      }
+    }
+
+    output.logFields shouldBe
+        """
+          "user":{"id":1,"name":"John Doe"}
         """
             .trimIndent()
   }
@@ -207,14 +243,14 @@ class ExceptionWithLogFieldsTest {
           )
     }
 
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       log.error {
         cause = CustomException()
         "Test"
       }
     }
 
-    logFields shouldBe
+    output.logFields shouldBe
         """
           "key1":"value1","key2":"value2"
         """
@@ -229,14 +265,14 @@ class ExceptionWithLogFieldsTest {
             logFields = listOf(field("key", "value")),
         )
 
-    val logFields = captureLogFields {
+    val output = captureLogOutput {
       log.error {
         cause = CustomException()
         "Test"
       }
     }
 
-    logFields shouldBe
+    output.logFields shouldBe
         """
           "key":"value"
         """

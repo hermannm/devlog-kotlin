@@ -66,20 +66,36 @@ import kotlinx.serialization.json.JsonElement
  * }
  * ```
  */
-class LogField
-@PublishedApi
-internal constructor(
-    internal val key: String,
-    internal val value: LogFieldValue,
-) {
-  // We override toString, equals and hashCode manually here instead of using a data class, since we
-  // don't want the data class copy/componentN methods to be part of our API.
-  override fun toString() = "${key}=${value}"
+sealed class LogField {
+  internal abstract val key: String
+  internal abstract val value: String
 
-  override fun equals(other: Any?) =
+  /**
+   * Returns null if the field should not be included in the log (used by
+   * [StringLogFieldFromContext]/[JsonLogFieldFromContext] to exclude fields that are already in the
+   * logging context).
+   */
+  internal abstract fun getValueForLog(): LogFieldValue?
+
+  override fun toString(): String = "${key}=${value}"
+
+  override fun equals(other: Any?): Boolean =
       other is LogField && this.key == other.key && this.value == other.value
 
-  override fun hashCode() = Objects.hash(key, value)
+  override fun hashCode(): Int = Objects.hash(key, value)
+}
+
+@PublishedApi
+internal class StringLogField(override val key: String, override val value: String) : LogField() {
+  override fun getValueForLog() = value
+}
+
+@PublishedApi
+internal class JsonLogField(override val key: String, json: String) : LogField() {
+  /** See [LoggingContext.JSON_FIELD_VALUE_PREFIX]. */
+  override val value: String = LoggingContext.JSON_FIELD_VALUE_PREFIX + json
+
+  override fun getValueForLog() = PrefixedRawJson(value)
 }
 
 /**
@@ -104,48 +120,70 @@ internal constructor(
  * - [java.net.URL]
  * - [java.math.BigDecimal]
  */
-inline fun <reified ValueT> field(
+inline fun <reified ValueT : Any> field(
     key: String,
-    value: ValueT,
+    value: ValueT?,
     serializer: SerializationStrategy<ValueT>? = null
 ): LogField {
-  return LogField(key, value = encodeFieldValue(value, serializer))
+  return encodeFieldValue(
+      value,
+      serializer,
+      onJson = { jsonValue -> JsonLogField(key, jsonValue) },
+      onString = { stringValue -> StringLogField(key, stringValue) },
+  )
 }
 
+/**
+ * Encodes the given value to JSON, calling [onJson] with the result. If we failed to encode to
+ * JSON, or the value was already a string (or one of the types with special handling as explained
+ * on [field]'s docstring), we fall back to its `toString` representation and call [onString].
+ *
+ * We take callbacks for the different results here instead of returning a return value. This is
+ * because we use this in both [field] and [LogBuilder.field], and they want to do different things
+ * with the encoded value:
+ * - [field] constructs a [StringLogField] or [JsonLogField] with it
+ * - [LogBuilder.field] passes the value to [LogEvent.addField], wrapping JSON values in [RawJson]
+ *
+ * If we used a return value here, we would have to wrap it in an object to convey whether it was
+ * encoded to JSON or just a plain string, which requires an allocation. By instead taking callbacks
+ * and making the function `inline`, we pay no extra cost.
+ */
 @PublishedApi
-internal inline fun <reified ValueT> encodeFieldValue(
-    value: ValueT,
-    serializer: SerializationStrategy<ValueT>?
-): LogFieldValue {
+internal inline fun <reified ValueT : Any, ReturnT> encodeFieldValue(
+    value: ValueT?,
+    serializer: SerializationStrategy<ValueT>?,
+    onJson: (String) -> ReturnT,
+    onString: (String) -> ReturnT,
+): ReturnT {
   try {
     if (value == null) {
-      return RawJson.NULL
+      return onJson(RawJson.NULL)
     }
 
     if (serializer != null) {
       val serializedValue = logFieldJson.encodeToString(serializer, value)
-      return RawJson(serializedValue)
+      return onJson(serializedValue)
     }
 
     return when (ValueT::class) {
       // Special case for String to avoid redundant serialization
-      String::class -> value
+      String::class -> onString(value as String)
       // Special cases for common types that kotlinx.serialization doesn't handle by default.
       // If more cases are added here, you should add them to the list in the docstring for `field`.
       Instant::class,
       UUID::class,
       URI::class,
       URL::class,
-      BigDecimal::class -> value.toString()
+      BigDecimal::class -> onString(value.toString())
       else -> {
         val serializedValue = logFieldJson.encodeToString(value)
-        RawJson(serializedValue)
+        onJson(serializedValue)
       }
     }
   } catch (_: Exception) {
     // We don't want to ever throw an exception from constructing a log field, which may happen if
     // serialization fails, for example. So in these cases we fall back to toString().
-    return value.toString()
+    return onString(value.toString())
   }
 }
 
@@ -191,10 +229,27 @@ internal inline fun <reified ValueT> encodeFieldValue(
  * ```
  */
 fun rawJsonField(key: String, json: String, validJson: Boolean = false): LogField {
-  return LogField(key, value = rawJsonFieldValue(json, validJson))
+  return validateRawJson(
+      json,
+      validJson,
+      onValidJson = { jsonValue -> JsonLogField(key, jsonValue) },
+      onInvalidJson = { stringValue -> StringLogField(key, stringValue) },
+  )
 }
 
-internal fun rawJsonFieldValue(json: String, validJson: Boolean): LogFieldValue {
+/**
+ * Validates that the given raw JSON string is valid JSON, calling [onValidJson] if it is, or
+ * [onInvalidJson] if it's not.
+ *
+ * We take lambdas here instead of returning a value, for the same reason as [encodeFieldValue]: we
+ * use this in both [rawJsonField] and [LogBuilder.rawJsonField].
+ */
+internal inline fun <ReturnT> validateRawJson(
+    json: String,
+    validJson: Boolean,
+    onValidJson: (String) -> ReturnT,
+    onInvalidJson: (String) -> ReturnT
+): ReturnT {
   try {
     // Some log platforms (e.g. AWS CloudWatch) use newlines as the separator between log messages.
     // So if the JSON string has unescaped newlines, we must re-parse the JSON.
@@ -202,7 +257,7 @@ internal fun rawJsonFieldValue(json: String, validJson: Boolean): LogFieldValue 
 
     // If we assume the JSON is valid, and there are no unescaped newlines, we can return it as-is.
     if (validJson && !containsNewlines) {
-      return RawJson(json)
+      return onValidJson(json)
     }
 
     // If we do not assume that the JSON is valid, we must try to decode it.
@@ -211,22 +266,20 @@ internal fun rawJsonFieldValue(json: String, validJson: Boolean): LogFieldValue 
     // If we successfully decoded the JSON, and it does not contain unescaped newlines, we can
     // return it as-is.
     if (!containsNewlines) {
-      return RawJson(json)
+      return onValidJson(json)
     }
 
     // If the JSON did contain unescaped newlines, then we need to re-encode to escape them.
     val encoded = logFieldJson.encodeToString(JsonElement.serializer(), decoded)
-    return RawJson(encoded)
+    return onValidJson(encoded)
   } catch (_: Exception) {
     // If we failed to decode/re-encode the JSON string, we return it as a non-JSON string.
-    return json
+    return onInvalidJson(json)
   }
 }
 
 /**
- * A log field value is either:
- * - A [RawJson] value, serialized in [encodeFieldValue] or passed directly to [rawJsonFieldValue]
- * - A `String` or other primitive type that we assume the logger implementation can handle
+ * A log field value is either a [String] or a [RawJson] instance.
  *
  * We don't use an interface or sealed class for this, to avoid allocating redundant wrapper
  * objects. We could wrap this in an inline value class, but experimenting with that proved to be
@@ -269,8 +322,32 @@ internal value class RawJson(private val json: String) : JsonSerializable {
      * think the log field was omitted due to some error. So in this library, we instead use a JSON
      * `null` as the value for null log fields.
      */
-    @PublishedApi internal val NULL = RawJson("null")
+    @PublishedApi internal const val NULL = "null"
   }
 }
 
-@PublishedApi internal val logFieldJson = Json { encodeDefaults = true }
+/** Same as [RawJson], but for JSON strings prefixed by [LoggingContext.JSON_FIELD_VALUE_PREFIX] */
+@JvmInline
+internal value class PrefixedRawJson(private val prefixedJson: String) : JsonSerializable {
+  override fun toString() = prefixedJson.removePrefix(LoggingContext.JSON_FIELD_VALUE_PREFIX)
+
+  override fun serialize(generator: JsonGenerator, serializers: SerializerProvider) {
+    val offset = LoggingContext.JSON_FIELD_VALUE_PREFIX.length
+    generator.writeRawValue(prefixedJson, offset, prefixedJson.length - offset)
+  }
+
+  override fun serializeWithType(
+      generator: JsonGenerator,
+      serializers: SerializerProvider,
+      typeSerializer: TypeSerializer
+  ) {
+    // Since we don't know what type the raw JSON is, we can only redirect to normal serialization
+    serialize(generator, serializers)
+  }
+}
+
+@PublishedApi
+internal val logFieldJson = Json {
+  encodeDefaults = true
+  ignoreUnknownKeys = true
+}

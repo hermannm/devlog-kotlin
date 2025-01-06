@@ -2,8 +2,17 @@
 <configuration>
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <mdcEntryWriter class="dev.hermannm.devlog.LoggingContextJsonFieldWriter"/>
+
       <!-- To test file/line info in LoggerTest -->
       <includeCallerData>true</includeCallerData>
+
+      <fieldNames>
+        <!--
+          Include MDC (logging context) fields under "context" key, so we can separate them from other fields in tests
+        -->
+        <mdc>context</mdc>
+      </fieldNames>
     </encoder>
   </appender>
 
