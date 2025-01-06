@@ -301,8 +301,8 @@ internal object LoggingContext {
         null -> {}
         // If the existing value matches the value we're about to insert, we can skip inserting it
         field.value -> continue
-        // If there is an existing entry that does not match our field, we have to add it to a
-        // list so we can restore it after our withLoggingContext scope
+        // If there is an existing entry that does not match our new field value, we add it to
+        // overwrittenFields so we can restore the previous value after our withLoggingContext scope
         else -> {
           overwrittenFields = overwrittenFields.set(index, field.key, existingValue, fields.size)
           /**
