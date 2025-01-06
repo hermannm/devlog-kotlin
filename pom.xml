@@ -159,6 +159,17 @@
     <sourceDirectory>src/main/kotlin</sourceDirectory>
     <testSourceDirectory>src/test/kotlin</testSourceDirectory>
 
+    <!-- Include license under META-INF in output JAR (this is de-facto standard for Java libraries) -->
+    <resources>
+      <resource>
+        <directory>${project.basedir}</directory>
+        <includes>
+          <include>LICENSE</include>
+        </includes>
+        <targetPath>META-INF</targetPath>
+      </resource>
+    </resources>
+
     <plugins>
       <!-- Kotlin compilation and kotlinx.serialization codegen -->
       <plugin>
