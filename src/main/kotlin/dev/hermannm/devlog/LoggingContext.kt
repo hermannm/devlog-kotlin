@@ -1,6 +1,5 @@
 package dev.hermannm.devlog
 
-import dev.hermannm.devlog.LoggingContext.JSON_FIELD_VALUE_PREFIX
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
@@ -15,6 +14,10 @@ import org.slf4j.MDC
  * attached to every log while processing it. Instead of manually attaching the event to each log,
  * you can wrap the event processing in `withLoggingContext` with the event as a log field, and then
  * all logs inside that context will include the event.
+ *
+ * The implementation uses [MDC] from SLF4J, which only supports String values by default. To encode
+ * object values as actual JSON (not escaped strings), you can configure
+ * [LoggingContextJsonFieldWriter].
  *
  * ### Example
  *
@@ -34,7 +37,8 @@ import org.slf4j.MDC
  * }
  * ```
  *
- * The field from `withLoggingContext` will then be attached to every log, like:
+ * If you have configured [LoggingContextJsonFieldWriter], the field from `withLoggingContext` will
+ * then be attached to every log as follows:
  * ```json
  * { "message": "Started processing event", "event": { /* ... */  } }
  * { "message": "Finished processing event", "event": { /* ... */  } }
@@ -42,9 +46,9 @@ import org.slf4j.MDC
  *
  * ### Note on coroutines
  *
- * `withLoggingContext` uses a thread-local, so it won't work with Kotlin coroutines and `suspend`
- * functions (though it does work with Java virtual threads). An alternative that supports
- * coroutines may be added in a future version of the library.
+ * SLF4J's `MDC` uses a thread-local, so it won't work by default with Kotlin coroutines and
+ * `suspend` functions (though it does work with Java virtual threads). You can solve this with
+ * [`kotlinx-coroutines-slf4j`](https://github.com/Kotlin/kotlinx.coroutines/blob/ee92d16c4b48345648dcd8bb15f11ab9c3747f67/integration/kotlinx-coroutines-slf4j/README.md).
  */
 inline fun <ReturnT> withLoggingContext(vararg logFields: LogField, block: () -> ReturnT): ReturnT {
   return withLoggingContextInternal(logFields, block)
@@ -58,6 +62,10 @@ inline fun <ReturnT> withLoggingContext(vararg logFields: LogField, block: () ->
  * attached to every log while processing it. Instead of manually attaching the event to each log,
  * you can wrap the event processing in `withLoggingContext` with the event as a log field, and then
  * all logs inside that context will include the event.
+ *
+ * The implementation uses [MDC] from SLF4J, which only supports String values by default. To encode
+ * object values as actual JSON (not escaped strings), you can configure
+ * [LoggingContextJsonFieldWriter].
  *
  * This overload of the function takes a list instead of varargs, for when you already have a list
  * of log fields available. This can be used together with [getLoggingContext] to pass context
@@ -81,7 +89,8 @@ inline fun <ReturnT> withLoggingContext(vararg logFields: LogField, block: () ->
  * }
  * ```
  *
- * The field from `withLoggingContext` will then be attached to every log, like:
+ * If you have configured [LoggingContextJsonFieldWriter], the field from `withLoggingContext` will
+ * then be attached to every log as follows:
  * ```json
  * { "message": "Started processing event", "event": { /* ... */  } }
  * { "message": "Finished processing event", "event": { /* ... */  } }
@@ -89,9 +98,9 @@ inline fun <ReturnT> withLoggingContext(vararg logFields: LogField, block: () ->
  *
  * ### Note on coroutines
  *
- * `withLoggingContext` uses a thread-local, so it won't work with Kotlin coroutines and `suspend`
- * functions (though it does work with Java virtual threads). An alternative that supports
- * coroutines may be added in a future version of the library.
+ * SLF4J's `MDC` uses a thread-local, so it won't work by default with Kotlin coroutines and
+ * `suspend` functions (though it does work with Java virtual threads). You can solve this with
+ * [`kotlinx-coroutines-slf4j`](https://github.com/Kotlin/kotlinx.coroutines/blob/ee92d16c4b48345648dcd8bb15f11ab9c3747f67/integration/kotlinx-coroutines-slf4j/README.md).
  */
 inline fun <ReturnT> withLoggingContext(logFields: List<LogField>, block: () -> ReturnT): ReturnT {
   return withLoggingContextInternal(logFields.toTypedArray(), block)
@@ -260,19 +269,23 @@ internal object LoggingContext {
    * output, unescaped, to get the benefits of structured logging.
    *
    * To achieve this, we add the raw JSON string from [JsonLogField] to the MDC, but with this
-   * prefix. Then, users can configure our [LoggingContextJsonFieldWriter] to strip this prefix and
-   * write the field value as raw JSON in the log output. This only works when using Logback with
-   * `logstash-logback-encoder`, but that's what this library is primarily designed for anyway.
+   * suffix added to the key. Then, users can configure our [LoggingContextJsonFieldWriter] to strip
+   * this suffix from the key and write the field value as raw JSON in the log output. This only
+   * works when using Logback with `logstash-logback-encoder`, but that's what this library is
+   * primarily designed for anyway.
+   *
+   * We add a suffix to the field key instead of the field value, since the field value may be
+   * external input, which would open us up to malicious actors breaking our logs by passing invalid
+   * JSON strings with the appropriate prefix/suffix.
+   *
+   * This specific suffix was chosen to reduce the chance of clashing with other keys - most MDC
+   * keys will not include spaces/parentheses, but these are perfectly valid JSON keys.
    */
-  internal const val JSON_FIELD_VALUE_PREFIX = "json: "
+  internal const val JSON_FIELD_KEY_SUFFIX = " (json)"
 
-  /**
-   * Returns an array of overwritten field values, with indices matching the given field array.
-   * Returns null if no fields were overwritten, so we don't allocate an array for the common case.
-   */
   @PublishedApi
-  internal fun addFields(fields: Array<out LogField>): Array<String?>? {
-    var overwrittenFields: Array<String?>? = null
+  internal fun addFields(fields: Array<out LogField>): OverwrittenContextFields {
+    var overwrittenFields = OverwrittenContextFields(null)
 
     for (index in fields.indices) {
       val field = fields[index]
@@ -282,22 +295,47 @@ internal object LoggingContext {
         continue
       }
 
-      when (val existingValue: String? = MDC.get(field.key)) {
+      var existingValue: String? = MDC.get(field.key)
+      when (existingValue) {
         // If there is no existing entry for our key, we continue down to MDC.put
         null -> {}
         // If the existing value matches the value we're about to insert, we can skip inserting it
         field.value -> continue
-        // If there is an existing entry that does not match our field, we have to add it to a list
-        // so we can restore it after our withLoggingContext scope
+        // If there is an existing entry that does not match our field, we have to add it to a
+        // list so we can restore it after our withLoggingContext scope
         else -> {
-          if (overwrittenFields == null) {
-            overwrittenFields = arrayOfNulls(fields.size)
+          overwrittenFields = overwrittenFields.set(index, field.key, existingValue, fields.size)
+          /**
+           * If we get a [JsonLogField] whose key matches a non-JSON field in the context, then we
+           * want to overwrite "key" with "key (json)" (adding [JSON_FIELD_KEY_SUFFIX] to identify
+           * the JSON value). But since "key (json)" does not match "key", calling `MDC.put` below
+           * will not overwrite the previous field, so we have to manually remove it here. The
+           * previous field will then be restored by [removeFields] after the context exits.
+           */
+          if (field.key != field.keyForLoggingContext) {
+            MDC.remove(field.key)
           }
-          overwrittenFields[index] = existingValue
         }
       }
 
-      MDC.put(field.key, field.value)
+      /**
+       * [JsonLogField] adds a suffix to [LogField.keyForLoggingContext], i.e. it will be different
+       * from [LogField.key]. In this case, we want to check existing context field values for both
+       * [LogField.key] _and_ [LogField.keyForLoggingContext].
+       */
+      if (field.key != field.keyForLoggingContext && existingValue == null) {
+        existingValue = MDC.get(field.keyForLoggingContext)
+        when (existingValue) {
+          null -> {}
+          field.value -> continue
+          else -> {
+            overwrittenFields =
+                overwrittenFields.set(index, field.keyForLoggingContext, existingValue, fields.size)
+          }
+        }
+      }
+
+      MDC.put(field.keyForLoggingContext, field.value)
     }
 
     return overwrittenFields
@@ -308,7 +346,10 @@ internal object LoggingContext {
    * context values after the current context exits.
    */
   @PublishedApi
-  internal fun removeFields(fields: Array<out LogField>, overwrittenFields: Array<String?>?) {
+  internal fun removeFields(
+      fields: Array<out LogField>,
+      overwrittenFields: OverwrittenContextFields
+  ) {
     for (index in fields.indices) {
       val field = fields[index]
 
@@ -317,16 +358,20 @@ internal object LoggingContext {
         continue
       }
 
-      if (overwrittenFields != null) {
-        val previousValue = overwrittenFields[index]
-
-        if (previousValue != null) {
-          MDC.put(field.key, previousValue)
+      val overwrittenKey = overwrittenFields.getKey(index)
+      if (overwrittenKey != null) {
+        MDC.put(overwrittenKey, overwrittenFields.getValue(index))
+        /**
+         * If the overwritten key matched the current key in the logging context, then we don't want
+         * to call `MDC.remove` below (these may not always match for [JsonLogField] - see docstring
+         * over `MDC.remove` in [addFields]).
+         */
+        if (overwrittenKey == field.keyForLoggingContext) {
           continue
         }
       }
 
-      MDC.remove(field.key)
+      MDC.remove(field.keyForLoggingContext)
     }
   }
 
@@ -342,6 +387,13 @@ internal object LoggingContext {
   internal fun hasKey(key: String): Boolean {
     val existingValue: String? = MDC.get(key)
     return existingValue != null
+  }
+
+  /** Assumes that the given key has already been checked to end with [JSON_FIELD_KEY_SUFFIX]. */
+  internal fun removeJsonFieldSuffixFromKey(key: String): String {
+    // We do manual substring here instead of using removeSuffix, since removeSuffix calls endsWith,
+    // so we would call it twice
+    return key.substring(0, key.length - JSON_FIELD_KEY_SUFFIX.length)
   }
 
   internal fun getFieldMap(): Map<String, String?>? {
@@ -397,8 +449,60 @@ internal object LoggingContext {
   }
 }
 
+/**
+ * Fields (key/value pairs) that were overwritten by [LoggingContext.addFields], passed to
+ * [LoggingContext.removeFields] so we can restore the previous field values after the current
+ * logging context exits.
+ *
+ * We want this object to be as efficient as possible, since it will be kept around for the whole
+ * span of a [withLoggingContext] scope, which may last a while. To support this goal, we:
+ * - Use an array, to store the fields as compactly as possible
+ *     - We store key/values inline, alternating - so an initialized array will look like:
+ *       `key1-value1-key2-value2`
+ *     - We initialize the array to twice the size of the current logging context fields, since we
+ *       store 2 elements (key/value) for every field in the current context. This is not a concern,
+ *       since there will typically be few elements in the context, and storing `null`s in the array
+ *       does not take up much space.
+ * - Initialize the array to `null`, so we don't allocate anything for the common case of there
+ *   being no overwritten fields
+ * - Use an inline value class, so we don't allocate a redundant wrapper object
+ *     - To avoid the array being boxed, we always use this object as its concrete type. We also
+ *       make the `fields` array nullable instead of the outer object, as making the outer object
+ *       nullable boxes it (like `Int` and `Int?`). See
+ *       [Kotlin docs](https://kotlinlang.org/docs/inline-classes.html#representation) for more on
+ *       when inline value classes are boxed.
+ */
+@JvmInline
+internal value class OverwrittenContextFields(private val fields: Array<String?>?) {
+  /**
+   * If the overwritten context field array has not been initialized yet, we initialize it before
+   * setting the key/value, and return the new array. It is an error not to use the return value
+   * (unfortunately,
+   * [Kotlin can't disallow unused return values yet](https://youtrack.jetbrains.com/issue/KT-12719)).
+   */
+  internal fun set(
+      index: Int,
+      key: String,
+      value: String,
+      totalFields: Int
+  ): OverwrittenContextFields {
+    val fields = this.fields ?: arrayOfNulls(totalFields * 2)
+    fields[index * 2] = key
+    fields[index * 2 + 1] = value
+    return OverwrittenContextFields(fields)
+  }
+
+  internal fun getKey(index: Int): String? {
+    return fields?.get(index * 2)
+  }
+
+  internal fun getValue(index: Int): String? {
+    return fields?.get(index * 2 + 1)
+  }
+}
+
 internal fun createLogFieldFromContext(key: String, value: String): LogField {
-  return if (value.startsWith(JSON_FIELD_VALUE_PREFIX)) {
+  return if (key.endsWith(LoggingContext.JSON_FIELD_KEY_SUFFIX)) {
     JsonLogFieldFromContext(key, value)
   } else {
     StringLogFieldFromContext(key, value)
@@ -410,6 +514,9 @@ internal class StringLogFieldFromContext(
     override val key: String,
     override val value: String,
 ) : LogField() {
+  override val keyForLoggingContext: String
+    get() = key
+
   override fun getValueForLog(): String? {
     // We only want to include fields from the logging context if it's not already in the context
     // (in which case the logger implementation will add the fields from SLF4J's MDC)
@@ -423,21 +530,23 @@ internal class StringLogFieldFromContext(
 
 @PublishedApi
 internal class JsonLogFieldFromContext(
-    override val key: String,
     /**
-     * We don't have to add the [LoggingContext.JSON_FIELD_VALUE_PREFIX] here like we do for
-     * [JsonLogField], since this is constructed from values that already have the prefix (see
-     * [createLogFieldFromContext]).
+     * We construct this field with keys that already have the
+     * [LoggingContext.JSON_FIELD_KEY_SUFFIX], so we set [keyForLoggingContext] to the key with the
+     * suffix, and remove the suffix for [key] below.
      */
+    override val keyForLoggingContext: String,
     override val value: String,
 ) : LogField() {
-  override fun getValueForLog(): PrefixedRawJson? {
+  override val key: String = LoggingContext.removeJsonFieldSuffixFromKey(keyForLoggingContext)
+
+  override fun getValueForLog(): RawJson? {
     // We only want to include fields from the logging context if it's not already in the context
     // (in which case the logger implementation will add the fields from SLF4J's MDC)
     return if (LoggingContext.hasKey(key)) {
       null
     } else {
-      PrefixedRawJson(value)
+      RawJson(value)
     }
   }
 }

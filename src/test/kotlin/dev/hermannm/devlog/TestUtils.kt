@@ -196,6 +196,9 @@ internal class PlainSlf4jLogger(
   }
 }
 
+/** For testing log fields with serializable object values. */
+@Serializable data class User(val id: Long, val name: String)
+
 /**
  * Used in [LoggerTest] to test that the logger gets the expected name from the file it's
  * constructed in.

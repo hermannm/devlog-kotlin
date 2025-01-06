@@ -4,9 +4,10 @@ import com.fasterxml.jackson.core.JsonGenerator
 import net.logstash.logback.composite.loggingevent.mdc.MdcEntryWriter
 
 /**
- * Writes logging context fields as JSON when using `logstash-logback-encoder`. We need this in
- * order to include object fields as raw JSON instead of escaped strings on the log output (see
- * [LoggingContext.JSON_FIELD_VALUE_PREFIX]).
+ * Writes logging context fields as JSON when using
+ * [`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder). We need this
+ * in order to include object fields as raw JSON instead of escaped strings on the log output (see
+ * [LoggingContext.JSON_FIELD_KEY_SUFFIX]).
  *
  * To use it, configure `logback.xml` under `src/main/resources` as follows:
  * ```xml
@@ -14,6 +15,7 @@ import net.logstash.logback.composite.loggingevent.mdc.MdcEntryWriter
  * <configuration>
  *   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
  *     <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+ *       <!-- Writes object values in logging context as actual JSON (not escaped) -->
  *       <mdcEntryWriter class="dev.hermannm.devlog.LoggingContextJsonFieldWriter"/>
  *     </encoder>
  *   </appender>
@@ -35,15 +37,18 @@ class LoggingContextJsonFieldWriter : MdcEntryWriter {
       mdcKey: String,
       value: String
   ): Boolean {
-    if (value.startsWith(LoggingContext.JSON_FIELD_VALUE_PREFIX)) {
-      val offset = LoggingContext.JSON_FIELD_VALUE_PREFIX.length
+    if (mdcKey.endsWith(LoggingContext.JSON_FIELD_KEY_SUFFIX)) {
+      // If the user has configured a different fieldName, we still want to use that
+      val fieldNameWithoutSuffix =
+          if (fieldName == mdcKey || fieldName.endsWith(LoggingContext.JSON_FIELD_KEY_SUFFIX)) {
+            LoggingContext.removeJsonFieldSuffixFromKey(fieldName)
+          } else {
+            fieldName
+          }
 
-      // We only want to handle the entry if it's not blank after "json: "
-      if (value.length > offset) {
-        generator.writeFieldName(fieldName)
-        generator.writeRawValue(value, offset, value.length - offset)
-        return true
-      }
+      generator.writeFieldName(fieldNameWithoutSuffix)
+      generator.writeRawValue(value)
+      return true
     }
 
     return false

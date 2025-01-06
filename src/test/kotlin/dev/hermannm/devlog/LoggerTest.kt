@@ -12,7 +12,6 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import java.time.Instant
-import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -339,9 +338,6 @@ internal class LoggerTest {
       val shouldHaveCorrectFileLocation: Boolean = true,
   ) {
     override fun toString() = name
-
-    /** To test log fields with object values. */
-    @Serializable data class User(val id: Int, val name: String)
   }
 
   val loggerTestCases =

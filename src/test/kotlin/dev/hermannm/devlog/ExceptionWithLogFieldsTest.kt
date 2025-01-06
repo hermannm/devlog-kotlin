@@ -3,7 +3,6 @@ package dev.hermannm.devlog
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Test
 
@@ -209,8 +208,6 @@ class ExceptionWithLogFieldsTest {
 
   @Test
   fun `serializable object field works on ExceptionWithLogFields`() {
-    @Serializable data class User(val id: Int, val name: String)
-
     val user = User(id = 1, name = "John Doe")
 
     val exception =

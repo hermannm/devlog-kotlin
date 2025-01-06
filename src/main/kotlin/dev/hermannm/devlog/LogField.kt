@@ -51,7 +51,8 @@ import kotlinx.serialization.json.JsonElement
  *   }
  * }
  *
- * @Serializable data class User(val id: Long, val name: String)
+ * @Serializable
+ * data class User(val id: Long, val name: String)
  * ```
  *
  * This gives the following output (using `logstash-logback-encoder`):
@@ -71,6 +72,13 @@ sealed class LogField {
   internal abstract val value: String
 
   /**
+   * [JsonLogField] adds a suffix ([LoggingContext.JSON_FIELD_KEY_SUFFIX]) to the key in the logging
+   * context to identify the value as raw JSON (so we can write the JSON unescaped in
+   * [LoggingContextJsonFieldWriter]).
+   */
+  internal abstract val keyForLoggingContext: String
+
+  /**
    * Returns null if the field should not be included in the log (used by
    * [StringLogFieldFromContext]/[JsonLogFieldFromContext] to exclude fields that are already in the
    * logging context).
@@ -87,15 +95,17 @@ sealed class LogField {
 
 @PublishedApi
 internal class StringLogField(override val key: String, override val value: String) : LogField() {
+  override val keyForLoggingContext: String
+    get() = key
+
   override fun getValueForLog() = value
 }
 
 @PublishedApi
-internal class JsonLogField(override val key: String, json: String) : LogField() {
-  /** See [LoggingContext.JSON_FIELD_VALUE_PREFIX]. */
-  override val value: String = LoggingContext.JSON_FIELD_VALUE_PREFIX + json
+internal class JsonLogField(override val key: String, override val value: String) : LogField() {
+  override val keyForLoggingContext: String = key + LoggingContext.JSON_FIELD_KEY_SUFFIX
 
-  override fun getValueForLog() = PrefixedRawJson(value)
+  override fun getValueForLog() = RawJson(value)
 }
 
 /**
@@ -323,26 +333,6 @@ internal value class RawJson(private val json: String) : JsonSerializable {
      * `null` as the value for null log fields.
      */
     @PublishedApi internal const val NULL = "null"
-  }
-}
-
-/** Same as [RawJson], but for JSON strings prefixed by [LoggingContext.JSON_FIELD_VALUE_PREFIX] */
-@JvmInline
-internal value class PrefixedRawJson(private val prefixedJson: String) : JsonSerializable {
-  override fun toString() = prefixedJson.removePrefix(LoggingContext.JSON_FIELD_VALUE_PREFIX)
-
-  override fun serialize(generator: JsonGenerator, serializers: SerializerProvider) {
-    val offset = LoggingContext.JSON_FIELD_VALUE_PREFIX.length
-    generator.writeRawValue(prefixedJson, offset, prefixedJson.length - offset)
-  }
-
-  override fun serializeWithType(
-      generator: JsonGenerator,
-      serializers: SerializerProvider,
-      typeSerializer: TypeSerializer
-  ) {
-    // Since we don't know what type the raw JSON is, we can only redirect to normal serialization
-    serialize(generator, serializers)
   }
 }
 

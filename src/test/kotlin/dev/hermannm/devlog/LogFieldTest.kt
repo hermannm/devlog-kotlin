@@ -9,7 +9,6 @@ import java.net.URI
 import java.net.URL
 import java.time.Instant
 import java.util.UUID
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encoding.Encoder
@@ -37,8 +36,6 @@ class LogFieldTest {
 
   @Test
   fun `log field with Serializable object`() {
-    @Serializable data class User(val id: Int, val name: String)
-
     val user = User(id = 1, name = "John Doe")
 
     val output = captureLogOutput {
@@ -126,8 +123,6 @@ class LogFieldTest {
    */
   @Test
   fun `custom serializer with nullable value`() {
-    @Serializable data class User(val id: Int, val name: String)
-
     val user: User? = null
 
     val output = captureLogOutput {
@@ -152,9 +147,9 @@ class LogFieldTest {
 
   @Test
   fun `non-serializable object falls back to toString`() {
-    data class User(val id: Int, val name: String)
+    data class NonSerializableUser(val id: Long, val name: String)
 
-    val user = User(id = 1, name = "John Doe")
+    val user = NonSerializableUser(id = 1, name = "John Doe")
 
     val output = captureLogOutput {
       log.info {
@@ -165,7 +160,7 @@ class LogFieldTest {
 
     output.logFields shouldBe
         """
-          "user":"User(id=1, name=John Doe)"
+          "user":"NonSerializableUser(id=1, name=John Doe)"
         """
             .trimIndent()
   }

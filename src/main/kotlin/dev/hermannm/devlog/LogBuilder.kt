@@ -75,7 +75,8 @@ internal constructor(
    *   }
    * }
    *
-   * @Serializable data class User(val id: Long, val name: String)
+   * @Serializable
+   * data class User(val id: Long, val name: String)
    * ```
    *
    * This gives the following output (using `logstash-logback-encoder`):

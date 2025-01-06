@@ -17,7 +17,6 @@ import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Test
@@ -112,6 +111,47 @@ class LoggingContextTest {
             "nestedContext" to JsonPrimitive("value"),
             "outerContext" to JsonPrimitive("value"),
         )
+  }
+
+  @Test
+  fun `nested logging context restores previous context fields on exit`() {
+    val user1 = User(id = 1, name = "John Doe")
+    val user2 = User(id = 2, name = "Jane Doe")
+
+    withLoggingContext(
+        field("user", user1),
+        field("stringField", "parentValue"),
+        field("parentOnlyField", "value1"),
+        field("fieldThatIsStringInParentButJsonInChild", "stringValue"),
+    ) {
+      val parentContext =
+          mapOf(
+              "user${LoggingContext.JSON_FIELD_KEY_SUFFIX}" to """{"id":1,"name":"John Doe"}""",
+              "stringField" to "parentValue",
+              "parentOnlyField" to "value1",
+              "fieldThatIsStringInParentButJsonInChild" to "stringValue",
+          )
+      LoggingContext shouldContainExactly parentContext
+
+      withLoggingContext(
+          field("user", user2),
+          field("stringField", "childValue"),
+          field("childOnlyField", "value2"),
+          rawJsonField("fieldThatIsStringInParentButJsonInChild", """{"test":true}"""),
+      ) {
+        LoggingContext shouldContainExactly
+            mapOf(
+                "user${LoggingContext.JSON_FIELD_KEY_SUFFIX}" to """{"id":2,"name":"Jane Doe"}""",
+                "stringField" to "childValue",
+                "parentOnlyField" to "value1",
+                "childOnlyField" to "value2",
+                "fieldThatIsStringInParentButJsonInChild${LoggingContext.JSON_FIELD_KEY_SUFFIX}" to
+                    """{"test":true}""",
+            )
+      }
+
+      LoggingContext shouldContainExactly parentContext
+    }
   }
 
   @Test
@@ -214,8 +254,6 @@ class LoggingContextTest {
 
   @Test
   fun `getLoggingContext allows passing logging context between threads`() {
-    @Serializable data class User(val id: Long, val name: String)
-
     val user = User(id = 1, name = "John Doe")
 
     val lock = ReentrantLock()
@@ -345,14 +383,14 @@ class LoggingContextTest {
     val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
 
     // Verify that there are no fields in parent thread context
-    LoggingContext.getFieldList().shouldBeEmpty()
+    LoggingContext.shouldBeEmpty()
 
     val latch = CountDownLatch(1) // Used to wait for the child thread to complete its log
     val executed = AtomicBoolean(false)
 
     test.runTask(executor) {
       // Verify that there are no fields in child thread context
-      LoggingContext.getFieldList().shouldBeEmpty()
+      LoggingContext.shouldBeEmpty()
       executed.set(true)
       latch.countDown()
     }
@@ -371,25 +409,15 @@ class LoggingContextTest {
     val parentField = field("parentField", "value")
     val childField = field("childField", "value")
 
-    // We assert this multiple times below, so we put it in a lambda here for reuse
-    val assertLoggingContextHasOnlyParentField = {
-      LoggingContext.getFieldMap()
-          .shouldNotBeNull()
-          .shouldContainExactly(mapOf("parentField" to "value"))
-    }
-
     withLoggingContext(parentField) {
-      assertLoggingContextHasOnlyParentField()
+      LoggingContext shouldContainExactly mapOf("parentField" to "value")
 
       executor.execute {
-        assertLoggingContextHasOnlyParentField()
+        LoggingContext shouldContainExactly mapOf("parentField" to "value")
 
         withLoggingContext(childField) {
-          LoggingContext.getFieldMap()
-              .shouldNotBeNull()
-              .shouldContainExactly(
-                  mapOf("parentField" to "value", "childField" to "value"),
-              )
+          LoggingContext shouldContainExactly
+              mapOf("parentField" to "value", "childField" to "value")
 
           // 1st synchronization point: The parent thread will reach this after we've added to the
           // logging context here in the child thread, so we can verify that the parent's context is
@@ -402,7 +430,7 @@ class LoggingContextTest {
       }
 
       barrier.await() // 1st synchronization point
-      assertLoggingContextHasOnlyParentField()
+      LoggingContext shouldContainExactly mapOf("parentField" to "value")
       barrier.await() // 2nd synchronization point
     }
   }
@@ -410,30 +438,31 @@ class LoggingContextTest {
   @Test
   fun `LoggingContext withFieldMap merges given map with existing fields`() {
     withLoggingContext(field("existingField", "value")) {
-      LoggingContext.getFieldMap()
-          .shouldNotBeNull()
-          .shouldContainExactly(mapOf("existingField" to "value"))
+      LoggingContext shouldContainExactly mapOf("existingField" to "value")
 
       LoggingContext.withFieldMap(
           mapOf("fieldMap1" to "value", "fieldMap2" to "value"),
       ) {
-        LoggingContext.getFieldMap()
-            .shouldNotBeNull()
-            .shouldContainExactly(
-                mapOf(
-                    "existingField" to "value",
-                    "fieldMap1" to "value",
-                    "fieldMap2" to "value",
-                ),
+        LoggingContext shouldContainExactly
+            mapOf(
+                "existingField" to "value",
+                "fieldMap1" to "value",
+                "fieldMap2" to "value",
             )
       }
 
       // Previous fields should be restored after
-      LoggingContext.getFieldMap()
-          .shouldNotBeNull()
-          .shouldContainExactly(mapOf("existingField" to "value"))
+      LoggingContext shouldContainExactly mapOf("existingField" to "value")
     }
   }
+}
+
+private infix fun LoggingContext.shouldContainExactly(map: Map<String, String>) {
+  this.getFieldMap().shouldNotBeNull().shouldContainExactly(map)
+}
+
+private fun LoggingContext.shouldBeEmpty() {
+  this.getFieldList().shouldBeEmpty()
 }
 
 /**
