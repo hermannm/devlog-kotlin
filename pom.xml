@@ -116,8 +116,8 @@
       <!--
         Optional - we only need this if the user:
         - Has chosen Logback as their logger implementation
-        - Uses logstash-logback-encoder for encoding logs
-        - Wants to use our LoggingContextFieldEncoder
+        - Uses logstash-logback-encoder for encoding logs as JSON
+        - Wants to use our LoggingContextJsonFieldWriter
       -->
       <optional>true</optional>
     </dependency>
