@@ -1,6 +1,8 @@
 package dev.hermannm.devlog.integrationtest.logback
 
 import dev.hermannm.devlog.getLogger
+import dev.hermannm.devlog.rawJsonField
+import dev.hermannm.devlog.withLoggingContext
 import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.matchers.string.shouldContain
 import java.io.ByteArrayOutputStream
@@ -18,20 +20,27 @@ class LogbackLoggerTest {
     val user = User(id = 1, name = "John Doe")
 
     val output = captureStdout {
-      log.info {
-        field("user", user)
-        "Test"
+      withLoggingContext(rawJsonField("contextField", """{"test":true}""")) {
+        log.info {
+          field("user", user)
+          "Test"
+        }
       }
     }
 
     output shouldContain """"level":"INFO""""
     output shouldContain """"message":"Test""""
     output shouldContain """"user":{"id":1,"name":"John Doe"}"""
+    output shouldContain """"contextField":{"test":true}"""
   }
 
   @Test
   fun `Logback should be on classpath`() {
     shouldNotThrowAny { Class.forName("ch.qos.logback.classic.Logger") }
+    // We also want to make sure that logstash-logback-encoder is loaded
+    shouldNotThrowAny {
+      Class.forName("net.logstash.logback.composite.loggingevent.mdc.MdcEntryWriter")
+    }
   }
 }
 

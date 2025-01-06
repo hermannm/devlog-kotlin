@@ -1,6 +1,8 @@
 package dev.hermannm.devlog.integrationtest.log4j
 
 import dev.hermannm.devlog.getLogger
+import dev.hermannm.devlog.rawJsonField
+import dev.hermannm.devlog.withLoggingContext
 import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.matchers.string.shouldContain
 import java.io.ByteArrayOutputStream
@@ -18,19 +20,30 @@ class Log4jLoggerTest {
     val user = User(id = 1, name = "John Doe")
 
     val output = captureStdout {
-      log.info {
-        field("user", user)
-        "Test"
+      withLoggingContext(rawJsonField("contextField", """{"test":true}""")) {
+        log.info {
+          field("user", user)
+          "Test"
+        }
       }
     }
 
     output shouldContain """"log.level":"INFO""""
     output shouldContain """"message":"Test [user={\"id\":1,\"name\":\"John Doe\"}]""""
+
+    // JSON fields in logging context adds a (json) suffix, so we can identify these fields and
+    // write them as raw JSON when using Logback. But we don't have such an implementation for
+    // Log4j, so these fields will be written with the key suffix and escaped JSON value.
+    output shouldContain """"contextField (json)":"{\"test\":true}""""
   }
 
   @Test
   fun `Logback should not be on classpath`() {
     shouldThrowExactly<ClassNotFoundException> { Class.forName("ch.qos.logback.classic.Logger") }
+    // We also want to make sure that logstash-logback-encoder is not loaded
+    shouldThrowExactly<ClassNotFoundException> {
+      Class.forName("net.logstash.logback.composite.loggingevent.mdc.MdcEntryWriter")
+    }
   }
 }
 
