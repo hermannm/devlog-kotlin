@@ -1,7 +1,7 @@
 package dev.hermannm.devlog.integrationtest.jul
 
-import dev.hermannm.devlog.field
 import dev.hermannm.devlog.getLogger
+import dev.hermannm.devlog.rawJsonField
 import dev.hermannm.devlog.withLoggingContext
 import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.assertions.withClue
@@ -26,7 +26,7 @@ class JulLoggerTest {
     val output = captureStderr {
       // slf4j-jdk14 does not support MDC, which withLoggingContext uses.
       // But we still want to test that using withLoggingContext here does not affect the log.
-      withLoggingContext(field("context", "value")) {
+      withLoggingContext(rawJsonField("contextField", """{"test":true}""")) {
         log.info {
           field("user", user)
           "Test"
@@ -54,7 +54,7 @@ class JulLoggerTest {
     shouldThrowExactly<ClassNotFoundException> { Class.forName("ch.qos.logback.classic.Logger") }
     // We also want to make sure that logstash-logback-encoder is not loaded
     shouldThrowExactly<ClassNotFoundException> {
-      Class.forName("net.logstash.logback.composite.loggingevent.mdc.MdcEntryWriter")
+      Class.forName("net.logstash.logback.encoder.LogstashEncoder")
     }
   }
 }
