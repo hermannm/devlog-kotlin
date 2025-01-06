@@ -21,3 +21,5 @@ target/
 # Exclude local Maven repository used for integration tests
 # (will be generated when running mvn verify)
 local-maven-repo/
+
+.DS_Store
