@@ -162,7 +162,10 @@ Then, configure Logback with a `logback.xml` file under `src/main/resources`:
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-    <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <!-- Writes object values in logging context as actual JSON (not escaped) -->
+      <mdcEntryWriter class="dev.hermannm.devlog.LoggingContextJsonFieldWriter"/>
+    </encoder>
   </appender>
 
   <root level="INFO">
