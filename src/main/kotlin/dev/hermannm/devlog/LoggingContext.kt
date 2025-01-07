@@ -517,22 +517,12 @@ internal fun createLogFieldFromContext(key: String, value: String): LogField {
 }
 
 @PublishedApi
-internal class StringLogFieldFromContext(
-    override val key: String,
-    override val value: String,
-) : LogField() {
-  override val keyForLoggingContext: String
-    get() = key
-
-  override fun getValueForLog(): String? {
-    // We only want to include fields from the logging context if it's not already in the context
-    // (in which case the logger implementation will add the fields from SLF4J's MDC)
-    return if (LoggingContext.hasKey(key)) {
-      null
-    } else {
-      value
-    }
-  }
+internal class StringLogFieldFromContext(key: String, value: String) : StringLogField(key, value) {
+  /**
+   * We only want to include fields from the logging context if it's not already in the context (in
+   * which case the logger implementation will add the fields from SLF4J's MDC).
+   */
+  override fun includeInLog(): Boolean = !LoggingContext.hasKey(key)
 }
 
 @PublishedApi
@@ -542,20 +532,19 @@ internal class JsonLogFieldFromContext(
      * [createLogFieldFromContext]). So we set [keyForLoggingContext] to the key with the suffix,
      * and remove the suffix for [key] below.
      */
-    override val keyForLoggingContext: String,
-    override val value: String,
-) : LogField() {
-  override val key: String = LoggingContext.removeJsonFieldSuffixFromKey(keyForLoggingContext)
-
-  override fun getValueForLog(): RawJson? {
-    // We only want to include fields from the logging context if it's not already in the context
-    // (in which case the logger implementation will add the fields from SLF4J's MDC)
-    return if (LoggingContext.hasKey(key)) {
-      null
-    } else {
-      RawJson(value)
-    }
-  }
+    keyWithJsonSuffix: String,
+    value: String,
+) :
+    JsonLogField(
+        key = LoggingContext.removeJsonFieldSuffixFromKey(keyWithJsonSuffix),
+        value = value,
+        keyForLoggingContext = keyWithJsonSuffix,
+    ) {
+  /**
+   * We only want to include fields from the logging context if it's not already in the context (in
+   * which case the logger implementation will add the fields from SLF4J's MDC).
+   */
+  override fun includeInLog(): Boolean = !LoggingContext.hasKey(key)
 }
 
 /**

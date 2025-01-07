@@ -4,6 +4,10 @@ import ch.qos.logback.classic.Level as LogbackLevel
 import ch.qos.logback.classic.Logger as LogbackLogger
 import ch.qos.logback.classic.spi.LoggingEvent as BaseLogbackEvent
 import ch.qos.logback.classic.spi.ThrowableProxy
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.JsonSerializable
+import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.jsontype.TypeSerializer
 import org.slf4j.Logger as Slf4jLogger
 import org.slf4j.event.DefaultLoggingEvent as BaseSlf4jEvent
 import org.slf4j.event.KeyValuePair
@@ -39,7 +43,9 @@ internal interface LogEvent {
 
   fun getCause(): Throwable?
 
-  fun addField(key: String, value: LogFieldValue)
+  fun addStringField(key: String, value: String)
+
+  fun addJsonField(key: String, json: String)
 
   fun isFieldKeyAdded(key: String): Boolean
 
@@ -105,8 +111,12 @@ internal class LogbackLogEvent(
 
   override fun getCause(): Throwable? = (super.getThrowableProxy() as? ThrowableProxy)?.throwable
 
-  override fun addField(key: String, value: LogFieldValue) {
+  override fun addStringField(key: String, value: String) {
     super.addKeyValuePair(KeyValuePair(key, value))
+  }
+
+  override fun addJsonField(key: String, json: String) {
+    super.addKeyValuePair(KeyValuePair(key, RawJson(json)))
   }
 
   override fun isFieldKeyAdded(key: String): Boolean {
@@ -170,7 +180,9 @@ internal class Slf4jLogEvent(level: LogLevel, logger: Slf4jLogger) :
 
   override fun getCause(): Throwable? = super.getThrowable()
 
-  override fun addField(key: String, value: LogFieldValue) = super.addKeyValue(key, value)
+  override fun addStringField(key: String, value: String) = super.addKeyValue(key, value)
+
+  override fun addJsonField(key: String, json: String) = super.addKeyValue(key, RawJson(json))
 
   override fun isFieldKeyAdded(key: String): Boolean {
     // getKeyValuePairs may return null if no fields have been added yet
@@ -250,5 +262,32 @@ internal class Slf4jLogEvent(level: LogLevel, logger: Slf4jLogger) :
   internal companion object {
     /** See [LogbackLogEvent.FULLY_QUALIFIED_CLASS_NAME]. */
     internal val FULLY_QUALIFIED_CLASS_NAME = Slf4jLogEvent::class.java.name
+  }
+}
+
+/**
+ * Wrapper class for a pre-serialized JSON string. It implements [JsonSerializable] from Jackson,
+ * because most JSON-outputting logger implementations will use that library to encode the logs (at
+ * least `logstash-logback-encoder` for Logback does this).
+ *
+ * Since we use this to wrap a value that has already been serialized with `kotlinx.serialization`,
+ * we simply call [JsonGenerator.writeRawValue] in [serialize] to write the JSON string as-is.
+ */
+@PublishedApi
+@JvmInline
+internal value class RawJson(private val json: String) : JsonSerializable {
+  override fun toString() = json
+
+  override fun serialize(generator: JsonGenerator, serializers: SerializerProvider) {
+    generator.writeRawValue(json)
+  }
+
+  override fun serializeWithType(
+      generator: JsonGenerator,
+      serializers: SerializerProvider,
+      typeSerializer: TypeSerializer
+  ) {
+    // Since we don't know what type the raw JSON is, we can only redirect to normal serialization
+    serialize(generator, serializers)
   }
 }

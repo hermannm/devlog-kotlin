@@ -100,8 +100,8 @@ internal constructor(
       encodeFieldValue(
           value,
           serializer,
-          onJson = { jsonValue -> logEvent.addField(key, RawJson(jsonValue)) },
-          onString = { stringValue -> logEvent.addField(key, stringValue) },
+          onJson = { jsonValue -> logEvent.addJsonField(key, jsonValue) },
+          onString = { stringValue -> logEvent.addStringField(key, stringValue) },
       )
     }
   }
@@ -146,8 +146,8 @@ internal constructor(
       validateRawJson(
           json,
           validJson,
-          onValidJson = { jsonValue -> logEvent.addField(key, RawJson(jsonValue)) },
-          onInvalidJson = { stringValue -> logEvent.addField(key, stringValue) },
+          onValidJson = { jsonValue -> logEvent.addJsonField(key, jsonValue) },
+          onInvalidJson = { stringValue -> logEvent.addStringField(key, stringValue) },
       )
     }
   }
@@ -200,10 +200,10 @@ internal constructor(
 
   private fun addField(field: LogField) {
     // Don't add fields with keys that have already been added
-    if (!logEvent.isFieldKeyAdded(field.key)) {
-      val value = field.getValueForLog()
-      if (value != null) {
-        logEvent.addField(field.key, value)
+    if (!logEvent.isFieldKeyAdded(field.key) && field.includeInLog()) {
+      when (field) {
+        is JsonLogField -> logEvent.addJsonField(field.key, field.value)
+        is StringLogField -> logEvent.addStringField(field.key, field.value)
       }
     }
   }
