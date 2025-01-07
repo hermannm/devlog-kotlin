@@ -73,7 +73,7 @@ public inline fun <ReturnT> withLoggingContext(
  *
  * This overload of the function takes a list instead of varargs, for when you already have a list
  * of log fields available. This can be used together with [getLoggingContext] to pass context
- * fields between threads (see example in [getLoggingContext] docstring).
+ * fields between threads ([see example][getLoggingContext]).
  *
  * ### Note on coroutines
  *
