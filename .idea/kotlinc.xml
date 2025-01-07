@@ -3,4 +3,8 @@
   <component name="KotlinJpsPluginSettings">
     <option name="version" value="2.1.0" />
   </component>
+  <component name="KotlinCompilerSettings">
+    <!-- To match compiler arg in pom.xml -->
+    <option name="additionalArguments" value="-Xexplicit-api=strict" />
+  </component>
 </project>
