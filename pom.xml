@@ -52,6 +52,9 @@
     <kotlinx-serialization.version>1.8.0</kotlinx-serialization.version>
     <jackson.version>2.18.2</jackson.version>
 
+    <!-- Coroutines (optional) -->
+    <kotlinx-coroutines.version>1.10.1</kotlinx-coroutines.version>
+
     <!-- Testing -->
     <junit.version>5.11.4</junit.version>
     <kotest.version>5.9.1</kotest.version>
@@ -132,6 +135,18 @@
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
       <version>${jackson.version}</version>
+    </dependency>
+
+    <!-- Coroutines -->
+    <dependency>
+      <groupId>org.jetbrains.kotlinx</groupId>
+      <artifactId>kotlinx-coroutines-core</artifactId>
+      <version>${kotlinx-coroutines.version}</version>
+      <!--
+        We only need this if the user uses withCoroutineLoggingContext - and in that case, they will most likely have
+        added this dependency themselves.
+      -->
+      <optional>true</optional>
     </dependency>
 
     <!-- Testing -->

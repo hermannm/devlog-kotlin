@@ -96,9 +96,8 @@ fun processEvent(event: Event) {
 
 Note that `withLoggingContext` uses a thread-local
 ([SLF4J's `MDC`](https://logback.qos.ch/manual/mdc.html)) to provide log fields to the scope, so it
-won't work with Kotlin coroutines and `suspend` functions. If you use coroutines, you can solve this
-with
-[`MDCContext` from `kotlinx-coroutines-slf4j`](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-slf4j/kotlinx.coroutines.slf4j/-m-d-c-context/).
+won't work with Kotlin coroutines and `suspend` functions. If you use coroutines, you should instead
+use `dev.hermannm.devlog.coroutines.withCoroutineLoggingContext`, which gives you a `suspend` scope.
 
 Lastly, you can attach a cause exception to the log like this:
 
