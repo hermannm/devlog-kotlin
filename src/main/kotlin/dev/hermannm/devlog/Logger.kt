@@ -79,7 +79,7 @@ internal constructor(
     @PublishedApi internal val underlyingLogger: Slf4jLogger,
 ) {
   /**
-   * Logs the message returned by the [buildLog] lambda at the INFO log level, if enabled.
+   * Calls the given lambda to build a log message, and logs it at the INFO log level, if enabled.
    *
    * If the log was caused by an exception, you can attach it to the log with the optional [cause]
    * parameter before the lambda.
@@ -122,7 +122,7 @@ internal constructor(
   }
 
   /**
-   * Logs the message returned by the [buildLog] lambda at the WARN log level, if enabled.
+   * Calls the given lambda to build a log message, and logs it at the WARN log level, if enabled.
    *
    * If the log was caused by an exception, you can attach it to the log with the optional [cause]
    * parameter before the lambda.
@@ -169,7 +169,7 @@ internal constructor(
   }
 
   /**
-   * Logs the message returned by the [buildLog] lambda at the ERROR log level, if enabled.
+   * Calls the given lambda to build a log message, and logs it at the ERROR log level, if enabled.
    *
    * If the log was caused by an exception, you can attach it to the log with the optional [cause]
    * parameter before the lambda.
@@ -216,7 +216,7 @@ internal constructor(
   }
 
   /**
-   * Logs the message returned by the [buildLog] lambda at the DEBUG log level, if enabled.
+   * Calls the given lambda to build a log message, and logs it at the DEBUG log level, if enabled.
    *
    * If the log was caused by an exception, you can attach it to the log with the optional [cause]
    * parameter before the lambda.
@@ -259,7 +259,7 @@ internal constructor(
   }
 
   /**
-   * Logs the message returned by the [buildLog] lambda at the TRACE log level, if enabled.
+   * Calls the given lambda to build a log message, and logs it at the TRACE log level, if enabled.
    *
    * If the log was caused by an exception, you can attach it to the log with the optional [cause]
    * parameter before the lambda.
@@ -302,7 +302,7 @@ internal constructor(
   }
 
   /**
-   * Logs the message returned by the [buildLog] lambda at the given [LogLevel], if it is enabled.
+   * Calls the given lambda to build a log message, and logs it at the given [LogLevel], if enabled.
    * This is useful when setting the log level dynamically, instead of calling
    * [info]/[warn]/[error]/[debug]/[trace] conditionally.
    *
