@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory as Slf4jLoggerFactory
  */
 public class LoggingContextJsonFieldWriter : MdcEntryWriter {
   init {
-    USING_LOGGING_CONTEXT_JSON_FIELD_WRITER = true
+    ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS = true
   }
 
   /** @return true if we handled the entry, false otherwise. */
@@ -75,10 +75,10 @@ public class LoggingContextJsonFieldWriter : MdcEntryWriter {
  * [JsonLogField.Companion], which will run when the class is loaded. We test that this works in the
  * `LogbackLoggerTest` under `integration-tests/logback`.
  */
-@Volatile internal var USING_LOGGING_CONTEXT_JSON_FIELD_WRITER = false
+@Volatile internal var ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS = false
 
 /**
- * See [USING_LOGGING_CONTEXT_JSON_FIELD_WRITER].
+ * See [ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS].
  *
  * This function catches all throwables (this is important, since we call this from static
  * initializers).

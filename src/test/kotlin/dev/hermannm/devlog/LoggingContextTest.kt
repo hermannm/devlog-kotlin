@@ -155,9 +155,9 @@ internal class LoggingContextTest {
   }
 
   @Test
-  fun `USING_LOGGING_CONTEXT_JSON_FIELD_WRITER has expected value`() {
+  fun `ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS has expected value`() {
     // Since we use LoggingContextJsonFieldWriter in tests, we expect this to be set
-    USING_LOGGING_CONTEXT_JSON_FIELD_WRITER.shouldBeTrue()
+    ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS.shouldBeTrue()
   }
 
   @Test

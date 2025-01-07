@@ -20,7 +20,7 @@ class LogbackLoggerTest {
   fun log() {
     /**
      * We want to test that constructing a JSON field before loading a logger works (see docstring
-     * on `USING_LOGGING_CONTEXT_JSON_FIELD_WRITER` in the library).
+     * on `ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS` in the library).
      */
     val jsonField = rawJsonField("contextField", """{"test":true}""")
 

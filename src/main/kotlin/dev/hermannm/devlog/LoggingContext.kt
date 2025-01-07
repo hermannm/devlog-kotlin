@@ -508,7 +508,7 @@ internal value class OverwrittenContextFields(private val fields: Array<String?>
 }
 
 internal fun createLogFieldFromContext(key: String, value: String): LogField {
-  return if (USING_LOGGING_CONTEXT_JSON_FIELD_WRITER &&
+  return if (ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS &&
       key.endsWith(LoggingContext.JSON_FIELD_KEY_SUFFIX)) {
     JsonLogFieldFromContext(key, value)
   } else {

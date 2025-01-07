@@ -103,7 +103,7 @@ internal open class JsonLogField(
     override val key: String,
     override val value: String,
     override val keyForLoggingContext: String =
-        if (USING_LOGGING_CONTEXT_JSON_FIELD_WRITER) key + LoggingContext.JSON_FIELD_KEY_SUFFIX
+        if (ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS) key + LoggingContext.JSON_FIELD_KEY_SUFFIX
         else key
 ) : LogField() {
   @PublishedApi
@@ -118,7 +118,7 @@ internal open class JsonLogField(
     @PublishedApi internal const val NULL_VALUE: String = "null"
 
     init {
-      // Needed to make sure USING_LOGGING_CONTEXT_JSON_FIELD_WRITER is set
+      // Needed to make sure ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS is set
       ensureLoggerImplementationIsLoaded()
     }
   }
