@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory as Slf4jLoggerFactory
  * This requires that you have added `ch.qos.logback:logback-classic` and
  * `net.logstash.logback:logstash-logback-encoder` as dependencies.
  */
-class LoggingContextJsonFieldWriter : MdcEntryWriter {
+public class LoggingContextJsonFieldWriter : MdcEntryWriter {
   init {
     USING_LOGGING_CONTEXT_JSON_FIELD_WRITER = true
   }

@@ -67,7 +67,7 @@ import kotlinx.serialization.json.JsonElement
  * }
  * ```
  */
-sealed class LogField {
+public sealed class LogField {
   internal abstract val key: String
   internal abstract val value: String
 
@@ -138,7 +138,7 @@ internal class JsonLogField(override val key: String, override val value: String
  * - [java.net.URL]
  * - [java.math.BigDecimal]
  */
-inline fun <reified ValueT : Any> field(
+public inline fun <reified ValueT : Any> field(
     key: String,
     value: ValueT?,
     serializer: SerializationStrategy<ValueT>? = null
@@ -246,7 +246,7 @@ internal inline fun <reified ValueT : Any, ReturnT> encodeFieldValue(
  * {"message":"User processing ended","user":{"id":1,"name":"John Doe"},/* ...timestamp etc. */}
  * ```
  */
-fun rawJsonField(key: String, json: String, validJson: Boolean = false): LogField {
+public fun rawJsonField(key: String, json: String, validJson: Boolean = false): LogField {
   return validateRawJson(
       json,
       validJson,
@@ -340,12 +340,12 @@ internal value class RawJson(private val json: String) : JsonSerializable {
      * think the log field was omitted due to some error. So in this library, we instead use a JSON
      * `null` as the value for null log fields.
      */
-    @PublishedApi internal const val NULL = "null"
+    @PublishedApi internal const val NULL: String = "null"
   }
 }
 
 @PublishedApi
-internal val logFieldJson = Json {
+internal val logFieldJson: Json = Json {
   encodeDefaults = true
   ignoreUnknownKeys = true
 }

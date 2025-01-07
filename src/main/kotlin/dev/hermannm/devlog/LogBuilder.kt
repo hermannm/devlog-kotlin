@@ -27,7 +27,7 @@ import kotlinx.serialization.SerializationStrategy
  * ```
  */
 @JvmInline // Inline value class, since we just wrap a log event
-value class LogBuilder
+public value class LogBuilder
 @PublishedApi
 internal constructor(
     @PublishedApi internal val logEvent: LogEvent,
@@ -40,7 +40,7 @@ internal constructor(
    * the first non-null exception will be kept (this is due to a limitation in Logback's
    * LoggingEvent API).
    */
-  var cause: Throwable?
+  public var cause: Throwable?
     set(value) = logEvent.setCause(value)
     get() = logEvent.getCause()
 
@@ -91,7 +91,7 @@ internal constructor(
    * }
    * ```
    */
-  inline fun <reified ValueT : Any> field(
+  public inline fun <reified ValueT : Any> field(
       key: String,
       value: ValueT?,
       serializer: SerializationStrategy<ValueT>? = null,
@@ -141,7 +141,7 @@ internal constructor(
    * {"message":"Registered new user","user":{"id":1,"name":"John Doe"},/* ...timestamp etc. */}
    * ```
    */
-  fun rawJsonField(key: String, json: String, validJson: Boolean = false) {
+  public fun rawJsonField(key: String, json: String, validJson: Boolean = false) {
     if (!logEvent.isFieldKeyAdded(key)) {
       validateRawJson(
           json,
@@ -161,7 +161,7 @@ internal constructor(
    * - If you want to add the field to all logs within a scope, you should instead use
    *   [withLoggingContext]
    */
-  fun existingField(field: LogField) {
+  public fun existingField(field: LogField) {
     addField(field)
   }
 

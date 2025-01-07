@@ -24,7 +24,7 @@ import org.slf4j.event.Level as Slf4jLevel
  * }
  * ```
  */
-fun getLogger(emptyLambdaToGetName: () -> Unit): Logger {
+public fun getLogger(emptyLambdaToGetName: () -> Unit): Logger {
   return getLogger(name = getClassNameFromFunction(emptyLambdaToGetName))
 }
 
@@ -37,7 +37,7 @@ fun getLogger(emptyLambdaToGetName: () -> Unit): Logger {
  * To set the name automatically from the containing class/file, you can use the [getLogger]
  * overload with an empty lambda.
  */
-fun getLogger(name: String): Logger {
+public fun getLogger(name: String): Logger {
   val underlyingLogger = Slf4jLoggerFactory.getLogger(name)
   return Logger(underlyingLogger)
 }
@@ -74,7 +74,7 @@ fun getLogger(name: String): Logger {
  * ```
  */
 @JvmInline // Inline value class, to avoid redundant indirection when we just wrap an SLF4J logger
-value class Logger
+public value class Logger
 internal constructor(
     @PublishedApi internal val underlyingLogger: Slf4jLogger,
 ) {
@@ -105,7 +105,7 @@ internal constructor(
    * object for [buildLog]. Inline functions give incorrect line numbers, but we prioritize the
    * performance gain in this case. File, class and method names will still be correct.
    */
-  inline fun info(buildLog: LogBuilder.() -> String) {
+  public inline fun info(buildLog: LogBuilder.() -> String) {
     if (underlyingLogger.isInfoEnabled) {
       log(LogLevel.INFO, buildLog)
     }
@@ -143,7 +143,7 @@ internal constructor(
    * object for [buildLog]. Inline functions give incorrect line numbers, but we prioritize the
    * performance gain in this case. File, class and method names will still be correct.
    */
-  inline fun warn(buildLog: LogBuilder.() -> String) {
+  public inline fun warn(buildLog: LogBuilder.() -> String) {
     if (underlyingLogger.isWarnEnabled) {
       log(LogLevel.WARN, buildLog)
     }
@@ -181,7 +181,7 @@ internal constructor(
    * object for [buildLog]. Inline functions give incorrect line numbers, but we prioritize the
    * performance gain in this case. File, class and method names will still be correct.
    */
-  inline fun error(buildLog: LogBuilder.() -> String) {
+  public inline fun error(buildLog: LogBuilder.() -> String) {
     if (underlyingLogger.isErrorEnabled) {
       log(LogLevel.ERROR, buildLog)
     }
@@ -214,7 +214,7 @@ internal constructor(
    * object for [buildLog]. Inline functions give incorrect line numbers, but we prioritize the
    * performance gain in this case. File, class and method names will still be correct.
    */
-  inline fun debug(buildLog: LogBuilder.() -> String) {
+  public inline fun debug(buildLog: LogBuilder.() -> String) {
     if (underlyingLogger.isDebugEnabled) {
       log(LogLevel.DEBUG, buildLog)
     }
@@ -247,7 +247,7 @@ internal constructor(
    * object for [buildLog]. Inline functions give incorrect line numbers, but we prioritize the
    * performance gain in this case. File, class and method names will still be correct.
    */
-  inline fun trace(buildLog: LogBuilder.() -> String) {
+  public inline fun trace(buildLog: LogBuilder.() -> String) {
     if (underlyingLogger.isTraceEnabled) {
       log(LogLevel.TRACE, buildLog)
     }
@@ -288,7 +288,7 @@ internal constructor(
    * object for [buildLog]. Inline functions give incorrect line numbers, but we prioritize the
    * performance gain in this case. File, class and method names will still be correct.
    */
-  inline fun at(level: LogLevel, buildLog: LogBuilder.() -> String) {
+  public inline fun at(level: LogLevel, buildLog: LogBuilder.() -> String) {
     if (underlyingLogger.isEnabledForLevel(level.slf4jLevel)) {
       log(level, buildLog)
     }
@@ -303,7 +303,7 @@ internal constructor(
   }
 }
 
-enum class LogLevel(
+public enum class LogLevel(
     @PublishedApi internal val slf4jLevel: Slf4jLevel,
 ) {
   INFO(Slf4jLevel.INFO),

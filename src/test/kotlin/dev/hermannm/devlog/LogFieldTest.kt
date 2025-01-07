@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test
 
 private val log = getLogger {}
 
-class LogFieldTest {
+internal class LogFieldTest {
   @Test
   fun `basic log field test`() {
     val output = captureLogOutput {

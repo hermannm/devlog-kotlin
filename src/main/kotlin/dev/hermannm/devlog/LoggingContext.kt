@@ -50,7 +50,10 @@ import org.slf4j.MDC
  * `suspend` functions (though it does work with Java virtual threads). You can solve this with
  * [`kotlinx-coroutines-slf4j`](https://github.com/Kotlin/kotlinx.coroutines/blob/ee92d16c4b48345648dcd8bb15f11ab9c3747f67/integration/kotlinx-coroutines-slf4j/README.md).
  */
-inline fun <ReturnT> withLoggingContext(vararg logFields: LogField, block: () -> ReturnT): ReturnT {
+public inline fun <ReturnT> withLoggingContext(
+    vararg logFields: LogField,
+    block: () -> ReturnT
+): ReturnT {
   return withLoggingContextInternal(logFields, block)
 }
 
@@ -102,7 +105,10 @@ inline fun <ReturnT> withLoggingContext(vararg logFields: LogField, block: () ->
  * `suspend` functions (though it does work with Java virtual threads). You can solve this with
  * [`kotlinx-coroutines-slf4j`](https://github.com/Kotlin/kotlinx.coroutines/blob/ee92d16c4b48345648dcd8bb15f11ab9c3747f67/integration/kotlinx-coroutines-slf4j/README.md).
  */
-inline fun <ReturnT> withLoggingContext(logFields: List<LogField>, block: () -> ReturnT): ReturnT {
+public inline fun <ReturnT> withLoggingContext(
+    logFields: List<LogField>,
+    block: () -> ReturnT
+): ReturnT {
   return withLoggingContextInternal(logFields.toTypedArray(), block)
 }
 
@@ -191,7 +197,7 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  * }
  * ```
  */
-fun getLoggingContext(): List<LogField> {
+public fun getLoggingContext(): List<LogField> {
   return LoggingContext.getFieldList()
 }
 
@@ -247,7 +253,7 @@ fun getLoggingContext(): List<LogField> {
  * }
  * ```
  */
-fun ExecutorService.inheritLoggingContext(): ExecutorService {
+public fun ExecutorService.inheritLoggingContext(): ExecutorService {
   return ExecutorServiceWithInheritedLoggingContext(this)
 }
 

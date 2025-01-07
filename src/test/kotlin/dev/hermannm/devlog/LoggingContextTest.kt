@@ -27,7 +27,7 @@ import org.junit.jupiter.params.provider.MethodSource
 private val log = getLogger {}
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class LoggingContextTest {
+internal class LoggingContextTest {
   @Test
   fun `field from logging context is included in log`() {
     val output = captureLogOutput {

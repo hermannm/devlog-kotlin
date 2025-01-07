@@ -57,7 +57,7 @@ package dev.hermannm.devlog
  * }
  * ```
  */
-open class ExceptionWithLogFields(
+public open class ExceptionWithLogFields(
     override val message: String?,
     logFields: List<LogField> = emptyList(),
     override val cause: Throwable? = null,
@@ -146,7 +146,7 @@ private fun combineFieldsWithLoggingContext(logFields: List<LogField>): List<Log
  * }
  * ```
  */
-interface WithLogFields {
+public interface WithLogFields {
   /** Will be attached to the log when passed through `cause` to one of [Logger]'s methods. */
-  val logFields: List<LogField>
+  public val logFields: List<LogField>
 }

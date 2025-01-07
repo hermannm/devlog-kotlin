@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test
 
 private val log = getLogger {}
 
-class ExceptionWithLogFieldsTest {
+internal class ExceptionWithLogFieldsTest {
   @Test
   fun `exception implementing WithLogFields has field included in log`() {
     val output = captureLogOutput {
