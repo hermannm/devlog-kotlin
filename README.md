@@ -14,8 +14,8 @@ Published on Maven Central: https://central.sonatype.com/artifact/dev.hermannm/d
 ## Usage
 
 The `Logger` class is the entry point to `devlog-kotlin`'s logging API. You can get a `Logger` by
-calling `getLogger`, with an empty lambda to automatically give the logger the name of its
-containing class (or file, if defined at the top level).
+calling `getLogger {}`, which automatically gives the logger the name of its containing class (or
+file, if defined at the top level).
 
 ```kotlin
 // File Example.kt
@@ -94,9 +94,11 @@ fun processEvent(event: Event) {
 { "message": "Finished processing event", "event": { /* ... */ } }
 ```
 
-Note that `withLoggingContext` uses a thread-local to provide log fields to the scope, so it won't
-work with Kotlin coroutines and `suspend` functions (though it does work with Java virtual threads).
-An alternative that supports coroutines may be added in a future version of the library.
+Note that `withLoggingContext` uses a thread-local
+([SLF4J's `MDC`](https://logback.qos.ch/manual/mdc.html)) to provide log fields to the scope, so it
+won't work with Kotlin coroutines and `suspend` functions. If you use coroutines, you can solve this
+with
+[`MDCContext` from `kotlinx-coroutines-slf4j`](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-slf4j/kotlinx.coroutines.slf4j/-m-d-c-context/).
 
 Finally, you can attach a cause exception to logs:
 
