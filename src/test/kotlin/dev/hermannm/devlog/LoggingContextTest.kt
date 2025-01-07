@@ -126,7 +126,7 @@ internal class LoggingContextTest {
     ) {
       val parentContext =
           mapOf(
-              "user${LoggingContext.JSON_FIELD_KEY_SUFFIX}" to """{"id":1,"name":"John Doe"}""",
+              "user${LOGGING_CONTEXT_JSON_KEY_SUFFIX}" to """{"id":1,"name":"John Doe"}""",
               "stringField" to "parentValue",
               "parentOnlyField" to "value1",
               "fieldThatIsStringInParentButJsonInChild" to "stringValue",
@@ -141,11 +141,11 @@ internal class LoggingContextTest {
       ) {
         LoggingContext shouldContainExactly
             mapOf(
-                "user${LoggingContext.JSON_FIELD_KEY_SUFFIX}" to """{"id":2,"name":"Jane Doe"}""",
+                "user${LOGGING_CONTEXT_JSON_KEY_SUFFIX}" to """{"id":2,"name":"Jane Doe"}""",
                 "stringField" to "childValue",
                 "parentOnlyField" to "value1",
                 "childOnlyField" to "value2",
-                "fieldThatIsStringInParentButJsonInChild${LoggingContext.JSON_FIELD_KEY_SUFFIX}" to
+                "fieldThatIsStringInParentButJsonInChild${LOGGING_CONTEXT_JSON_KEY_SUFFIX}" to
                     """{"test":true}""",
             )
       }

@@ -66,9 +66,8 @@ import kotlinx.serialization.json.JsonElement
 public sealed class LogField {
   internal abstract val key: String
   internal abstract val value: String
-
   /**
-   * [JsonLogField] adds a suffix ([LoggingContext.JSON_FIELD_KEY_SUFFIX]) to the key in the logging
+   * [JsonLogField] adds a suffix ([LOGGING_CONTEXT_JSON_KEY_SUFFIX]) to the key in the logging
    * context to identify the value as raw JSON (so we can write the JSON unescaped in
    * [LoggingContextJsonFieldWriter]).
    */
@@ -103,8 +102,11 @@ internal open class JsonLogField(
     override val key: String,
     override val value: String,
     override val keyForLoggingContext: String =
-        if (ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS) key + LoggingContext.JSON_FIELD_KEY_SUFFIX
-        else key
+        if (ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS) {
+          key + LOGGING_CONTEXT_JSON_KEY_SUFFIX
+        } else {
+          key
+        }
 ) : LogField() {
   @PublishedApi
   internal companion object {

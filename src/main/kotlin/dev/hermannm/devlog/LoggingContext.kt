@@ -4,6 +4,7 @@ import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import org.slf4j.LoggerFactory as Slf4jLoggerFactory
 import org.slf4j.MDC
 
 /**
@@ -265,30 +266,6 @@ public fun ExecutorService.inheritLoggingContext(): ExecutorService {
  */
 @PublishedApi
 internal object LoggingContext {
-  /**
-   * SLF4J's MDC only supports String values. This works fine for our [StringLogField] - but we also
-   * want the ability to include JSON-serialized objects in our logging context. This is useful when
-   * for example processing an event, and you want that event to be included on all logs in the
-   * scope of processing it. If we were to just include it as a string, the JSON would be escaped,
-   * which prevents log analysis platforms from parsing fields from the event and letting us query
-   * on them. What we want is for the [JsonLogField] to be included as actual JSON on the log
-   * output, unescaped, to get the benefits of structured logging.
-   *
-   * To achieve this, we add the raw JSON string from [JsonLogField] to the MDC, but with this
-   * suffix added to the key. Then, users can configure our [LoggingContextJsonFieldWriter] to strip
-   * this suffix from the key and write the field value as raw JSON in the log output. This only
-   * works when using Logback with `logstash-logback-encoder`, but that's what this library is
-   * primarily designed for anyway.
-   *
-   * We add a suffix to the field key instead of the field value, since the field value may be
-   * external input, which would open us up to malicious actors breaking our logs by passing invalid
-   * JSON strings with the appropriate prefix/suffix.
-   *
-   * This specific suffix was chosen to reduce the chance of clashing with other keys - most MDC
-   * keys will not include spaces/parentheses, but these are perfectly valid JSON keys.
-   */
-  internal const val JSON_FIELD_KEY_SUFFIX = " (json)"
-
   @PublishedApi
   internal fun addFields(fields: Array<out LogField>): OverwrittenContextFields {
     var overwrittenFields = OverwrittenContextFields(null)
@@ -313,10 +290,11 @@ internal object LoggingContext {
           overwrittenFields = overwrittenFields.set(index, field.key, existingValue, fields.size)
           /**
            * If we get a [JsonLogField] whose key matches a non-JSON field in the context, then we
-           * want to overwrite "key" with "key (json)" (adding [JSON_FIELD_KEY_SUFFIX] to identify
-           * the JSON value). But since "key (json)" does not match "key", calling `MDC.put` below
-           * will not overwrite the previous field, so we have to manually remove it here. The
-           * previous field will then be restored by [removeFields] after the context exits.
+           * want to overwrite "key" with "key (json)" (adding [LOGGING_CONTEXT_JSON_KEY_SUFFIX] to
+           * identify the JSON value). But since "key (json)" does not match "key", calling
+           * `MDC.put` below will not overwrite the previous field, so we have to manually remove it
+           * here. The previous field will then be restored by [removeFields] after the context
+           * exits.
            */
           if (field.key != field.keyForLoggingContext) {
             MDC.remove(field.key)
@@ -393,13 +371,6 @@ internal object LoggingContext {
   internal fun hasKey(key: String): Boolean {
     val existingValue: String? = MDC.get(key)
     return existingValue != null
-  }
-
-  /** Assumes that the given key has already been checked to end with [JSON_FIELD_KEY_SUFFIX]. */
-  internal fun removeJsonFieldSuffixFromKey(key: String): String {
-    // We do manual substring here instead of using removeSuffix, since removeSuffix calls endsWith,
-    // so we would call it twice
-    return key.substring(0, key.length - JSON_FIELD_KEY_SUFFIX.length)
   }
 
   internal fun getFieldMap(): Map<String, String?>? {
@@ -509,7 +480,7 @@ internal value class OverwrittenContextFields(private val fields: Array<String?>
 
 internal fun createLogFieldFromContext(key: String, value: String): LogField {
   return if (ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS &&
-      key.endsWith(LoggingContext.JSON_FIELD_KEY_SUFFIX)) {
+      key.endsWith(LOGGING_CONTEXT_JSON_KEY_SUFFIX)) {
     JsonLogFieldFromContext(key, value)
   } else {
     StringLogFieldFromContext(key, value)
@@ -536,7 +507,7 @@ internal class JsonLogFieldFromContext(
     value: String,
 ) :
     JsonLogField(
-        key = LoggingContext.removeJsonFieldSuffixFromKey(keyWithJsonSuffix),
+        key = keyWithJsonSuffix.removeSuffix(LOGGING_CONTEXT_JSON_KEY_SUFFIX),
         value = value,
         keyForLoggingContext = keyWithJsonSuffix,
     ) {
@@ -545,6 +516,63 @@ internal class JsonLogFieldFromContext(
    * which case the logger implementation will add the fields from SLF4J's MDC).
    */
   override fun includeInLog(): Boolean = !LoggingContext.hasKey(key)
+}
+
+/**
+ * SLF4J's MDC only supports String values. This works fine for our [StringLogField] - but we also
+ * want the ability to include JSON-serialized objects in our logging context. This is useful when
+ * for example processing an event, and you want that event to be included on all logs in the scope
+ * of processing it. If we were to just include it as a string, the JSON would be escaped, which
+ * prevents log analysis platforms from parsing fields from the event and letting us query on them.
+ * What we want is for the [JsonLogField] to be included as actual JSON on the log output,
+ * unescaped, to get the benefits of structured logging.
+ *
+ * To achieve this, we add the raw JSON string from [JsonLogField] to the MDC, but with this suffix
+ * added to the key. Then, users can configure our [LoggingContextJsonFieldWriter] to strip this
+ * suffix from the key and write the field value as raw JSON in the log output. This only works when
+ * using Logback with `logstash-logback-encoder`, but that's what this library is primarily designed
+ * for anyway.
+ *
+ * We add a suffix to the field key instead of the field value, since the field value may be
+ * external input, which would open us up to malicious actors breaking our logs by passing invalid
+ * JSON strings with the appropriate prefix/suffix.
+ *
+ * This specific suffix was chosen to reduce the chance of clashing with other keys - MDC keys
+ * typically don't have spaces/parentheses.
+ */
+internal const val LOGGING_CONTEXT_JSON_KEY_SUFFIX = " (json)"
+
+/**
+ * We only want to add [LOGGING_CONTEXT_JSON_KEY_SUFFIX] to context field keys if the user has
+ * configured [LoggingContextJsonFieldWriter] with `logstash-logback-encoder`. If this is not the
+ * case, we don't want to add the key suffix, as that will show up in the log output.
+ *
+ * So to check this, we use this global boolean (volatile for thread-safety), defaulting to false.
+ * If `LoggingContextJsonFieldWriter` is configured, its constructor will run when Logback is
+ * initialized, and set this to true. Then we can check this value in [JsonLogField], to decide
+ * whether or not to add the JSON key suffix.
+ *
+ * One obstacle with this approach is that we need Logback to be loaded before checking this field.
+ * The user may construct a [JsonLogField] before loading Logback, in which case
+ * `LoggingContextJsonFieldWriter`'s constructor will not have run yet, and we will omit the key
+ * suffix when it should have been added. So to ensure that Logback is loaded before checking this
+ * field, we call [ensureLoggerImplementationIsLoaded] from an `init` block on
+ * [JsonLogField.Companion], which will run when the class is loaded. We test that this works in the
+ * `LogbackLoggerTest` under `integration-tests/logback`.
+ */
+@Volatile internal var ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS = false
+
+/**
+ * See [ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS].
+ *
+ * This function catches all throwables (this is important, since we call this from static
+ * initializers).
+ */
+internal fun ensureLoggerImplementationIsLoaded() {
+  try {
+    // This will initialize the SLF4J logger implementation, if not already initialized
+    Slf4jLoggerFactory.getILoggerFactory()
+  } catch (_: Throwable) {}
 }
 
 /**
