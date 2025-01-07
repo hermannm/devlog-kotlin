@@ -187,10 +187,7 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  *           emailService.sendEmail(to = user.email, content = makeWelcomeEmailContent(user))
  *         } catch (e: Exception) {
  *           // This log will get the "user" field from the parent logging context
- *           log.error {
- *             cause = e
- *             "Failed to send welcome email to user"
- *           }
+ *           log.error(e) { "Failed to send welcome email to user" }
  *         }
  *       }
  *     }
@@ -244,10 +241,7 @@ public fun getLoggingContext(): List<LogField> {
  *         emailService.sendEmail(to = user.email, content = makeWelcomeEmailContent(user))
  *       } catch (e: Exception) {
  *         // This log will get the "user" field from the parent logging context
- *         log.error {
- *           cause = e
- *           "Failed to send welcome email to user"
- *         }
+ *         log.error(e) { "Failed to send welcome email to user" }
  *       }
  *     }
  *   }

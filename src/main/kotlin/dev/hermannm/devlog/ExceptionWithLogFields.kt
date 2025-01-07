@@ -5,14 +5,15 @@ package dev.hermannm.devlog
  * `cause` exception to one of the methods on [Logger], it will check if the given exception is an
  * instance of this class, and if it is, these fields will be added to the log.
  *
+ * The exception also includes any log fields from [withLoggingContext], from the scope in which the
+ * exception is constructed. This way, we don't lose any logging context if the exception escapes
+ * the context it was thrown from. If you don't want this behavior, you can create a custom
+ * exception and implement the [WithLogFields] interface.
+ *
  * This is useful when you are throwing an exception from somewhere down in the stack, but do
  * logging further up the stack, and you have structured data that you want to attach to the
  * exception log. In this case, one may typically resort to string concatenation, but this class
  * allows you to have the benefits of structured logging for exceptions as well.
- *
- * The exception also includes any log fields from [withLoggingContext], from the scope in which the
- * exception is constructed. If you don't want this behavior, you can create a custom exception and
- * implement the [WithLogFields] interface.
  *
  * ### Example
  *
@@ -34,10 +35,7 @@ package dev.hermannm.devlog
  *   try {
  *     storeUser(user)
  *   } catch (e: Exception) {
- *     log.error {
- *       cause = e
- *       "Failed to store user"
- *     }
+ *     log.error(e) { "Failed to store user" }
  *   }
  * }
  * ```
@@ -124,10 +122,7 @@ private fun combineFieldsWithLoggingContext(logFields: List<LogField>): List<Log
  *   try {
  *     storeUser(user)
  *   } catch (e: Exception) {
- *     log.error {
- *       cause = e
- *       "Failed to store user"
- *     }
+ *     log.error(e) { "Failed to store user" }
  *   }
  * }
  * ```

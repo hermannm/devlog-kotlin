@@ -98,17 +98,14 @@ Note that `withLoggingContext` uses a thread-local to provide log fields to the 
 work with Kotlin coroutines and `suspend` functions (though it does work with Java virtual threads).
 An alternative that supports coroutines may be added in a future version of the library.
 
-Finally, you can attach a `cause` exception to logs:
+Finally, you can attach a cause exception to logs:
 
 ```kotlin
 fun example() {
   try {
     callExternalService()
   } catch (e: Exception) {
-    log.error {
-      cause = e
-      "Request to external service failed"
-    }
+    log.error(e) { "Request to external service failed" }
   }
 }
 ```

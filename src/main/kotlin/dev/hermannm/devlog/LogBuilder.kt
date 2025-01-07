@@ -3,8 +3,14 @@ package dev.hermannm.devlog
 import kotlinx.serialization.SerializationStrategy
 
 /**
- * Class used in the logging methods on [Logger], allowing you to set a [cause] exception and
- * [add structured key-value data][field] to a log.
+ * Class used in the logging methods on [Logger], allowing you to add structured key-value data to
+ * the log by calling the [field] and [rawJsonField] methods.
+ *
+ * This class is given as a function receiver to the lambda arguments on `Logger`'s methods, which
+ * lets you call its methods directly in the scope of that lambda. This is a common technique for
+ * creating _type-safe builders_ in Kotlin. See
+ * [Kotlin docs](https://kotlinlang.org/docs/lambdas.html#function-literals-with-receiver) for more
+ * on this.
  *
  * ### Example
  *
@@ -16,9 +22,8 @@ import kotlinx.serialization.SerializationStrategy
  *     storeUser(user)
  *   } catch (e: Exception) {
  *     // The lambda argument passed to this logger method has a LogBuilder as its receiver, which
- *     // means that you can set `LogBuilder.cause` and call `LogBuilder.field` in this scope.
- *     log.error {
- *       cause = e
+ *     // means that you can call `LogBuilder.field` directly in this scope.
+ *     log.error(e) {
  *       field("user", user)
  *       "Failed to store user in database"
  *     }
@@ -32,18 +37,6 @@ public value class LogBuilder
 internal constructor(
     @PublishedApi internal val logEvent: LogEvent,
 ) {
-  /**
-   * Set this if the log was caused by an exception, to include the exception message and stack
-   * trace in the log.
-   *
-   * This property should only be set once on a single log. If you set `cause` multiple times, only
-   * the first non-null exception will be kept (this is due to a limitation in Logback's
-   * LoggingEvent API).
-   */
-  public var cause: Throwable?
-    set(value) = logEvent.setCause(value)
-    get() = logEvent.getCause()
-
   /**
    * Adds a [log field][LogField] (structured key-value data) to the log.
    *
@@ -165,22 +158,16 @@ internal constructor(
     addField(field)
   }
 
-  @PublishedApi
-  internal fun finalize(message: String) {
-    logEvent.setMessage(message)
-
-    addFieldsFromCauseException()
-  }
-
   /**
    * Checks if the log [cause] exception (or any of its own cause exceptions) implements the
-   * [WithLogFields] interface, and if so, adds those fields.
+   * [WithLogFields] interface, and if so, adds those fields to the log.
    */
-  private fun addFieldsFromCauseException() {
+  @PublishedApi
+  internal fun addFieldsFromCauseException(cause: Throwable) {
     // The `cause` here is the log event cause exception. But this exception may itself have a
     // `cause` exception, and that may have another one, and so on. We want to go through all these
     // exceptions to look for log fields, so we re-assign this local variable as we iterate through.
-    var exception = cause
+    var exception: Throwable? = cause
     // Limit the depth of cause exceptions, so we don't expose ourselves to infinite loops.
     // This can happen if:
     // - exception1.cause -> exception2

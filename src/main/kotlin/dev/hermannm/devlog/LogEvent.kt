@@ -3,7 +3,6 @@ package dev.hermannm.devlog
 import ch.qos.logback.classic.Level as LogbackLevel
 import ch.qos.logback.classic.Logger as LogbackLogger
 import ch.qos.logback.classic.spi.LoggingEvent as BaseLogbackEvent
-import ch.qos.logback.classic.spi.ThrowableProxy
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializable
 import com.fasterxml.jackson.databind.SerializerProvider
@@ -36,29 +35,22 @@ import org.slf4j.spi.LoggingEventAware
  */
 @PublishedApi
 internal interface LogEvent {
-  /** Already implemented by [BaseLogbackEvent.setMessage] and [BaseSlf4jEvent.setMessage]. */
-  fun setMessage(message: String)
-
-  fun setCause(cause: Throwable?)
-
-  fun getCause(): Throwable?
-
   fun addStringField(key: String, value: String)
 
   fun addJsonField(key: String, json: String)
 
   fun isFieldKeyAdded(key: String): Boolean
 
-  fun log(logger: Slf4jLogger)
+  fun log(message: String, logger: Slf4jLogger)
 }
 
 @PublishedApi
-internal fun createLogEvent(level: LogLevel, logger: Slf4jLogger): LogEvent {
+internal fun createLogEvent(level: LogLevel, cause: Throwable?, logger: Slf4jLogger): LogEvent {
   if (LOGBACK_IS_ON_CLASSPATH && logger is LogbackLogger) {
-    return LogbackLogEvent(level, logger)
+    return LogbackLogEvent(level, cause, logger)
   }
 
-  return Slf4jLogEvent(level, logger)
+  return Slf4jLogEvent(level, cause, logger)
 }
 
 /**
@@ -80,37 +72,16 @@ internal val LOGBACK_IS_ON_CLASSPATH =
     }
 
 /** Extends Logback's custom log event class to implement [LogEvent]. */
-internal class LogbackLogEvent(
-    level: LogLevel,
-    logger: LogbackLogger,
-) :
+internal class LogbackLogEvent(level: LogLevel, cause: Throwable?, logger: LogbackLogger) :
     LogEvent,
     BaseLogbackEvent(
         FULLY_QUALIFIED_CLASS_NAME,
         logger,
         level.toLogback(),
         null, // message (we set this when finalizing the log)
-        null, // throwable (may be set by LogBuilder)
+        cause,
         null, // argArray (we don't use this)
     ) {
-  override fun setCause(cause: Throwable?) {
-    /**
-     * Passing null to [ThrowableProxy] will throw, so we must only call it if cause is not null. We
-     * still want to allow passing null here, to support the case where the user has a cause
-     * exception that may or not be null.
-     *
-     * Calling [BaseLogbackEvent.setThrowableProxy] twice on the same event will also throw - and at
-     * the time of writing, there is no way to just overwrite the previous throwableProxy. We would
-     * rather ignore the second cause exception than throw an exception from our logger method, so
-     * we only set throwableProxy here if it has not already been set.
-     */
-    if (cause != null && super.getThrowableProxy() == null) {
-      super.setThrowableProxy(ThrowableProxy(cause))
-    }
-  }
-
-  override fun getCause(): Throwable? = (super.getThrowableProxy() as? ThrowableProxy)?.throwable
-
   override fun addStringField(key: String, value: String) {
     super.addKeyValuePair(KeyValuePair(key, value))
   }
@@ -125,7 +96,9 @@ internal class LogbackLogEvent(
     return fields.any { it.key == key }
   }
 
-  override fun log(logger: Slf4jLogger) {
+  override fun log(message: String, logger: Slf4jLogger) {
+    super.setMessage(message)
+
     // Safe to cast here, since we only construct this event if the logger is a LogbackLogger.
     // We choose to cast instead of keeping the LogbackLogger as a field on the event, since casting
     // to a concrete class is fast, and we don't want to increase the allocated size of the event.
@@ -165,20 +138,13 @@ internal fun LogLevel.toLogback(): LogbackLevel {
 }
 
 /** Extends SLF4J's log event class to implement [LogEvent]. */
-internal class Slf4jLogEvent(level: LogLevel, logger: Slf4jLogger) :
-    LogEvent,
-    BaseSlf4jEvent(
-        level.slf4jLevel,
-        logger,
-    ) {
+internal class Slf4jLogEvent(level: LogLevel, cause: Throwable?, logger: Slf4jLogger) :
+    LogEvent, BaseSlf4jEvent(level.slf4jLevel, logger) {
   init {
+    super.setThrowable(cause)
     super.setCallerBoundary(FULLY_QUALIFIED_CLASS_NAME)
     super.setTimeStamp(System.currentTimeMillis())
   }
-
-  override fun setCause(cause: Throwable?) = super.setThrowable(cause)
-
-  override fun getCause(): Throwable? = super.getThrowable()
 
   override fun addStringField(key: String, value: String) = super.addKeyValue(key, value)
 
@@ -190,7 +156,9 @@ internal class Slf4jLogEvent(level: LogLevel, logger: Slf4jLogger) :
     return fields.any { it.key == key }
   }
 
-  override fun log(logger: Slf4jLogger) {
+  override fun log(message: String, logger: Slf4jLogger) {
+    super.setMessage(message)
+
     when (logger) {
       // If logger is LoggingEventAware, we can just log the event directly
       is LoggingEventAware -> logger.log(this)
