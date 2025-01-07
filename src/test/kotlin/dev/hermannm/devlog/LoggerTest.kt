@@ -265,7 +265,7 @@ internal class LoggerTest {
 
   @Test
   fun `Logback is loaded in tests`() {
-    LogEvent.LOGBACK_IS_ON_CLASSPATH shouldBe true
+    LOGBACK_IS_ON_CLASSPATH shouldBe true
   }
 
   @Test

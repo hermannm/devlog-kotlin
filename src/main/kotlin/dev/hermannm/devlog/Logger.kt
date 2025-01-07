@@ -296,7 +296,7 @@ internal constructor(
 
   @PublishedApi
   internal inline fun log(level: LogLevel, buildLog: LogBuilder.() -> String) {
-    val builder = LogBuilder(LogEvent.create(level, underlyingLogger))
+    val builder = LogBuilder(createLogEvent(level, underlyingLogger))
     val message = builder.buildLog()
     builder.finalize(message)
     builder.logEvent.log(underlyingLogger)
