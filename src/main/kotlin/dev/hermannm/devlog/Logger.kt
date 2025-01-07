@@ -92,10 +92,10 @@ internal constructor(
    * ```
    * private val log = getLogger {}
    *
-   * fun example(user: User) {
+   * fun example(event: Event) {
    *   log.info {
-   *     field("user", user)
-   *     "Registered new user"
+   *     field("event", event)
+   *     "Processing event"
    *   }
    * }
    * ```
@@ -135,13 +135,13 @@ internal constructor(
    * ```
    * private val log = getLogger {}
    *
-   * fun example(user: User) {
+   * fun example(event: Event) {
    *   try {
-   *     sendWelcomeEmail(user)
+   *     publishEvent(event)
    *   } catch (e: Exception) {
    *     log.warn(e) {
-   *       field("user", user)
-   *       "Failed to send welcome email to user"
+   *       field("event", event)
+   *       "Failed to publish event, retrying"
    *     }
    *   }
    * }
@@ -182,13 +182,13 @@ internal constructor(
    * ```
    * private val log = getLogger {}
    *
-   * fun example(user: User) {
+   * fun example(event: Event) {
    *   try {
-   *     storeUser(user)
+   *     processEvent(event)
    *   } catch (e: Exception) {
    *     log.error(e) {
-   *       field("user", user)
-   *       "Failed to store user in database"
+   *       field("event", event)
+   *       "Failed to process event"
    *     }
    *   }
    * }
@@ -229,10 +229,10 @@ internal constructor(
    * ```
    * private val log = getLogger {}
    *
-   * fun example(user: User) {
+   * fun example(event: Event) {
    *   log.debug {
-   *     field("user", user)
-   *     "Received new sign-up request"
+   *     field("event", event)
+   *     "Processing event"
    *   }
    * }
    * ```
@@ -272,10 +272,10 @@ internal constructor(
    * ```
    * private val log = getLogger {}
    *
-   * fun example(user: User) {
+   * fun example(event: Event) {
    *   log.trace {
-   *     field("user", user)
-   *     "Started processing user request"
+   *     field("event", event)
+   *     "Event processing started"
    *   }
    * }
    * ```
@@ -317,14 +317,14 @@ internal constructor(
    * ```
    * private val log = getLogger {}
    *
-   * fun example(user: User) {
+   * fun example(event: Event) {
    *   try {
-   *     sendWelcomeEmail(user)
+   *     processEvent(event)
    *   } catch (e: Exception) {
    *     val logLevel = if (e is IOException) LogLevel.ERROR else LogLevel.WARN
    *     log.at(logLevel, cause = e) {
-   *       field("user", user)
-   *       "Failed to send welcome email to user"
+   *       field("event", event)
+   *       "Failed to process event"
    *     }
    *   }
    * }

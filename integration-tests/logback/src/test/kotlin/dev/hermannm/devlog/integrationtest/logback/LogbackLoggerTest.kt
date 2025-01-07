@@ -24,16 +24,16 @@ class LogbackLoggerTest {
      */
     val jsonField = rawJsonField("contextField", """{"test":true}""")
 
-    @Serializable data class User(val id: Long, val name: String)
+    @Serializable data class Event(val id: Long, val type: String)
 
-    val user = User(id = 1, name = "John Doe")
+    val event = Event(id = 1001, type = "ORDER_UPDATED")
 
     val log = getLogger {}
 
     val output = captureStdout {
       withLoggingContext(jsonField) {
         log.info {
-          field("user", user)
+          field("event", event)
           "Test"
         }
       }
@@ -41,7 +41,7 @@ class LogbackLoggerTest {
 
     output shouldContain """"level":"INFO""""
     output shouldContain """"message":"Test""""
-    output shouldContain """"user":{"id":1,"name":"John Doe"}"""
+    output shouldContain """"event":{"id":1001,"type":"ORDER_UPDATED"}"""
     output shouldContain """"contextField":{"test":true}"""
   }
 

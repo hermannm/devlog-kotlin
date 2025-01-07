@@ -6,8 +6,7 @@ import net.logstash.logback.composite.loggingevent.mdc.MdcEntryWriter
 /**
  * Writes logging context fields as JSON when using
  * [`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder). We need this
- * in order to include object fields as raw JSON instead of escaped strings on the log output (see
- * [LOGGING_CONTEXT_JSON_KEY_SUFFIX]).
+ * in order to include object fields as raw JSON instead of escaped strings on the log output.
  *
  * To use it, configure `logback.xml` under `src/main/resources` as follows:
  * ```xml

@@ -44,14 +44,14 @@ You can also add _fields_ (structured key-value data) to your logs. The `field` 
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class User(val id: Long, val name: String)
+data class Event(val id: Long, val type: String)
 
 fun example() {
-  val user = User(id = 1, name = "John Doe")
+  val event = Event(id = 1001, type = "ORDER_UPDATED")
 
   log.info {
-    field("user", user)
-    "Registered new user"
+    field("event", event)
+    "Processing event"
   }
 }
 ```
@@ -63,10 +63,10 @@ a more structured manner than if you were to just use string concatenation.
 <!-- prettier-ignore -->
 ```jsonc
 {
-  "message": "Registered new user",
-  "user": {
-    "id": 1,
-    "name": "John Doe"
+  "message": "Processing event",
+  "event": {
+    "id": 1001,
+    "type": "ORDER_UPDATED"
   },
   // ...timestamp etc.
 }

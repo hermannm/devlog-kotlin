@@ -186,19 +186,19 @@ internal class ExceptionWithLogFieldsTest {
 
   @Test
   fun `serializable object field works on ExceptionWithLogFields`() {
-    val user = User(id = 1, name = "John Doe")
+    val event = Event(id = 1001, type = EventType.ORDER_PLACED)
 
     val exception =
         ExceptionWithLogFields(
             message = null,
-            logFields = listOf(field("user", user)),
+            logFields = listOf(field("event", event)),
         )
 
     val output = captureLogOutput { log.error(exception) { "Test" } }
 
     output.logFields shouldBe
         """
-          "user":{"id":1,"name":"John Doe"}
+          "event":{"id":1001,"type":"ORDER_PLACED"}
         """
             .trimIndent()
   }

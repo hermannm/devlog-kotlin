@@ -17,8 +17,8 @@ import org.slf4j.MDC
  * all logs inside that context will include the event.
  *
  * The implementation uses [MDC] from SLF4J, which only supports String values by default. To encode
- * object values as actual JSON (not escaped strings), you can configure
- * [LoggingContextJsonFieldWriter].
+ * object values as actual JSON (not escaped strings), you can use [LoggingContextJsonFieldWriter]
+ * with Logback.
  *
  * ### Example
  *
@@ -41,8 +41,8 @@ import org.slf4j.MDC
  * If you have configured [LoggingContextJsonFieldWriter], the field from `withLoggingContext` will
  * then be attached to every log as follows:
  * ```json
- * { "message": "Started processing event", "event": { /* ... */  } }
- * { "message": "Finished processing event", "event": { /* ... */  } }
+ * { "message": "Started processing event", "event": { ... } }
+ * { "message": "Finished processing event", "event": { ... } }
  * ```
  *
  * ### Note on coroutines
@@ -151,6 +151,9 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  *
  * ### Example
  *
+ * Scenario: We store an updated order in a database, and then want to asynchronously update
+ * statistics for the order.
+ *
  * ```
  * import dev.hermannm.devlog.field
  * import dev.hermannm.devlog.getLogger
@@ -160,23 +163,22 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  *
  * private val log = getLogger {}
  *
- * class UserService(
- *     private val userRepository: UserRepository,
- *     private val emailService: EmailService,
+ * class OrderService(
+ *     private val orderRepository: OrderRepository,
+ *     private val statisticsService: StatisticsService,
  * ) {
- *   fun registerUser(user: User) {
- *     withLoggingContext(field("user", user)) {
- *       userRepository.create(user)
- *       sendWelcomeEmail(user)
+ *   fun updateOrder(order: Order) {
+ *     withLoggingContext(field("order", order)) {
+ *       orderRepository.update(order)
+ *       updateStatistics(order)
  *     }
  *   }
  *
- *   // In this hypothetical, we don't want sendWelcomeEmail to block registerUser, so we spawn a
- *   // thread.
+ *   // In this scenario, we don't want updateStatistics to block updateOrder, so we spawn a thread.
  *   //
  *   // But we want to log if it fails, and include the logging context from the parent thread.
  *   // This is where getLoggingContext comes in.
- *   private fun sendWelcomeEmail(user: User) {
+ *   private fun updateStatistics(order: Order) {
  *     // We call getLoggingContext here, to copy the context fields from the parent thread
  *     val loggingContext = getLoggingContext()
  *
@@ -184,10 +186,10 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  *       // We then pass the parent context to withLoggingContext here in the child thread
  *       withLoggingContext(loggingContext) {
  *         try {
- *           emailService.sendEmail(to = user.email, content = makeWelcomeEmailContent(user))
+ *           statisticsService.orderUpdated(order)
  *         } catch (e: Exception) {
- *           // This log will get the "user" field from the parent logging context
- *           log.error(e) { "Failed to send welcome email to user" }
+ *           // This log will get the "order" field from the parent logging context
+ *           log.error(e) { "Failed to update order statistics" }
  *         }
  *       }
  *     }
@@ -207,6 +209,9 @@ public fun getLoggingContext(): List<LogField> {
  *
  * ### Example
  *
+ * Scenario: We store an updated order in a database, and then want to asynchronously update
+ * statistics for the order.
+ *
  * ```
  * import dev.hermannm.devlog.field
  * import dev.hermannm.devlog.getLogger
@@ -216,32 +221,32 @@ public fun getLoggingContext(): List<LogField> {
  *
  * private val log = getLogger {}
  *
- * class UserService(
- *     private val userRepository: UserRepository,
- *     private val emailService: EmailService,
+ * class OrderService(
+ *     private val orderRepository: OrderRepository,
+ *     private val statisticsService: StatisticsService,
  * ) {
  *   // Call inheritLoggingContext on the executor
  *   private val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
  *
- *   fun registerUser(user: User) {
- *     withLoggingContext(field("user", user)) {
- *       userRepository.create(user)
- *       sendWelcomeEmail(user)
+ *   fun updateOrder(order: Order) {
+ *     withLoggingContext(field("order", order)) {
+ *       orderRepository.update(order)
+ *       updateStatistics(order)
  *     }
  *   }
  *
- *   // In this hypothetical, we don't want sendWelcomeEmail to block registerUser, so we use an
+ *   // In this scenario, we don't want updateStatistics to block updateOrder, so we use an
  *   // ExecutorService to spawn a thread.
  *   //
  *   // But we want to log if it fails, and include the logging context from the parent thread.
  *   // This is where inheritLoggingContext comes in.
- *   private fun sendWelcomeEmail(user: User) {
+ *   private fun updateStatistics(order: Order) {
  *     executor.execute {
  *       try {
- *         emailService.sendEmail(to = user.email, content = makeWelcomeEmailContent(user))
+ *         statisticsService.orderUpdated(order)
  *       } catch (e: Exception) {
- *         // This log will get the "user" field from the parent logging context
- *         log.error(e) { "Failed to send welcome email to user" }
+ *         // This log will get the "order" field from the parent logging context
+ *         log.error(e) { "Failed to update order statistics" }
  *       }
  *     }
  *   }

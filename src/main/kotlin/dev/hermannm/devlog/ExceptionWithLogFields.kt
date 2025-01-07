@@ -10,7 +10,7 @@ package dev.hermannm.devlog
  * the context it was thrown from. If you don't want this behavior, you can create a custom
  * exception and implement the [WithLogFields] interface.
  *
- * This is useful when you are throwing an exception from somewhere down in the stack, but do
+ * This class is useful when you are throwing an exception from somewhere down in the stack, but do
  * logging further up the stack, and you have structured data that you want to attach to the
  * exception log. In this case, one may typically resort to string concatenation, but this class
  * allows you to have the benefits of structured logging for exceptions as well.
@@ -18,38 +18,41 @@ package dev.hermannm.devlog
  * ### Example
  *
  * ```
- * fun storeUser(user: User) {
- *   withLoggingContext(field("user", user)) {
- *     if (usernameTaken(user.name)) {
- *       throw ExceptionWithLogFields(
- *           "Invalid user data",
- *           logFields = listOf(field("reason", "Username taken")),
- *       )
- *     }
- *   }
- * }
+ * import dev.hermannm.devlog.ExceptionWithLogFields
+ * import dev.hermannm.devlog.field
+ * import dev.hermannm.devlog.getLogger
  *
  * private val log = getLogger {}
  *
- * fun example(user: User) {
+ * fun example(event: OrderUpdateEvent) {
  *   try {
- *     storeUser(user)
+ *     processOrderUpdate(event)
  *   } catch (e: Exception) {
- *     log.error(e) { "Failed to store user" }
+ *     log.error(e) { "Failed to process order update event" }
+ *   }
+ * }
+ *
+ * fun processOrderUpdate(event: OrderUpdateEvent) {
+ *   withLoggingContext(field("event", event)) {
+ *     val order = getOrder(event.orderId)
+ *
+ *     if (!order.canBeUpdated()) {
+ *       throw ExceptionWithLogFields(
+ *           "Received update event for finalized order",
+ *           logFields = listOf(field("order", order)),
+ *       )
+ *     }
  *   }
  * }
  * ```
  *
  * The `log.error` would then give the following log output (using `logstash-logback-encoder`), with
- * both the `reason` field from the exception and the `user` field from the logging context:
+ * both the `order` field from the exception and the `event` field from the logging context:
  * ```
  * {
- *   "message": "Failed to store user",
- *   "reason": "Username taken",
- *   "user": {
- *     "id": 1,
- *     "name": "John Doe"
- *   },
+ *   "message": "Failed to process order update event",
+ *   "order": { ... },
+ *   "event": { ... },
  *   "stack_trace": "...",
  *   // ...timestamp etc.
  * }
@@ -105,37 +108,36 @@ private fun combineFieldsWithLoggingContext(logFields: List<LogField>): List<Log
  * import dev.hermannm.devlog.field
  * import dev.hermannm.devlog.getLogger
  *
- * class InvalidUserData(user: User) : RuntimeException(), WithLogFields {
- *   override val message = "Invalid user data"
- *   override val logFields = listOf(field("user", user))
- * }
- *
- * fun storeUser(user: User) {
- *   if (!user.isValid()) {
- *     throw InvalidUserData(user)
- *   }
- * }
- *
  * private val log = getLogger {}
  *
- * fun example(user: User) {
+ * fun example(order: Order) {
  *   try {
- *     storeUser(user)
+ *     updateOrder(order)
  *   } catch (e: Exception) {
- *     log.error(e) { "Failed to store user" }
+ *     log.error(e) { "Failed to update order" }
  *   }
+ * }
+ *
+ * fun updateOrder(order: Order) {
+ *   if (!order.canBeUpdated()) {
+ *     throw InvalidOrderState("Cannot update finalized order", order)
+ *   }
+ * }
+ *
+ * class InvalidOrderState(
+ *     override val message: String,
+ *     order: Order,
+ * ) : RuntimeException(), WithLogFields {
+ *   override val logFields = listOf(field("order", order))
  * }
  * ```
  *
  * The `log.error` would then give the following log output (using `logstash-logback-encoder`), with
- * the `user` log field from `InvalidUserData` attached:
+ * the `order` log field from `InvalidOrderState` attached:
  * ```
  * {
- *   "message": "Failed to store user",
- *   "user": {
- *     "id": 1,
- *     "name": "John Doe"
- *   },
+ *   "message": "Failed to update order",
+ *   "order": { ... },
  *   "stack_trace": "...",
  *   // ...timestamp etc.
  * }

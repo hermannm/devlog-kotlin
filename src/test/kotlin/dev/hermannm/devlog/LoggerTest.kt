@@ -289,13 +289,13 @@ internal class LoggerTest {
       val fieldKey1: String = "key1",
       val fieldValue1: String = "value1",
       val fieldKey2: String = "key2",
-      val fieldValue2: User = User(id = 1, name = "John Doe"),
+      val fieldValue2: Event = Event(id = 1001, type = EventType.ORDER_PLACED),
       val cause: Exception = Exception("Something went wrong"),
       val expectedMessage: String = message,
       val expectedFields: List<KeyValuePair>? =
           listOf(
               KeyValuePair(fieldKey1, fieldValue1),
-              KeyValuePair(fieldKey2, RawJson("""{"id":1,"name":"John Doe"}""")),
+              KeyValuePair(fieldKey2, RawJson("""{"id":1001,"type":"ORDER_PLACED"}""")),
           ),
       val shouldHaveCorrectFileLocation: Boolean = true,
   ) {
@@ -312,13 +312,15 @@ internal class LoggerTest {
           LoggerTestCase(
               "Location-aware SLF4J logger",
               logger = Logger(LocationAwareSlf4jLogger(logbackLogger)),
-              expectedMessage = """Test message [key1=value1, key2={"id":1,"name":"John Doe"}]""",
+              expectedMessage =
+                  """Test message [key1=value1, key2={"id":1001,"type":"ORDER_PLACED"}]""",
               expectedFields = null,
           ),
           LoggerTestCase(
               "Plain SLF4J logger",
               logger = Logger(PlainSlf4jLogger(logbackLogger)),
-              expectedMessage = """Test message [key1=value1, key2={"id":1,"name":"John Doe"}]""",
+              expectedMessage =
+                  """Test message [key1=value1, key2={"id":1001,"type":"ORDER_PLACED"}]""",
               expectedFields = null,
               // The plain SLF4J logger does not implement location-aware logging, so we don't
               // expect it to have correct file location

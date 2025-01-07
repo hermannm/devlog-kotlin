@@ -39,25 +39,30 @@ import kotlinx.serialization.json.JsonElement
  * private val log = getLogger {}
  *
  * fun example() {
- *   val user = User(id = 1, name = "John Doe")
+ *   val event = Event(id = 1001, type = EventType.ORDER_PLACED)
  *
  *   log.info {
- *     field("user", user)
- *     "Registered new user"
+ *     field("event", event)
+ *     "Processing event"
  *   }
  * }
  *
  * @Serializable
- * data class User(val id: Long, val name: String)
+ * data class Event(val id: Long, val type: EventType)
+ *
+ * enum class EventType {
+ *   ORDER_PLACED,
+ *   ORDER_UPDATED,
+ * }
  * ```
  *
  * This gives the following output (using `logstash-logback-encoder`):
  * ```json
  * {
- *   "message": "Registered new user",
- *   "user": {
- *     "id": "1",
- *     "name": "John Doe"
+ *   "message": "Processing event",
+ *   "event": {
+ *     "id": 1001,
+ *     "type": "ORDER_PLACED"
  *   },
  *   // ...timestamp etc.
  * }
@@ -170,8 +175,7 @@ public inline fun <reified ValueT : Any> field(
  * because we use this in both [field] and [LogBuilder.field], and they want to do different things
  * with the encoded value:
  * - [field] constructs a [StringLogField] or [JsonLogField] with it
- * - [LogBuilder.field] passes the value to [LogEvent.addStringField], wrapping JSON values in
- *   [RawJson]
+ * - [LogBuilder.field] passes the value to [LogEvent.addStringField] or [LogEvent.addJsonField]
  *
  * If we used a return value here, we would have to wrap it in an object to convey whether it was
  * encoded to JSON or just a plain string, which requires an allocation. By instead taking callbacks
@@ -223,7 +227,7 @@ internal inline fun <reified ValueT : Any, ReturnT> encodeFieldValue(
  * This function is made to be used with [withLoggingContext], to add fields to all logs within a
  * scope. If you just want to add a field to a single log, you should instead call
  * [LogBuilder.rawJsonField] on one of [Logger]'s methods (see example on
- * [addRawJsonField][LogBuilder.rawJsonField]).
+ * [rawJsonField][LogBuilder.rawJsonField]).
  *
  * By default, this function checks that the given JSON string is actually valid JSON. The reason
  * for this is that giving raw JSON to our log encoder when it is not in fact valid JSON can break
@@ -241,20 +245,20 @@ internal inline fun <reified ValueT : Any, ReturnT> encodeFieldValue(
  * private val log = getLogger {}
  *
  * fun example() {
- *   val userJson = """{"id":1,"name":"John Doe"}"""
+ *   val eventJson = """{"id":1001,"type":"ORDER_PLACED"}"""
  *
- *   withLoggingContext(rawJsonField("user", userJson)) {
- *     log.debug { "Started processing user" }
+ *   withLoggingContext(rawJsonField("event", eventJson)) {
+ *     log.debug { "Started processing event" }
  *     // ...
- *     log.debug { "User processing ended" }
+ *     log.debug { "Finished processing event" }
  *   }
  * }
  * ```
  *
  * This gives the following output (using `logstash-logback-encoder`):
  * ```json
- * {"message":"Started processing user","user":{"id":1,"name":"John Doe"},/* ...timestamp etc. */}
- * {"message":"User processing ended","user":{"id":1,"name":"John Doe"},/* ...timestamp etc. */}
+ * {"message":"Started processing event","event":{"id":1001,"type":"ORDER_PLACED"},/* ...timestamp etc. */}
+ * {"message":"Finished processing event","event":{"id":1001,"type":"ORDER_PLACED"},/* ...timestamp etc. */}
  * ```
  */
 public fun rawJsonField(key: String, json: String, validJson: Boolean = false): LogField {
@@ -270,7 +274,7 @@ public fun rawJsonField(key: String, json: String, validJson: Boolean = false): 
  * Validates that the given raw JSON string is valid JSON, calling [onValidJson] if it is, or
  * [onInvalidJson] if it's not.
  *
- * We take lambdas here instead of returning a value, for the same reason as [encodeFieldValue]: we
+ * We take lambdas here instead of returning a value, for the same reason as [encodeFieldValue]. We
  * use this in both [rawJsonField] and [LogBuilder.rawJsonField].
  */
 internal inline fun <ReturnT> validateRawJson(
