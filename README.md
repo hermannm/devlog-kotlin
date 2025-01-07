@@ -100,7 +100,7 @@ won't work with Kotlin coroutines and `suspend` functions. If you use coroutines
 with
 [`MDCContext` from `kotlinx-coroutines-slf4j`](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-slf4j/kotlinx.coroutines.slf4j/-m-d-c-context/).
 
-Finally, you can attach a cause exception to logs:
+Lastly, you can attach a cause exception to the log like this:
 
 ```kotlin
 fun example() {
