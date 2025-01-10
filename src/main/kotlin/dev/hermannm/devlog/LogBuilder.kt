@@ -138,6 +138,9 @@ internal constructor(
    *   // ...timestamp etc.
    * }
    * ```
+   *
+   * @param validJson Set this true if you are 100% sure that [json] is valid JSON, and you want to
+   *   save the performance cost of validating it.
    */
   public fun rawJsonField(key: String, json: String, validJson: Boolean = false) {
     if (!logEvent.isFieldKeyAdded(key)) {

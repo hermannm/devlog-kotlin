@@ -263,6 +263,9 @@ internal inline fun <reified ValueT : Any, ReturnT> encodeFieldValue(
  * {"message":"Started processing event","event":{"id":1001,"type":"ORDER_PLACED"},/* ...timestamp etc. */}
  * {"message":"Finished processing event","event":{"id":1001,"type":"ORDER_PLACED"},/* ...timestamp etc. */}
  * ```
+ *
+ * @param validJson Set this true if you are 100% sure that [json] is valid JSON, and you want to
+ *   save the performance cost of validating it.
  */
 public fun rawJsonField(key: String, json: String, validJson: Boolean = false): LogField {
   return validateRawJson(
@@ -274,8 +277,8 @@ public fun rawJsonField(key: String, json: String, validJson: Boolean = false): 
 }
 
 /**
- * Turns the given pre-serialized JSON string into a `kotlinx.serialization.json.JsonElement`, using
- * the same validation logic as [rawJsonField].
+ * Turns the given pre-serialized JSON string into a [JsonElement] (from `kotlinx.serialization`),
+ * using the same validation logic as [rawJsonField].
  *
  * By default, this function checks that the given JSON string is actually valid JSON. The reason
  * for this is that giving raw JSON to our log encoder when it is not in fact valid JSON can break
@@ -293,33 +296,34 @@ public fun rawJsonField(key: String, json: String, validJson: Boolean = false): 
  * ```
  * import dev.hermannm.devlog.getLogger
  * import dev.hermannm.devlog.rawJson
- * import kotlinx.serialization.json.buildJsonObject
- * import kotlinx.serialization.json.put
+ * import kotlinx.serialization.Serializable
+ * import kotlinx.serialization.json.JsonElement
  *
  * private val log = getLogger {}
  *
  * fun example() {
- *   // We hope the external service returns valid JSON, but we can't trust that fully. If they did,
- *   // we want to log it as unescaped JSON, but if they didn't, we want to log it as a string.
+ *   // We hope the external service returns valid JSON, but we can't trust that fully. If it did
+ *   // return JSON, we want to log it unescaped, but if it didn't, we want to log it as a string.
  *   // `rawJson` does this validation for us.
  *   val response = callExternalService()
  *
  *   if (!response.status.isSuccessful()) {
+ *     // We want to log a "response" log field with an object of "status" and "body". So we create
+ *     // a serializable class with the fields we want, and make "body" a JsonElement from rawJson.
+ *     @Serializable data class ResponseLog(val status: Int, val body: JsonElement)
+ *
  *     log.error {
- *       field(
- *           "response",
- *           buildJsonObject {
- *             put("status", response.status.code)
- *             put("body", rawJson(response.body))
- *           },
- *       )
+ *       field("response", ResponseLog(response.status.code, rawJson(response.body)))
  *       "External service returned error response"
  *     }
  *   }
  * }
  * ```
+ *
+ * @param isValid Set this true if you are 100% sure that [json] is valid JSON, and you want to save
+ *   the performance cost of validating it.
  */
-// For JsonUnquotedLiteral. This is likely to not change:
+// For JsonUnquotedLiteral. This will likely be stabilized as-is:
 // https://github.com/Kotlin/kotlinx.serialization/issues/2900
 @OptIn(ExperimentalSerializationApi::class)
 public fun rawJson(json: String, isValid: Boolean = false): JsonElement {
