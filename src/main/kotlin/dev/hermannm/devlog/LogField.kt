@@ -6,10 +6,13 @@ import java.net.URL
 import java.time.Instant
 import java.util.Objects
 import java.util.UUID
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationStrategy
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonUnquotedLiteral
 
 /**
  * A log field is a key-value pair for adding structured data to logs.
@@ -267,6 +270,71 @@ public fun rawJsonField(key: String, json: String, validJson: Boolean = false): 
       validJson,
       onValidJson = { jsonValue -> JsonLogField(key, jsonValue) },
       onInvalidJson = { stringValue -> StringLogField(key, stringValue) },
+  )
+}
+
+/**
+ * Turns the given pre-serialized JSON string into a `kotlinx.serialization.json.JsonElement`, using
+ * the same validation logic as [rawJsonField].
+ *
+ * By default, this function checks that the given JSON string is actually valid JSON. The reason
+ * for this is that giving raw JSON to our log encoder when it is not in fact valid JSON can break
+ * our logs. If the JSON is valid, we can use [JsonUnquotedLiteral] to avoid having to re-encode it
+ * when serializing into another object. But if it's not valid JSON, we escape it as a string
+ * (returning a [JsonPrimitive]). If you are 100% sure that the given JSON string is valid and you
+ * want to skip this check, you can set [isValid] to true.
+ *
+ * This is useful when you want to include a raw JSON field on a log. If it's a top-level field, you
+ * can use [rawJsonField] - but if you want the field to be in a nested object, then you can use
+ * this function.
+ *
+ * ### Example
+ *
+ * ```
+ * import dev.hermannm.devlog.getLogger
+ * import dev.hermannm.devlog.rawJson
+ * import kotlinx.serialization.json.buildJsonObject
+ * import kotlinx.serialization.json.put
+ *
+ * private val log = getLogger {}
+ *
+ * fun example() {
+ *   // We hope the external service returns valid JSON, but we can't trust that fully. If they did,
+ *   // we want to log it as unescaped JSON, but if they didn't, we want to log it as a string.
+ *   // `rawJson` does this validation for us.
+ *   val response = callExternalService()
+ *
+ *   if (!response.status.isSuccessful()) {
+ *     log.error {
+ *       field(
+ *           "response",
+ *           buildJsonObject {
+ *             put("status", response.status.code)
+ *             put("body", rawJson(response.body))
+ *           },
+ *       )
+ *       "External service returned error response"
+ *     }
+ *   }
+ * }
+ * ```
+ */
+// For JsonUnquotedLiteral. This is likely to not change:
+// https://github.com/Kotlin/kotlinx.serialization/issues/2900
+@OptIn(ExperimentalSerializationApi::class)
+public fun rawJson(json: String, isValid: Boolean = false): JsonElement {
+  return validateRawJson(
+      json,
+      isValid,
+      onValidJson = { jsonValue ->
+        when (jsonValue) {
+          // JsonUnquotedLiteral prohibits creating a value from "null", so we have to check for
+          // that here and instead return JsonNull
+          "null" -> JsonNull
+          else -> JsonUnquotedLiteral(jsonValue)
+        }
+      },
+      onInvalidJson = { jsonValue -> JsonPrimitive(jsonValue) },
   )
 }
 
