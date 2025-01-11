@@ -1,13 +1,9 @@
 package dev.hermannm.devlog
 
-import java.math.BigDecimal
-import java.net.URI
-import java.net.URL
-import java.time.Instant
-import java.util.Objects
-import java.util.UUID
+import kotlin.reflect.KClass
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -77,7 +73,7 @@ public sealed class LogField {
   /**
    * [JsonLogField] adds a suffix ([LOGGING_CONTEXT_JSON_KEY_SUFFIX]) to the key in the logging
    * context to identify the value as raw JSON (so we can write the JSON unescaped in
-   * [LoggingContextJsonFieldWriter]).
+   * [dev.hermannm.devlog.LoggingContextJsonFieldWriter]).
    */
   internal abstract val keyForLoggingContext: String
 
@@ -93,7 +89,8 @@ public sealed class LogField {
   override fun equals(other: Any?): Boolean =
       other is LogField && this.key == other.key && this.value == other.value
 
-  override fun hashCode(): Int = Objects.hash(key, value)
+  override fun hashCode(): Int =
+      key.hashCode() * 31 + value.hashCode() // 31 is default factor for aggregate hash codes
 }
 
 @PublishedApi
@@ -201,27 +198,36 @@ internal inline fun <reified ValueT : Any, ReturnT> encodeFieldValue(
       return onJson(serializedValue)
     }
 
-    return when (ValueT::class) {
-      // Special case for String to avoid redundant serialization
-      String::class -> onString(value as String)
-      // Special cases for common types that kotlinx.serialization doesn't handle by default.
-      // If more cases are added here, you should add them to the list in the docstring for `field`.
-      Instant::class,
-      UUID::class,
-      URI::class,
-      URL::class,
-      BigDecimal::class -> onString(value.toString())
-      else -> {
-        val serializedValue = logFieldJson.encodeToString(value)
-        onJson(serializedValue)
-      }
+    // Special case for String, to avoid redundant serialization
+    if (ValueT::class == String::class) {
+      return onString(value as String)
     }
+
+    // Special cases for common types that kotlinx.serialization doesn't handle by default
+    if (fieldValueShouldUseToString(ValueT::class)) {
+      return onString(value.toString())
+    }
+
+    val serializedValue = logFieldJson.encodeToString(value)
+    return onJson(serializedValue)
   } catch (_: Exception) {
     // We don't want to ever throw an exception from constructing a log field, which may happen if
     // serialization fails, for example. So in these cases we fall back to toString().
     return onString(value.toString())
   }
 }
+
+/**
+ * Some types, namely classes in the Java standard library, are not supported by
+ * `kotlinx.serialization` by default, and so will always fail to serialize. In these cases, we want
+ * to call `toString` on the value before even trying to serialize, as we don't want to pay the cost
+ * of creating an exception just to discard it right after. So we use this function to check if the
+ * field value type should eagerly use `toString`.
+ *
+ * We make this an expect-actual function, so that implementations can use platform-specific types
+ * (such as Java standard libary classes on the JVM).
+ */
+@PublishedApi internal expect fun fieldValueShouldUseToString(type: KClass<*>): Boolean
 
 /**
  * Constructs a [LogField], a key-value pair for adding structured data to logs, with the given
