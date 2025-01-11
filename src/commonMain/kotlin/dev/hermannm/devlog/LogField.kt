@@ -8,6 +8,7 @@ import java.util.Objects
 import java.util.UUID
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -77,7 +78,7 @@ public sealed class LogField {
   /**
    * [JsonLogField] adds a suffix ([LOGGING_CONTEXT_JSON_KEY_SUFFIX]) to the key in the logging
    * context to identify the value as raw JSON (so we can write the JSON unescaped in
-   * [LoggingContextJsonFieldWriter]).
+   * [dev.hermannm.devlog.LoggingContextJsonFieldWriter]).
    */
   internal abstract val keyForLoggingContext: String
 

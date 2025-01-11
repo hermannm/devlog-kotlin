@@ -1,4 +1,9 @@
+build/
 target/
+.kotlin
+
+# Gradle-specific build directory
+.gradle
 
 # Ignore all IntelliJ files
 .idea
