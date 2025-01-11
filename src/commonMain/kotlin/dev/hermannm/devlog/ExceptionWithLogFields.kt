@@ -82,7 +82,8 @@ public open class ExceptionWithLogFields(
     override val cause: Throwable? = null,
 ) : RuntimeException(), WithLogFields {
   // Final, since we want to ensure that fields from logging context are included
-  final override val logFields: List<LogField> = combineFieldsWithLoggingContext(logFields)
+  final override val logFields: List<LogField> =
+      LoggingContext.combineFieldListWithContextFields(logFields)
 
   public constructor(
       message: String?,
@@ -99,27 +100,6 @@ public open class ExceptionWithLogFields(
       vararg logFields: LogField,
       cause: Throwable? = null,
   ) : this(message = cause?.message, logFields.asList(), cause)
-}
-
-/** Combines the given log fields with any fields from [withLoggingContext]. */
-private fun combineFieldsWithLoggingContext(logFields: List<LogField>): List<LogField> {
-  val contextFields = LoggingContext.getFieldMap()
-
-  // If logging context is empty, we just use the given field list, to avoid allocating an
-  // additional list
-  if (contextFields.isNullOrEmpty()) {
-    return logFields
-  }
-
-  val combinedFields =
-      ArrayList<LogField>(
-          // Initialize capacity for both exception fields and context fields
-          logFields.size + LoggingContext.getNonNullFieldCount(contextFields),
-      )
-  // Add exception log fields first, so they show first in the log output
-  combinedFields.addAll(logFields)
-  LoggingContext.mapFieldMapToList(contextFields, target = combinedFields)
-  return combinedFields
 }
 
 /**

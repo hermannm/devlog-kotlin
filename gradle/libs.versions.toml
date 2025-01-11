@@ -1,0 +1,35 @@
+# Gradle version catalog: https://docs.gradle.org/current/userguide/version_catalogs.html
+# Plugins/libraries declared in this file become available on the `libs` object in build.gradle.kts
+
+[versions]
+kotlin = "2.1.21"
+kotlinx-serialization = "1.8.1"
+slf4j = "2.0.17"
+logback = "1.5.18"
+logstash-logback-encoder = "8.1"
+jackson = "2.19.0"
+junit = "5.13.0"
+junitPlatform = "1.13.0"
+kotest = "5.9.1"
+
+[plugins]
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinxSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+
+[libraries]
+kotlinxSerialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+kotlinReflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+logstashLogbackEncoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback-encoder" }
+jackson = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+
+### Test libraries
+
+junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+# For @ParameterizedTest
+junitParams = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
+# If we don't specify JUnit platform dependencies, Gradle uses its own versions, which may clash
+junitPlatformEngine = { module = "org.junit.platform:junit-platform-engine", version.ref = "junitPlatform" }
+junitPlatformLauncher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junitPlatform" }
+kotest = { module = "io.kotest:kotest-assertions-core-jvm", version.ref = "kotest" }

@@ -5,12 +5,7 @@ import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldContain
-import java.math.BigDecimal
-import java.net.URI
-import java.net.URL
-import java.time.Instant
-import java.util.UUID
+import io.kotest.matchers.shouldNotBe
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encoding.Encoder
@@ -74,26 +69,6 @@ internal class LogFieldTest {
           "first":true,"second":["value1","value2"],"third":10
         """
             .trimIndent()
-  }
-
-  @Test
-  fun `special-case types`() {
-    val output = captureLogOutput {
-      log.info {
-        field("instant", Instant.parse("2024-12-09T16:38:23Z"))
-        field("uri", URI.create("https://example.com"))
-        field("url", URL("https://example.com"))
-        field("uuid", UUID.fromString("3638dd04-d196-41ad-8b15-5188a22a6ba4"))
-        field("bigDecimal", BigDecimal("100.0"))
-        "Test"
-      }
-    }
-
-    output.logFields shouldContain """"instant":"2024-12-09T16:38:23Z""""
-    output.logFields shouldContain """"uri":"https://example.com""""
-    output.logFields shouldContain """"url":"https://example.com""""
-    output.logFields shouldContain """"uuid":"3638dd04-d196-41ad-8b15-5188a22a6ba4""""
-    output.logFields shouldContain """"bigDecimal":"100.0""""
   }
 
   @Test
@@ -474,5 +449,29 @@ internal class LogFieldTest {
           "key1":"value1","key2":"value2"
         """
             .trimIndent()
+  }
+
+  @Suppress("ReplaceCallWithBinaryOperator") // We want to use .equals explicitly here
+  @Test
+  fun `LogField equals, toString and hashCode work as expected`() {
+    val stringField = field("key", "value")
+    val stringField2 = field("key", "value")
+
+    stringField.equals(stringField2).shouldBeTrue()
+    stringField.hashCode() shouldBe stringField2.hashCode()
+    stringField.toString() shouldBe "key=value"
+    stringField.toString() shouldBe stringField2.toString()
+
+    val objectField = field("key", Event(id = 1001, type = EventType.ORDER_PLACED))
+
+    stringField.equals(objectField).shouldBeFalse()
+    stringField.hashCode() shouldNotBe objectField.hashCode()
+
+    val objectAsStringField = field("key", """{"id":1001,"type":"ORDER_PLACED"}""")
+
+    objectField.equals(objectAsStringField).shouldBeTrue()
+    objectField.hashCode() shouldBe objectAsStringField.hashCode()
+    objectField.toString() shouldBe """key={"id":1001,"type":"ORDER_PLACED"}"""
+    objectField.toString() shouldBe objectAsStringField.toString()
   }
 }

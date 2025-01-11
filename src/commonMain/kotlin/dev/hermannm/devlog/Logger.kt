@@ -1,8 +1,6 @@
-package dev.hermannm.devlog
+@file:OptIn(InternalLoggingApi::class)
 
-import org.slf4j.Logger as Slf4jLogger
-import org.slf4j.LoggerFactory as Slf4jLoggerFactory
-import org.slf4j.event.Level as Slf4jLevel
+package dev.hermannm.devlog
 
 /**
  * Returns a [Logger], using the given lambda to automatically give the logger the name of its
@@ -38,8 +36,7 @@ public fun getLogger(emptyLambdaToGetName: () -> Unit): Logger {
  * overload with an empty lambda.
  */
 public fun getLogger(name: String): Logger {
-  val underlyingLogger = Slf4jLoggerFactory.getLogger(name)
-  return Logger(underlyingLogger)
+  return Logger(underlyingLogger = getPlatformLogger(name))
 }
 
 /**
@@ -76,7 +73,7 @@ public fun getLogger(name: String): Logger {
 @JvmInline // Inline value class, to avoid redundant indirection when we just wrap an SLF4J logger
 public value class Logger
 internal constructor(
-    @PublishedApi internal val underlyingLogger: Slf4jLogger,
+    @PublishedApi internal val underlyingLogger: PlatformLogger,
 ) {
   /**
    * Calls the given lambda to build a log message, and logs it at the INFO log level, if enabled.
@@ -116,7 +113,7 @@ internal constructor(
    *   to add structured key-value data to the log.
    */
   public inline fun info(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
-    if (underlyingLogger.isInfoEnabled) {
+    if (underlyingLogger.isInfoEnabled()) {
       log(LogLevel.INFO, cause, buildLog)
     }
   }
@@ -163,7 +160,7 @@ internal constructor(
    *   to add structured key-value data to the log.
    */
   public inline fun warn(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
-    if (underlyingLogger.isWarnEnabled) {
+    if (underlyingLogger.isWarnEnabled()) {
       log(LogLevel.WARN, cause, buildLog)
     }
   }
@@ -210,7 +207,7 @@ internal constructor(
    *   to add structured key-value data to the log.
    */
   public inline fun error(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
-    if (underlyingLogger.isErrorEnabled) {
+    if (underlyingLogger.isErrorEnabled()) {
       log(LogLevel.ERROR, cause, buildLog)
     }
   }
@@ -253,7 +250,7 @@ internal constructor(
    *   to add structured key-value data to the log.
    */
   public inline fun debug(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
-    if (underlyingLogger.isDebugEnabled) {
+    if (underlyingLogger.isDebugEnabled()) {
       log(LogLevel.DEBUG, cause, buildLog)
     }
   }
@@ -296,7 +293,7 @@ internal constructor(
    *   to add structured key-value data to the log.
    */
   public inline fun trace(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
-    if (underlyingLogger.isTraceEnabled) {
+    if (underlyingLogger.isTraceEnabled()) {
       log(LogLevel.TRACE, cause, buildLog)
     }
   }
@@ -351,7 +348,7 @@ internal constructor(
       cause: Throwable? = null,
       buildLog: LogBuilder.() -> String
   ) {
-    if (underlyingLogger.isEnabledForLevel(level.slf4jLevel)) {
+    if (isEnabledFor(level)) {
       log(level, cause, buildLog)
     }
   }
@@ -367,16 +364,42 @@ internal constructor(
 
     builder.logEvent.log(message, underlyingLogger)
   }
+
+  @PublishedApi
+  internal fun isEnabledFor(level: LogLevel): Boolean {
+    return when (level) {
+      LogLevel.INFO -> underlyingLogger.isInfoEnabled()
+      LogLevel.WARN -> underlyingLogger.isWarnEnabled()
+      LogLevel.ERROR -> underlyingLogger.isErrorEnabled()
+      LogLevel.DEBUG -> underlyingLogger.isDebugEnabled()
+      LogLevel.TRACE -> underlyingLogger.isTraceEnabled()
+    }
+  }
 }
 
-public enum class LogLevel(
-    @PublishedApi internal val slf4jLevel: Slf4jLevel,
-) {
-  INFO(Slf4jLevel.INFO),
-  WARN(Slf4jLevel.WARN),
-  ERROR(Slf4jLevel.ERROR),
-  DEBUG(Slf4jLevel.DEBUG),
-  TRACE(Slf4jLevel.TRACE),
+@InternalLoggingApi
+public expect interface PlatformLogger {
+  public fun isInfoEnabled(): Boolean
+
+  public fun isWarnEnabled(): Boolean
+
+  public fun isErrorEnabled(): Boolean
+
+  public fun isDebugEnabled(): Boolean
+
+  public fun isTraceEnabled(): Boolean
+}
+
+internal expect fun getPlatformLogger(name: String): PlatformLogger
+
+@RequiresOptIn public annotation class InternalLoggingApi
+
+public enum class LogLevel {
+  INFO,
+  WARN,
+  ERROR,
+  DEBUG,
+  TRACE,
 }
 
 /**
@@ -567,7 +590,7 @@ public enum class LogLevel(
  * ```
  */
 internal fun getClassNameFromFunction(function: () -> Unit): String {
-  val name = function.javaClass.name
+  val name = function::class.qualifiedName ?: return "Logger"
   return when {
     name.contains("Kt$") -> name.substringBefore("Kt$")
     name.contains("$") -> name.substringBefore("$")

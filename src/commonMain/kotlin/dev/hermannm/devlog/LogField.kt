@@ -1,11 +1,5 @@
 package dev.hermannm.devlog
 
-import java.math.BigDecimal
-import java.net.URI
-import java.net.URL
-import java.time.Instant
-import java.util.Objects
-import java.util.UUID
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.Json
@@ -82,7 +76,7 @@ public sealed class LogField {
   /**
    * [JsonLogField] adds a suffix ([LOGGING_CONTEXT_JSON_KEY_SUFFIX]) to the key in the logging
    * context to identify the value as raw JSON (so we can write the JSON unescaped in
-   * [LoggingContextJsonFieldWriter]).
+   * [dev.hermannm.devlog.LoggingContextJsonFieldWriter]).
    */
   internal abstract val keyForLoggingContext: String
 
@@ -98,7 +92,8 @@ public sealed class LogField {
   override fun equals(other: Any?): Boolean =
       other is LogField && this.key == other.key && this.value == other.value
 
-  override fun hashCode(): Int = Objects.hash(key, value)
+  override fun hashCode(): Int =
+      key.hashCode() * 31 + value.hashCode() // 31 is default factor for aggregate hash codes
 }
 
 @PublishedApi
@@ -133,8 +128,15 @@ internal open class JsonLogField(
     @PublishedApi internal const val NULL_VALUE: String = "null"
 
     init {
-      // Needed to make sure ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS is set
-      ensureLoggerImplementationIsLoaded()
+      try {
+        /**
+         * Needed to make sure [ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS] is set.
+         *
+         * We catch all throwables here, since we're in a static initializer here, and it's OK for
+         * this to fail silently.
+         */
+        ensureLoggerImplementationIsLoaded()
+      } catch (_: Throwable) {}
     }
   }
 }
@@ -234,29 +236,26 @@ public fun <ValueT : Any> field(
 @PublishedApi
 internal inline fun <reified ValueT, ReturnT> encodeFieldValue(
     value: ValueT,
-    onJson: (String) -> ReturnT,
-    onString: (String) -> ReturnT,
+    crossinline onJson: (String) -> ReturnT,
+    crossinline onString: (String) -> ReturnT,
 ): ReturnT {
   try {
     if (value == null) {
       return onJson(JsonLogField.NULL_VALUE)
     }
 
-    return when (value) {
-      // Special case for String to avoid redundant serialization
-      is String -> onString(value)
-      // Special cases for common types that kotlinx.serialization doesn't handle by default.
-      // If more cases are added here, you should add them to the list in the docstring for `field`.
-      is Instant,
-      is UUID,
-      is URI,
-      is URL,
-      is BigDecimal -> onString(value.toString())
-      else -> {
-        val serializedValue = logFieldJson.encodeToString(value)
-        onJson(serializedValue)
-      }
+    // Special case for String, to avoid redundant serialization
+    if (value is String) {
+      return onString(value)
     }
+
+    // Special cases for common types that kotlinx.serialization doesn't handle by default
+    if (fieldValueShouldUseToString(value)) {
+      return onString(value.toString())
+    }
+
+    val serializedValue = logFieldJson.encodeToString(value)
+    return onJson(serializedValue)
   } catch (_: Exception) {
     // We don't want to ever throw an exception from constructing a log field, which may happen if
     // serialization fails, for example. So in these cases we fall back to toString().
@@ -268,8 +267,8 @@ internal inline fun <reified ValueT, ReturnT> encodeFieldValue(
 internal inline fun <ValueT : Any, ReturnT> encodeFieldValueWithSerializer(
     value: ValueT?,
     serializer: SerializationStrategy<ValueT>,
-    onJson: (String) -> ReturnT,
-    onString: (String) -> ReturnT,
+    crossinline onJson: (String) -> ReturnT,
+    crossinline onString: (String) -> ReturnT,
 ): ReturnT {
   try {
     if (value == null) {
@@ -284,6 +283,18 @@ internal inline fun <ValueT : Any, ReturnT> encodeFieldValueWithSerializer(
     return onString(value.toString())
   }
 }
+
+/**
+ * Some types, namely classes in the Java standard library, are not supported by
+ * `kotlinx.serialization` by default, and so will always fail to serialize. In these cases, we want
+ * to call `toString` on the value before even trying to serialize, as we don't want to pay the cost
+ * of creating an exception just to discard it right after. So we use this function to check if the
+ * field value type should eagerly use `toString`.
+ *
+ * We make this an expect-actual function, so that implementations can use platform-specific types
+ * (such as Java standard libary classes on the JVM).
+ */
+@PublishedApi internal expect fun fieldValueShouldUseToString(value: Any): Boolean
 
 /**
  * Constructs a [LogField], a key-value pair for adding structured data to logs, with the given
@@ -414,8 +425,8 @@ public fun rawJson(json: String, validJson: Boolean = false): JsonElement {
 internal inline fun <ReturnT> validateRawJson(
     json: String,
     isValid: Boolean,
-    onValidJson: (String) -> ReturnT,
-    onInvalidJson: (String) -> ReturnT
+    crossinline onValidJson: (String) -> ReturnT,
+    crossinline onInvalidJson: (String) -> ReturnT
 ): ReturnT {
   try {
     // Some log platforms (e.g. AWS CloudWatch) use newlines as the separator between log messages.

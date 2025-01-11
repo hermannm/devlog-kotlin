@@ -1,52 +1,21 @@
 package dev.hermannm.devlog
 
 import ch.qos.logback.classic.Level as LogbackLevel
-import ch.qos.logback.classic.Logger as LogbackLogger
-import ch.qos.logback.classic.spi.LoggingEvent as BaseLogbackEvent
+import ch.qos.logback.classic.spi.LoggingEvent
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializable
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer
-import org.slf4j.Logger as Slf4jLogger
-import org.slf4j.event.DefaultLoggingEvent as BaseSlf4jEvent
+import org.slf4j.Logger
+import org.slf4j.event.DefaultLoggingEvent
 import org.slf4j.event.KeyValuePair
 import org.slf4j.event.Level as Slf4jLevel
 import org.slf4j.spi.LocationAwareLogger
 import org.slf4j.spi.LoggingEventAware
 
-/**
- * The purpose of [LogBuilder] is to build a log event. We could store intermediate state on
- * `LogBuilder`, and then use that to construct a log event when the builder is finished. But if we
- * instead construct the log event in-place on `LogBuilder`, we can avoid allocations on the hot
- * path.
- *
- * SLF4J has support for building log events, through the [org.slf4j.event.LoggingEvent] interface,
- * [org.slf4j.event.DefaultLoggingEvent] implementation, and [LoggingEventAware] logger interface.
- * And [LogbackLogger] implements `LoggingEventAware` - great! Except Logback uses a different event
- * format internally, so in its implementation of [LoggingEventAware.log], it has to map from the
- * SLF4J event to its own event format. This allocates a new event, defeating the purpose of
- * constructing our log event in-place on `LogBuilder`.
- *
- * So to optimize for the common SLF4J + Logback combination, we construct the log event on
- * Logback's format in [LogbackLogEvent], so we can log it directly. However, we still want to be
- * compatible with alternative SLF4J implementations, so we implement SLF4J's format in
- * [Slf4jLogEvent]. [LogEvent] is the common interface between the two, so that [LogBuilder] can
- * call this interface without having to care about the underlying implementation.
- */
 @PublishedApi
-internal interface LogEvent {
-  fun addStringField(key: String, value: String)
-
-  fun addJsonField(key: String, json: String)
-
-  fun isFieldKeyAdded(key: String): Boolean
-
-  fun log(message: String, logger: Slf4jLogger)
-}
-
-@PublishedApi
-internal fun createLogEvent(level: LogLevel, cause: Throwable?, logger: Slf4jLogger): LogEvent {
-  if (LOGBACK_IS_ON_CLASSPATH && logger is LogbackLogger) {
+internal actual fun createLogEvent(level: LogLevel, cause: Throwable?, logger: Logger): LogEvent {
+  if (LOGBACK_IS_ON_CLASSPATH && logger is ch.qos.logback.classic.Logger) {
     return LogbackLogEvent(level, cause, logger)
   }
 
@@ -72,9 +41,13 @@ internal val LOGBACK_IS_ON_CLASSPATH =
     }
 
 /** Extends Logback's custom log event class to implement [LogEvent]. */
-internal class LogbackLogEvent(level: LogLevel, cause: Throwable?, logger: LogbackLogger) :
+internal class LogbackLogEvent(
+    level: LogLevel,
+    cause: Throwable?,
+    logger: ch.qos.logback.classic.Logger
+) :
     LogEvent,
-    BaseLogbackEvent(
+    LoggingEvent(
         FULLY_QUALIFIED_CLASS_NAME,
         logger,
         level.toLogback(),
@@ -96,13 +69,13 @@ internal class LogbackLogEvent(level: LogLevel, cause: Throwable?, logger: Logba
     return fields.any { it.key == key }
   }
 
-  override fun log(message: String, logger: Slf4jLogger) {
+  override fun log(message: String, logger: Logger) {
     super.setMessage(message)
 
     // Safe to cast here, since we only construct this event if the logger is a LogbackLogger.
     // We choose to cast instead of keeping the LogbackLogger as a field on the event, since casting
     // to a concrete class is fast, and we don't want to increase the allocated size of the event.
-    (logger as LogbackLogger).callAppenders(this)
+    (logger as ch.qos.logback.classic.Logger).callAppenders(this)
   }
 
   internal companion object {
@@ -138,8 +111,8 @@ internal fun LogLevel.toLogback(): LogbackLevel {
 }
 
 /** Extends SLF4J's log event class to implement [LogEvent]. */
-internal class Slf4jLogEvent(level: LogLevel, cause: Throwable?, logger: Slf4jLogger) :
-    LogEvent, BaseSlf4jEvent(level.slf4jLevel, logger) {
+internal class Slf4jLogEvent(level: LogLevel, cause: Throwable?, logger: Logger) :
+    LogEvent, DefaultLoggingEvent(level.toSlf4j(), logger) {
   init {
     super.setThrowable(cause)
     super.setCallerBoundary(FULLY_QUALIFIED_CLASS_NAME)
@@ -156,7 +129,7 @@ internal class Slf4jLogEvent(level: LogLevel, cause: Throwable?, logger: Slf4jLo
     return fields.any { it.key == key }
   }
 
-  override fun log(message: String, logger: Slf4jLogger) {
+  override fun log(message: String, logger: Logger) {
     super.setMessage(message)
 
     when (logger) {
@@ -183,7 +156,7 @@ internal class Slf4jLogEvent(level: LogLevel, cause: Throwable?, logger: Slf4jLo
     )
   }
 
-  private fun logWithBasicSlf4jApi(logger: Slf4jLogger) {
+  private fun logWithBasicSlf4jApi(logger: Logger) {
     // Basic SLF4J API doesn't take KeyValuePair, so we must merge them into message
     val message = mergeMessageAndKeyValuePairs()
     // level should never be null here, since we pass it in the constructor
@@ -230,6 +203,16 @@ internal class Slf4jLogEvent(level: LogLevel, cause: Throwable?, logger: Slf4jLo
   internal companion object {
     /** See [LogbackLogEvent.FULLY_QUALIFIED_CLASS_NAME]. */
     internal val FULLY_QUALIFIED_CLASS_NAME = Slf4jLogEvent::class.java.name
+  }
+}
+
+internal fun LogLevel.toSlf4j(): Slf4jLevel {
+  return when (this) {
+    LogLevel.INFO -> Slf4jLevel.INFO
+    LogLevel.WARN -> Slf4jLevel.WARN
+    LogLevel.ERROR -> Slf4jLevel.ERROR
+    LogLevel.DEBUG -> Slf4jLevel.DEBUG
+    LogLevel.TRACE -> Slf4jLevel.TRACE
   }
 }
 

@@ -1,13 +1,18 @@
 package dev.hermannm.devlog
 
 import ch.qos.logback.classic.Logger as LogbackLogger
+import io.kotest.assertions.withClue
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContainOnlyOnce
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldNotBeInstanceOf
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
+import java.util.concurrent.locks.Lock
+import kotlin.concurrent.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import org.slf4j.Logger as Slf4jLogger
@@ -202,6 +207,35 @@ internal class PlainSlf4jLogger(
 internal enum class EventType {
   ORDER_PLACED,
   ORDER_UPDATED,
+}
+
+internal infix fun LoggingContext.shouldContainExactly(map: Map<String, String>) {
+  val contextFields = this.getFieldList()
+
+  contextFields.size shouldBe map.size
+  for ((key, value) in map) {
+    withClue({ "key='${key}', value='${value}'" }) {
+      val field = contextFields.find { field -> field.keyForLoggingContext == key }
+      field.shouldNotBeNull()
+      field.value shouldBe value
+    }
+  }
+}
+
+internal fun LoggingContext.shouldBeEmpty() {
+  this.getFieldList().shouldBeEmpty()
+}
+
+/**
+ * Acquires the lock around the given block if the given condition is true - otherwise, just calls
+ * the block directly.
+ */
+internal inline fun Lock.conditionallyLock(condition: Boolean, block: () -> Unit) {
+  if (condition) {
+    this.withLock(block)
+  } else {
+    block()
+  }
 }
 
 /**

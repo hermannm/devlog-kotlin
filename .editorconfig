@@ -5,6 +5,7 @@ root = true
 [*]
 indent_style = space
 indent_size = 2
+max_line_length = 100
 end_of_line = lf
 charset = utf-8
 trim_trailing_whitespace = true
@@ -13,11 +14,9 @@ insert_final_newline = true
 [*.md]
 # Markdown uses double trailing whitespaces as special chars to force newlines
 trim_trailing_whitespace = false
-max_line_length = 100
 
 # Approximates ktfmt's formatting rules.
 [{*.kt,*.kts}]
-max_line_length = 100
 ij_continuation_indent_size = 4
 ij_java_names_count_to_use_import_on_demand = 9999
 ij_kotlin_align_in_columns_case_branch = false
