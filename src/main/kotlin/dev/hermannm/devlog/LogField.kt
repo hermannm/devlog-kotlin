@@ -9,10 +9,15 @@ import java.util.UUID
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonUnquotedLiteral
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.longOrNull
 
 /**
  * A log field is a key-value pair for adding structured data to logs.
@@ -365,20 +370,11 @@ internal inline fun <ReturnT> validateRawJson(
       return onValidJson(json)
     }
 
-    val prevalidationResult = prevalidateJson(json)
-    when (prevalidationResult) {
-      JsonPrevalidationResult.VALID -> {
-        if (!containsNewlines) {
-          return onValidJson(json)
-        }
-        // Else continue down, as we need to re-encode JSON to get rid of newlines
-      }
-      JsonPrevalidationResult.MAY_BE_VALID -> {} // Continue
-      JsonPrevalidationResult.INVALID -> return onInvalidJson(json)
-    }
-
     // If we do not assume that the JSON is valid, we must try to decode it.
     val decoded = logFieldJson.parseToJsonElement(json)
+    if (!isValidJson(decoded)) {
+      return onInvalidJson(json)
+    }
 
     // If we successfully decoded the JSON, and it does not contain unescaped newlines, we can
     // return it as-is.
@@ -395,214 +391,39 @@ internal inline fun <ReturnT> validateRawJson(
   }
 }
 
+/**
+ * [kotlinx.serialization.json.Json.parseToJsonElement] says that it throws on invalid JSON input,
+ * but this is not true: It allows unquoted strings, such as `value`, and even unquoted strings in
+ * object values, like `{ "key": value }`. See
+ * https://github.com/Kotlin/kotlinx.serialization/issues/2511
+ *
+ * This is a deliberate design decision by kotlinx-serialization, so it may be kept as-is:
+ * https://github.com/Kotlin/kotlinx.serialization/issues/2375#issuecomment-1647826508
+ *
+ * To check that the result from `parseToJsonElement` is _actually_ valid JSON, we have to go
+ * through each element in it and verify that they're not an unquoted literal. We do this by
+ * checking that primitives are either strings, booleans, numbers or null.
+ */
+internal fun isValidJson(jsonElement: JsonElement): Boolean {
+  return when (jsonElement) {
+    is JsonArray -> {
+      jsonElement.all { arrayElement -> isValidJson(arrayElement) }
+    }
+    is JsonObject -> {
+      jsonElement.all { (_, objectValue) -> isValidJson(objectValue) }
+    }
+    is JsonNull -> true
+    is JsonPrimitive -> {
+      jsonElement.isString ||
+          jsonElement.booleanOrNull != null ||
+          jsonElement.doubleOrNull != null ||
+          jsonElement.longOrNull != null
+    }
+  }
+}
+
 @PublishedApi
 internal val logFieldJson: Json = Json {
   encodeDefaults = true
   ignoreUnknownKeys = true
-}
-
-internal enum class JsonPrevalidationResult {
-  VALID,
-  MAY_BE_VALID,
-  INVALID,
-}
-
-internal fun prevalidateJson(json: String): JsonPrevalidationResult {
-  val start = json.indexOfFirst { char -> !isJsonWhitespace(char) }
-  val end = json.indexOfLast { char -> !isJsonWhitespace(char) }
-  // If we couldn't find a non-whitespace character in the JSON string, then it's all whitespace,
-  // and thus invalid
-  if (start == -1 || end == -1) {
-    return JsonPrevalidationResult.INVALID
-  }
-
-  val json = json.substring(start, end)
-
-  when (json) {
-    "true",
-    "false",
-    "null" -> return JsonPrevalidationResult.VALID
-    "" -> return JsonPrevalidationResult.INVALID
-  }
-
-  when (json.first()) {
-    '"',
-    '{',
-    '[' -> return JsonPrevalidationResult.MAY_BE_VALID
-  }
-
-  if (isJsonNumber(json)) {
-    return JsonPrevalidationResult.VALID
-  } else {
-    return JsonPrevalidationResult.INVALID
-  }
-}
-
-/** Uses whitespace definition from [JSON spec](https://json.org). */
-private fun isJsonWhitespace(char: Char): Boolean {
-  return when (char) {
-    ' ',
-    '\t',
-    '\n',
-    '\r' -> return true
-    else -> return false
-  }
-}
-
-/**
- * Follows state machine for valid numbers as shown in diagram in the [JSON spec](https://json.org).
- */
-internal fun isJsonNumber(json: String): Boolean {
-  var stage = JsonNumberValidationStage.START
-  for (char in json) {
-    // We want to make sure that every branch of the below when expression either continues the loop
-    // or returns from the function. So we use "Nothing" as the expression's result.
-    @Suppress("UnusedVariable", "unused")
-    val result: Nothing =
-        when (stage) {
-          JsonNumberValidationStage.START -> {
-            when (char) {
-              '-' -> {
-                stage = JsonNumberValidationStage.FIRST_DIGIT_MINUS_SIGN
-                continue
-              }
-              '0' -> {
-                stage = JsonNumberValidationStage.FIRST_DIGIT_0
-                continue
-              }
-              in '1'..'9' -> {
-                stage = JsonNumberValidationStage.FIRST_DIGIT_1_THROUGH_9
-                continue
-              }
-              else -> return false
-            }
-          }
-          JsonNumberValidationStage.FIRST_DIGIT_MINUS_SIGN -> {
-            when (char) {
-              '0' -> {
-                stage = JsonNumberValidationStage.FIRST_DIGIT_0
-                continue
-              }
-              in '1'..'9' -> {
-                stage = JsonNumberValidationStage.FIRST_DIGIT_1_THROUGH_9
-                continue
-              }
-              else -> return false
-            }
-          }
-          JsonNumberValidationStage.FIRST_DIGIT_0 -> {
-            when (char) {
-              '.' -> {
-                stage = JsonNumberValidationStage.DECIMAL_SEPARATOR
-                continue
-              }
-              'e',
-              'E' -> {
-                stage = JsonNumberValidationStage.EXPONENT
-                continue
-              }
-              else -> return false
-            }
-          }
-          JsonNumberValidationStage.FIRST_DIGIT_1_THROUGH_9 -> {
-            when (char) {
-              in '0'..'9' -> continue
-              '.' -> {
-                stage = JsonNumberValidationStage.DECIMAL_SEPARATOR
-                continue
-              }
-              'e',
-              'E' -> {
-                stage = JsonNumberValidationStage.EXPONENT
-                continue
-              }
-              else -> return false
-            }
-          }
-          JsonNumberValidationStage.DECIMAL_SEPARATOR -> {
-            when (char) {
-              in '0'..'9' -> {
-                stage = JsonNumberValidationStage.DECIMAL_DIGITS
-                continue
-              }
-              else -> return false
-            }
-          }
-          JsonNumberValidationStage.DECIMAL_DIGITS -> {
-            when (char) {
-              in '0'..'9' -> continue
-              'e',
-              'E' -> {
-                stage = JsonNumberValidationStage.EXPONENT
-                continue
-              }
-              else -> return false
-            }
-          }
-          JsonNumberValidationStage.EXPONENT -> {
-            when (char) {
-              '-',
-              '+' -> {
-                stage = JsonNumberValidationStage.EXPONENT_SIGN
-                continue
-              }
-              in '0'..'9' -> {
-                stage = JsonNumberValidationStage.EXPONENT_DIGITS
-                continue
-              }
-              else -> return false
-            }
-          }
-          JsonNumberValidationStage.EXPONENT_SIGN -> {
-            when (char) {
-              in '0'..'9' -> {
-                stage = JsonNumberValidationStage.EXPONENT_DIGITS
-                continue
-              }
-              else -> return false
-            }
-          }
-          JsonNumberValidationStage.EXPONENT_DIGITS -> {
-            when (char) {
-              in '0'..'9' -> continue
-              else -> return false
-            }
-          }
-        }
-  }
-
-  // If we get here, the JSON string is ended. To know if the characters we have looked is a valid
-  // JSON number, we must see which stage we are left in after the last character.
-  return when (stage) {
-    // Invalid: A blank string is not a valid number
-    JsonNumberValidationStage.START,
-    // Invalid: A minus sign must be followed by digits
-    JsonNumberValidationStage.FIRST_DIGIT_MINUS_SIGN,
-    // Invalid: A decimal separator must be followed by digits
-    JsonNumberValidationStage.DECIMAL_SEPARATOR,
-    // Invalid: An exponent character must be followed by digits (and optionally a sign)
-    JsonNumberValidationStage.EXPONENT,
-    // Invalid: An exponent sign must be followed by digits
-    JsonNumberValidationStage.EXPONENT_SIGN -> false
-    // Valid: 0 is a number
-    JsonNumberValidationStage.FIRST_DIGIT_0,
-    // Valid: Digits constitute a number
-    JsonNumberValidationStage.FIRST_DIGIT_1_THROUGH_9,
-    // Valid: We have a number with a decimal separator and following digits
-    JsonNumberValidationStage.DECIMAL_DIGITS,
-    // Valid: We have a number with an exponent and digits
-    JsonNumberValidationStage.EXPONENT_DIGITS -> true
-  }
-}
-
-private enum class JsonNumberValidationStage {
-  START,
-  FIRST_DIGIT_MINUS_SIGN,
-  FIRST_DIGIT_0,
-  FIRST_DIGIT_1_THROUGH_9,
-  DECIMAL_SEPARATOR,
-  DECIMAL_DIGITS,
-  EXPONENT,
-  EXPONENT_SIGN,
-  EXPONENT_DIGITS,
 }
