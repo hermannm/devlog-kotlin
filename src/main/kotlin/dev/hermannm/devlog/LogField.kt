@@ -275,7 +275,7 @@ internal inline fun <reified ValueT : Any, ReturnT> encodeFieldValue(
 public fun rawJsonField(key: String, json: String, validJson: Boolean = false): LogField {
   return validateRawJson(
       json,
-      validJson,
+      isValid = validJson,
       onValidJson = { jsonValue -> JsonLogField(key, jsonValue) },
       onInvalidJson = { stringValue -> StringLogField(key, stringValue) },
   )
@@ -334,7 +334,7 @@ public fun rawJsonField(key: String, json: String, validJson: Boolean = false): 
 public fun rawJson(json: String, validJson: Boolean = false): JsonElement {
   return validateRawJson(
       json,
-      validJson,
+      isValid = validJson,
       onValidJson = { jsonValue ->
         when (jsonValue) {
           // JsonUnquotedLiteral prohibits creating a value from "null", so we have to check for
@@ -356,7 +356,7 @@ public fun rawJson(json: String, validJson: Boolean = false): JsonElement {
  */
 internal inline fun <ReturnT> validateRawJson(
     json: String,
-    validJson: Boolean,
+    isValid: Boolean,
     onValidJson: (String) -> ReturnT,
     onInvalidJson: (String) -> ReturnT
 ): ReturnT {
@@ -366,7 +366,7 @@ internal inline fun <ReturnT> validateRawJson(
     val containsNewlines = json.contains('\n')
 
     // If we assume the JSON is valid, and there are no unescaped newlines, we can return it as-is.
-    if (validJson && !containsNewlines) {
+    if (isValid && !containsNewlines) {
       return onValidJson(json)
     }
 

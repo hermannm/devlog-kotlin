@@ -374,7 +374,7 @@ internal class LogFieldTest {
     val isValid: Boolean =
         validateRawJson(
             validJson,
-            validJson = false,
+            isValid = false,
             onValidJson = { true },
             onInvalidJson = { false },
         )
@@ -401,7 +401,7 @@ internal class LogFieldTest {
     val isValid: Boolean =
         validateRawJson(
             invalidJson,
-            validJson = false,
+            isValid = false,
             onValidJson = { true },
             onInvalidJson = { false },
         )
