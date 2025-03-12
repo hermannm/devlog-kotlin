@@ -1,6 +1,7 @@
 package dev.hermannm.devlog
 
 import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -340,6 +341,78 @@ internal class LogFieldTest {
   fun `passing a JSON literal null to rawJson works`() {
     val value = rawJson("null")
     value shouldBe JsonNull
+  }
+
+  fun invalidJsonTestCases() =
+      listOf<String>(
+          // Unquoted string
+          "test",
+          // Object with unquoted string
+          """{"test":test}""",
+      )
+
+  @ParameterizedTest
+  @MethodSource("invalidJsonTestCases")
+  fun `invalid JSON is rejected`(invalidJson: String) {
+    val isValid: Boolean =
+        validateRawJson(
+            invalidJson,
+            validJson = false,
+            onValidJson = { true },
+            onInvalidJson = { false },
+        )
+    isValid.shouldBeFalse()
+  }
+
+  class JsonNumberTestCase(
+      val json: String,
+      val shouldBeValid: Boolean,
+  ) {
+    override fun toString() = "${json} should be ${if (shouldBeValid) "valid" else "invalid"}"
+  }
+
+  fun jsonNumberTestCases() =
+      listOf<JsonNumberTestCase>(
+          JsonNumberTestCase("0", shouldBeValid = true),
+          JsonNumberTestCase("1", shouldBeValid = true),
+          JsonNumberTestCase("123456789", shouldBeValid = true),
+          JsonNumberTestCase("0.0123456789", shouldBeValid = true),
+          JsonNumberTestCase("123456789.0123456789", shouldBeValid = true),
+          JsonNumberTestCase("0e2", shouldBeValid = true),
+          JsonNumberTestCase("0E2", shouldBeValid = true),
+          JsonNumberTestCase("2e2", shouldBeValid = true),
+          JsonNumberTestCase("2E2", shouldBeValid = true),
+          JsonNumberTestCase("0.1e2", shouldBeValid = true),
+          JsonNumberTestCase("0.1E2", shouldBeValid = true),
+          JsonNumberTestCase("2e+5", shouldBeValid = true),
+          JsonNumberTestCase("2e-5", shouldBeValid = true),
+          JsonNumberTestCase("9e123456789", shouldBeValid = true),
+          // Decimal separator without decimals is not allowed
+          JsonNumberTestCase("1.", shouldBeValid = false),
+          // Multiple 0s outside of decimals are not allowed
+          JsonNumberTestCase("00", shouldBeValid = false),
+          // Leading 0 is not allowed
+          JsonNumberTestCase("01", shouldBeValid = false),
+          // Exponent must have digits after
+          JsonNumberTestCase("2e", shouldBeValid = false),
+          // Exponent sign must have digits after
+          JsonNumberTestCase("2e+", shouldBeValid = false),
+          JsonNumberTestCase("2e-", shouldBeValid = false),
+          // Must be digits
+          JsonNumberTestCase("test", shouldBeValid = false),
+          // Must be all digits
+          JsonNumberTestCase("1test1", shouldBeValid = false),
+          // Blank string is not valid
+          JsonNumberTestCase("", shouldBeValid = false),
+          // All-whitespace string is not valid
+          JsonNumberTestCase("     ", shouldBeValid = false),
+      )
+
+  @ParameterizedTest
+  @MethodSource("jsonNumberTestCases")
+  fun `JSON number validation used in rawJsonField works as expected`(test: JsonNumberTestCase) {
+    val isValid = isJsonNumber(test.json)
+    isValid shouldBe test.shouldBeValid
   }
 
   @Test
