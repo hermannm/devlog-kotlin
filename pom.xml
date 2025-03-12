@@ -41,24 +41,24 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <kotlin.version>2.1.0</kotlin.version>
+    <kotlin.version>2.1.10</kotlin.version>
 
     <!-- Logging -->
-    <slf4j.version>2.0.16</slf4j.version>
-    <logback.version>1.5.16</logback.version>
+    <slf4j.version>2.0.17</slf4j.version>
+    <logback.version>1.5.17</logback.version>
     <logstash-logback-encoder.version>8.0</logstash-logback-encoder.version>
 
     <!-- Serialization -->
     <kotlinx-serialization.version>1.8.0</kotlinx-serialization.version>
-    <jackson.version>2.18.2</jackson.version>
+    <jackson.version>2.18.3</jackson.version>
 
     <!-- Testing -->
-    <junit.version>5.11.4</junit.version>
+    <junit.version>5.12.0</junit.version>
     <kotest.version>5.9.1</kotest.version>
 
     <!-- Maven plugins -->
-    <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
-    <ktfmt.version>0.43</ktfmt.version>
+    <spotless-maven-plugin.version>2.44.3</spotless-maven-plugin.version>
+    <ktfmt.version>0.53</ktfmt.version>
     <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
     <maven-install-plugin.version>3.1.3</maven-install-plugin.version>
     <maven-dependency-plugin.version>3.8.1</maven-dependency-plugin.version>
@@ -220,7 +220,7 @@
             <toggleOffOn/>
             <ktfmt>
               <version>${ktfmt.version}</version>
-              <style>DEFAULT</style>
+              <style>META</style>
             </ktfmt>
           </kotlin>
         </configuration>
