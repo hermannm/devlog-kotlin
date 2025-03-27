@@ -169,6 +169,22 @@ internal constructor(
   }
 
   /**
+   * Adds the given [log fields][LogField] to the log. This is useful when you have a list of
+   * previously constructed fields from the
+   * [field][dev.hermannm.devlog.field]/[rawJsonField][dev.hermannm.devlog.rawJsonField] top-level
+   * functions, that you want to add to a single log.
+   * - If you want to create new fields and add them to the log, you should instead call
+   *   [LogBuilder.field]
+   * - If you want to add the fields to all logs within a scope, you should instead use
+   *   [withLoggingContext]
+   */
+  public fun existingFields(fields: List<LogField>) {
+    for (field in fields) {
+      addField(field)
+    }
+  }
+
+  /**
    * Checks if the log [cause] exception (or any of its own cause exceptions) implements the
    * [WithLogFields] interface, and if so, adds those fields to the log.
    */
