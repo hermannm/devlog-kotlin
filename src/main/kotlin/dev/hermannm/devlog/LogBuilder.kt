@@ -178,7 +178,7 @@ internal constructor(
    * - If you want to add the fields to all logs within a scope, you should instead use
    *   [withLoggingContext]
    */
-  public fun existingFields(fields: List<LogField>) {
+  public fun existingFields(fields: Iterable<LogField>) {
     for (field in fields) {
       addField(field)
     }
