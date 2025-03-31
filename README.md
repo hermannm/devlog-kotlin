@@ -61,6 +61,7 @@ below). This allows you to filter and query on the field in the log analysis too
 a more structured manner than if you were to just use string concatenation.
 
 <!-- prettier-ignore -->
+
 ```jsonc
 {
   "message": "Processing event",
@@ -98,7 +99,8 @@ Note that `withLoggingContext` uses a thread-local
 ([SLF4J's `MDC`](https://logback.qos.ch/manual/mdc.html)) to provide log fields to the scope, so it
 won't work with Kotlin coroutines and `suspend` functions. If you use coroutines, you can solve this
 with
-[`MDCContext` from `kotlinx-coroutines-slf4j`](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-slf4j/kotlinx.coroutines.slf4j/-m-d-c-context/).
+[`MDCContext` from
+`kotlinx-coroutines-slf4j`](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-slf4j/kotlinx.coroutines.slf4j/-m-d-c-context/).
 
 Lastly, you can attach a cause exception to the log like this:
 
@@ -124,7 +126,7 @@ To set up `devlog-kotlin` with Logback and JSON output, add the following depend
   ```kotlin
   dependencies {
     // Logger API
-    implementation("dev.hermannm:devlog-kotlin:0.3.0")
+    implementation("dev.hermannm:devlog-kotlin:0.4.0")
     // Logger implementation
     implementation("ch.qos.logback:logback-classic:1.5.15")
     // JSON encoding of logs
@@ -138,7 +140,7 @@ To set up `devlog-kotlin` with Logback and JSON output, add the following depend
     <dependency>
       <groupId>dev.hermannm</groupId>
       <artifactId>devlog-kotlin</artifactId>
-      <version>0.3.0</version>
+      <version>0.4.0</version>
     </dependency>
     <!-- Logger implementation -->
     <dependency>
@@ -176,7 +178,8 @@ Then, configure Logback with a `logback.xml` file under `src/main/resources`:
 For more configuration options, see:
 
 - [The Configuration chapter of the Logback manual](https://logback.qos.ch/manual/configuration.html)
-- [The Usage docs of `logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder#usage)
+- [The Usage docs of
+  `logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder#usage)
   (the library to use for JSON encoding of logs)
 
 ## Implementation
