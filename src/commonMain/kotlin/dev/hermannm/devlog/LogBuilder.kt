@@ -282,7 +282,7 @@ internal constructor(
 
   /**
    * Checks if the log [cause] exception (or any of its own cause exceptions) implements the
-   * [WithLogFields] interface, and if so, adds those fields to the log.
+   * [HasLogFields] interface, and if so, adds those fields to the log.
    */
   @PublishedApi
   internal fun addFieldsFromCauseException(cause: Throwable) {
@@ -298,7 +298,7 @@ internal constructor(
     // We set max depth to 10, which should be high enough to not affect real users.
     var depth = 0
     while (exception != null && depth < 10) {
-      if (exception is WithLogFields) {
+      if (exception is HasLogFields) {
         addFields(exception.logFields)
       }
 

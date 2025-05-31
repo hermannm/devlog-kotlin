@@ -10,7 +10,7 @@ private val log = getLogger {}
 
 internal class ExceptionWithLogFieldsTest {
   @Test
-  fun `exception implementing WithLogFields has field included in log`() {
+  fun `exception implementing HasLogFields has field included in log`() {
     val output = captureLogOutput {
       log.error(exceptionWithLogField("exceptionField", "value")) { "Test" }
     }
@@ -68,7 +68,7 @@ internal class ExceptionWithLogFieldsTest {
   }
 
   @Test
-  fun `child exception that implements WithLogFields`() {
+  fun `child exception that implements HasLogFields`() {
     val output = captureLogOutput {
       val exception =
           Exception(
@@ -86,7 +86,7 @@ internal class ExceptionWithLogFieldsTest {
   }
 
   @Test
-  fun `parent and child exceptions that both implement WithLogFields have their fields merged`() {
+  fun `parent and child exceptions that both implement HasLogFields have their fields merged`() {
     val output = captureLogOutput {
       val exception =
           ExceptionWithLogFields(
@@ -204,8 +204,8 @@ internal class ExceptionWithLogFieldsTest {
   }
 
   @Test
-  fun `custom implementation of WithLogFields works`() {
-    class CustomException : Exception(), WithLogFields {
+  fun `custom implementation of HasLogFields works`() {
+    class CustomException : Exception(), HasLogFields {
       override val logFields =
           listOf(
               field("key1", "value1"),

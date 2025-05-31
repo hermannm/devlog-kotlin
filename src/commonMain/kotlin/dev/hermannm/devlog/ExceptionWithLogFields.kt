@@ -8,7 +8,7 @@ package dev.hermannm.devlog
  * The exception also includes any log fields from [withLoggingContext], from the scope in which the
  * exception is constructed. This way, we don't lose any logging context if the exception escapes
  * the context it was thrown from. If you don't want this behavior, you can create a custom
- * exception and implement the [WithLogFields] interface.
+ * exception and implement the [HasLogFields] interface.
  *
  * This class is useful when you are throwing an exception from somewhere down in the stack, but do
  * logging further up the stack, and you have structured data that you want to attach to the
@@ -80,7 +80,7 @@ public open class ExceptionWithLogFields(
     override val message: String?,
     logFields: List<LogField> = emptyList(),
     override val cause: Throwable? = null,
-) : RuntimeException(), WithLogFields {
+) : RuntimeException(), HasLogFields {
   // Final, since we want to ensure that fields from logging context are included
   final override val logFields: List<LogField> =
       LoggingContext.combineFieldListWithContextFields(logFields)
@@ -118,7 +118,7 @@ public open class ExceptionWithLogFields(
  * ### Example
  *
  * ```
- * import dev.hermannm.devlog.WithLogFields
+ * import dev.hermannm.devlog.HasLogFields
  * import dev.hermannm.devlog.field
  * import dev.hermannm.devlog.getLogger
  *
@@ -141,7 +141,7 @@ public open class ExceptionWithLogFields(
  * class OrderUpdateException(
  *     override val message: String,
  *     order: Order,
- * ) : RuntimeException(), WithLogFields {
+ * ) : RuntimeException(), HasLogFields {
  *   override val logFields = listOf(field("order", order))
  * }
  * ```
@@ -157,7 +157,7 @@ public open class ExceptionWithLogFields(
  * }
  * ```
  */
-public interface WithLogFields {
+public interface HasLogFields {
   /** Will be attached to the log when passed through `cause` to one of [Logger]'s methods. */
   public val logFields: List<LogField>
 }
