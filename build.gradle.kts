@@ -3,12 +3,48 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 group = "dev.hermannm"
 
-version = "0.3.0"
+version = "0.5.0"
+
+publishing {
+  publications.withType<MavenPublication> {
+    pom {
+      name.set("devlog-kotlin")
+      description.set(
+          "Logging library for Kotlin JVM, that thinly wraps SLF4J and Logback to provide a more ergonomic API.",
+      )
+      url.set("https://hermannm.dev/devlog")
+
+      licenses {
+        license {
+          name.set("MIT")
+          url.set("https://github.com/hermannm/devlog-kotlin/blob/main/LICENSE")
+          distribution.set("repo")
+        }
+      }
+
+      developers {
+        developer {
+          id.set("hermannm")
+          name.set("Hermann Mørkrid")
+          url.set("https://hermannm.dev")
+          email.set("hermann.morkrid@gmail.com")
+        }
+      }
+
+      scm {
+        connection.set("scm:git:https://github.com/hermannm/devlog-kotlin.git")
+        developerConnection.set("scm:git:https://github.com/hermannm/devlog-kotlin.git")
+        url.set("https://github.com/hermannm/devlog-kotlin")
+      }
+    }
+  }
+}
 
 // Dependency versions are declared in Gradle version catalog (./gradle/libs.versions.toml)
 plugins {
   alias(libs.plugins.kotlinMultiplatform)
   alias(libs.plugins.kotlinxSerialization)
+  `maven-publish`
 }
 
 kotlin {
