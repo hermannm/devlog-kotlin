@@ -16,8 +16,10 @@ import kotlin.concurrent.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import org.slf4j.Logger as Slf4jLogger
+import org.slf4j.event.Level
 import org.slf4j.spi.LocationAwareLogger
 import org.slf4j.spi.LoggingEventAware
+import org.slf4j.spi.LoggingEventBuilder
 
 internal data class LogOutput(
     /** String of all JSON-encoded log-event-specific fields from log output, in order. */
@@ -179,6 +181,9 @@ internal class EventAwareSlf4jLogger(
     this.shouldNotBeInstanceOf<LogbackLogger>()
     this.shouldBeInstanceOf<LoggingEventAware>()
   }
+
+  override fun makeLoggingEventBuilder(level: Level): LoggingEventBuilder =
+      logbackLogger.makeLoggingEventBuilder(level)
 }
 
 internal class LocationAwareSlf4jLogger(
@@ -189,6 +194,9 @@ internal class LocationAwareSlf4jLogger(
     this.shouldNotBeInstanceOf<LoggingEventAware>()
     this.shouldBeInstanceOf<LocationAwareLogger>()
   }
+
+  override fun makeLoggingEventBuilder(level: Level): LoggingEventBuilder =
+      logbackLogger.makeLoggingEventBuilder(level)
 }
 
 internal class PlainSlf4jLogger(
@@ -199,6 +207,9 @@ internal class PlainSlf4jLogger(
     this.shouldNotBeInstanceOf<LoggingEventAware>()
     this.shouldNotBeInstanceOf<LocationAwareSlf4jLogger>()
   }
+
+  override fun makeLoggingEventBuilder(level: Level): LoggingEventBuilder =
+      logbackLogger.makeLoggingEventBuilder(level)
 }
 
 /** Serializable example class for tests. */

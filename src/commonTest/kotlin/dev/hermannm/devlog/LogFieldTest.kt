@@ -348,7 +348,7 @@ internal class LogFieldTest {
   }
 
   fun validJsonTestCases() =
-      listOf<String>(
+      listOf(
           // Valid literals
           "\"string\"",
           "true",
@@ -385,7 +385,7 @@ internal class LogFieldTest {
   }
 
   fun invalidJsonTestCases() =
-      listOf<String>(
+      listOf(
           // Unquoted string
           "test",
           // Object with unquoted string field value

@@ -16,7 +16,7 @@ import kotlinx.serialization.json.longOrNull
 /**
  * A log field is a key-value pair for adding structured data to logs.
  *
- * When outputting logs as JSON (using
+ * When outputting logs as JSON (using e.g.
  * [logstash-logback-encoder](https://github.com/logfellow/logstash-logback-encoder)), this becomes
  * a field in the logged JSON object. That allows you to filter and query on the field in the log
  * analysis tool of your choice, in a more structured manner than if you were to just use string
@@ -76,7 +76,7 @@ public sealed class LogField {
   /**
    * [JsonLogField] adds a suffix ([LOGGING_CONTEXT_JSON_KEY_SUFFIX]) to the key in the logging
    * context to identify the value as raw JSON (so we can write the JSON unescaped in
-   * [dev.hermannm.devlog.LoggingContextJsonFieldWriter]).
+   * `LoggingContextJsonFieldWriter`).
    */
   internal abstract val keyForLoggingContext: String
 

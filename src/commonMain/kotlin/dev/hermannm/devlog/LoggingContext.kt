@@ -11,7 +11,7 @@ package dev.hermannm.devlog
  *
  * The implementation uses [MDC][org.slf4j.MDC] from SLF4J, which only supports String values by
  * default. To encode object values as actual JSON (not escaped strings), you can use
- * [dev.hermannm.devlog.LoggingContextJsonFieldWriter] with Logback.
+ * `dev.hermannm.devlog.LoggingContextJsonFieldWriter` with Logback.
  *
  * ### Note on coroutines
  *
@@ -37,7 +37,7 @@ package dev.hermannm.devlog
  * }
  * ```
  *
- * If you have configured [dev.hermannm.devlog.LoggingContextJsonFieldWriter], the field from
+ * If you have configured `dev.hermannm.devlog.LoggingContextJsonFieldWriter`, the field from
  * `withLoggingContext` will then be attached to every log as follows:
  * ```json
  * { "message": "Started processing event", "event": { ... } }
@@ -62,7 +62,7 @@ public inline fun <ReturnT> withLoggingContext(
  *
  * The implementation uses [MDC][org.slf4j.MDC] from SLF4J, which only supports String values by
  * default. To encode object values as actual JSON (not escaped strings), you can configure
- * [dev.hermannm.devlog.LoggingContextJsonFieldWriter].
+ * `dev.hermannm.devlog.LoggingContextJsonFieldWriter`.
  *
  * This overload of the function takes a list instead of varargs, for when you already have a list
  * of log fields available. This can be used together with [getLoggingContext] to pass context
@@ -92,7 +92,7 @@ public inline fun <ReturnT> withLoggingContext(
  * }
  * ```
  *
- * If you have configured [dev.hermannm.devlog.LoggingContextJsonFieldWriter], the field from
+ * If you have configured `dev.hermannm.devlog.LoggingContextJsonFieldWriter`, the field from
  * `withLoggingContext` will then be attached to every log as follows:
  * ```json
  * { "message": "Started processing event", "event": { /* ... */  } }
@@ -139,8 +139,9 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  * [withLoggingContext]). This can be used to pass logging context between threads (see example
  * below).
  *
- * If you spawn threads using an [java.util.concurrent.ExecutorService], you may instead use
- * [inheritLoggingContext], which does the logging context copying from parent to child for you.
+ * If you spawn threads using an [java.util.concurrent.ExecutorService], you may instead use the
+ * `dev.hermannm.devlog.inheritLoggingContext` extension function, which does the logging context
+ * copying from parent to child for you.
  *
  * ### Example
  *
@@ -214,12 +215,14 @@ internal expect object LoggingContext {
       overwrittenFields: OverwrittenContextFields
   )
 
-  internal fun hasKey(key: String): Boolean
+  internal fun hasKey(@Suppress("unused") key: String): Boolean
 
   internal fun getFieldList(): List<LogField>
 
   /** Combines the given log fields with any fields from [withLoggingContext]. */
-  internal fun combineFieldListWithContextFields(fields: List<LogField>): List<LogField>
+  internal fun combineFieldListWithContextFields(
+      @Suppress("unused") fields: List<LogField>
+  ): List<LogField>
 }
 
 /**
@@ -325,7 +328,7 @@ internal class JsonLogFieldFromContext(
  *
  * To achieve this, we add the raw JSON string from [JsonLogField] to the MDC, but with this suffix
  * added to the key. Then, users can configure our
- * [dev.hermannm.devlog.LoggingContextJsonFieldWriter] to strip this suffix from the key and write
+ * `dev.hermannm.devlog.LoggingContextJsonFieldWriter` to strip this suffix from the key and write
  * the field value as raw JSON in the log output. This only works when using Logback with
  * `logstash-logback-encoder`, but that's what this library is primarily designed for anyway.
  *
@@ -340,7 +343,7 @@ internal const val LOGGING_CONTEXT_JSON_KEY_SUFFIX = " (json)"
 
 /**
  * We only want to add [LOGGING_CONTEXT_JSON_KEY_SUFFIX] to context field keys if the user has
- * configured [dev.hermannm.devlog.LoggingContextJsonFieldWriter] with `logstash-logback-encoder`.
+ * configured `dev.hermannm.devlog.LoggingContextJsonFieldWriter` with `logstash-logback-encoder`.
  * If this is not the case, we don't want to add the key suffix, as that will show up in the log
  * output.
  *

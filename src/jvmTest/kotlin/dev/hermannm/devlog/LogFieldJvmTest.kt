@@ -17,7 +17,7 @@ internal class LogFieldJvmTest {
       log.info {
         field("instant", Instant.parse("2024-12-09T16:38:23Z"))
         field("uri", URI.create("https://example.com"))
-        field("url", URL("https://example.com"))
+        @Suppress("DEPRECATION") field("url", URL("https://example.com"))
         field("uuid", UUID.fromString("3638dd04-d196-41ad-8b15-5188a22a6ba4"))
         field("bigDecimal", BigDecimal("100.0"))
         "Test"
