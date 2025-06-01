@@ -6,6 +6,7 @@
 kotlin = "2.1.21"
 spotless = "7.0.4"
 ktfmt = "0.54"
+gradleMavenPublish = "0.32.0"
 gradleVersions = "0.52.0"
 # Library versions
 kotlinxSerialization = "1.8.1"
@@ -22,6 +23,9 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 kotlinxSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 # Formatter
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+# Plugin recommended by JetBrains for publishing Kotlin multiplatform libraries to Maven Central
+# https://www.jetbrains.com/help/kotlin-multiplatform-dev/multiplatform-publish-libraries.html
+gradleMavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "gradleMavenPublish" }
 # Provides dependencyUpdates task to check for new library versions
 gradleVersions = { id = "com.github.ben-manes.versions", version.ref = "gradleVersions" }
 
