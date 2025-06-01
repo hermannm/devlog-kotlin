@@ -50,6 +50,7 @@ plugins {
   alias(libs.plugins.kotlinxSerialization)
   alias(libs.plugins.spotless)
   alias(libs.plugins.gradleMavenPublish)
+  alias(libs.plugins.dokka)
   alias(libs.plugins.gradleVersions)
 }
 
