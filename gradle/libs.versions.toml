@@ -6,11 +6,12 @@
 kotlin = "2.1.21"
 spotless = "7.0.4"
 ktfmt = "0.54"
+gradleVersions = "0.52.0"
 # Library versions
-kotlinx-serialization = "1.8.1"
+kotlinxSerialization = "1.8.1"
 slf4j = "2.0.17"
 logback = "1.5.18"
-logstash-logback-encoder = "8.1"
+logstashLogbackEncoder = "8.1"
 jackson = "2.19.0"
 junit = "5.13.0"
 junitPlatform = "1.13.0"
@@ -19,14 +20,17 @@ kotest = "5.9.1"
 [plugins]
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinxSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+# Formatter
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+# Provides dependencyUpdates task to check for new library versions
+gradleVersions = { id = "com.github.ben-manes.versions", version.ref = "gradleVersions" }
 
 [libraries]
-kotlinxSerialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+kotlinxSerialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinReflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
-logstashLogbackEncoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback-encoder" }
+logstashLogbackEncoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstashLogbackEncoder" }
 jackson = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
 
 ### Test libraries

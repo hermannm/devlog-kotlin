@@ -1,3 +1,4 @@
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
@@ -45,6 +46,7 @@ plugins {
   alias(libs.plugins.kotlinMultiplatform)
   alias(libs.plugins.kotlinxSerialization)
   alias(libs.plugins.spotless)
+  alias(libs.plugins.gradleVersions)
   `maven-publish`
 }
 
@@ -111,5 +113,21 @@ spotless {
   kotlin {
     toggleOffOn()
     ktfmt(libs.versions.ktfmt.get())
+  }
+}
+
+tasks.withType<DependencyUpdatesTask> {
+  rejectVersionIf {
+    val invalidVersionRegexes =
+        listOf(
+            Regex("(?i).*Alpha(?:-?\\d+)?"),
+            Regex("(?i).*a(?:-?\\d+)?"),
+            Regex("(?i).*Beta(?:-?\\d+)?"),
+            Regex("(?i).*-B(?:-?\\d+)?"),
+            Regex("(?i).*RC(?:-?\\d+)?"),
+            Regex("(?i).*CR(?:-?\\d+)?"),
+            Regex("(?i).*M(?:-?\\d+)?"),
+        )
+    return@rejectVersionIf invalidVersionRegexes.any { it.matches(candidate.version) }
   }
 }
