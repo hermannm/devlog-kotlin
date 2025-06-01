@@ -1,3 +1,8 @@
-pluginManagement { repositories { mavenCentral() } }
-
 rootProject.name = "devlog-kotlin"
+
+pluginManagement {
+  repositories {
+    mavenCentral()
+    gradlePluginPortal()
+  }
+}

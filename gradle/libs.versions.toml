@@ -2,7 +2,11 @@
 # Plugins/libraries declared in this file become available on the `libs` object in build.gradle.kts
 
 [versions]
+# Plugin versions
 kotlin = "2.1.21"
+spotless = "7.0.4"
+ktfmt = "0.54"
+# Library versions
 kotlinx-serialization = "1.8.1"
 slf4j = "2.0.17"
 logback = "1.5.18"
@@ -15,6 +19,7 @@ kotest = "5.9.1"
 [plugins]
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinxSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 
 [libraries]
 kotlinxSerialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }

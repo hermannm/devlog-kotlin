@@ -44,6 +44,7 @@ publishing {
 plugins {
   alias(libs.plugins.kotlinMultiplatform)
   alias(libs.plugins.kotlinxSerialization)
+  alias(libs.plugins.spotless)
   `maven-publish`
 }
 
@@ -102,6 +103,13 @@ kotlin {
   explicitApi()
 }
 
+repositories { mavenCentral() }
+
 tasks.withType<Test> { useJUnitPlatform() }
 
-repositories { mavenCentral() }
+spotless {
+  kotlin {
+    toggleOffOn()
+    ktfmt(libs.versions.ktfmt.get())
+  }
+}
