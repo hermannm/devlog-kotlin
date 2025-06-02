@@ -207,14 +207,14 @@ internal class LoggerTest {
   }
 
   @Test
-  fun `Logger constructor with name parameter`() {
+  fun `getLogger with name parameter`() {
     val testName = "LoggerWithCustomName"
     val logger = getLogger(name = testName)
     logger.underlyingLogger.name shouldBe testName
   }
 
   @Test
-  fun `Logger constructor with function parameter`() {
+  fun `getLogger with function parameter`() {
     // All loggers in this file should have this name (since file name and class name here are the
     // same), whether it's constructed inside the class, outside, or on a companion object.
     val expectedName = "dev.hermannm.devlog.LoggerTest"
@@ -222,8 +222,14 @@ internal class LoggerTest {
     loggerOutsideClass.underlyingLogger.name shouldBe expectedName
     loggerOnCompanionObject.underlyingLogger.name shouldBe expectedName
 
-    // Logger constructed in separate file should be named after that file.
+    // Logger created in separate file should be named after that file.
     loggerInOtherFile.underlyingLogger.name shouldBe "dev.hermannm.devlog.TestUtils"
+  }
+
+  @Test
+  fun `getLogger with class parameter`() {
+    val logger = getLogger(LoggerTest::class)
+    logger.underlyingLogger.name shouldBe "dev.hermannm.devlog.LoggerTest"
   }
 
   @ParameterizedTest

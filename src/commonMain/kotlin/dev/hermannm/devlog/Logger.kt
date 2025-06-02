@@ -1,8 +1,13 @@
 package dev.hermannm.devlog
 
+import kotlin.reflect.KClass
+
 /**
  * Returns a [Logger], using the given lambda to automatically give the logger the name of its
  * containing class (or file, if defined at the top level).
+ *
+ * The logger name is included in the log output, and can be used to enable/disable log levels for
+ * loggers based on their package names, or query for logs from a specific class.
  *
  * ### Example
  *
@@ -21,17 +26,57 @@ package dev.hermannm.devlog
  * ```
  */
 public fun getLogger(emptyLambdaToGetName: () -> Unit): Logger {
-  return getLogger(name = getClassNameFromFunction(emptyLambdaToGetName))
+  return getLogger(name = getLoggerName(emptyLambdaToGetName::class))
+}
+
+/**
+ * Returns a [Logger] with the name of the given class.
+ *
+ * The logger name is included in the log output, and can be used to enable/disable log levels for
+ * loggers based on their package names, or query for logs from a specific class.
+ *
+ * In most cases, you should prefer the `getLogger` overload that takes an empty lambda, to
+ * automatically get the name of the containing class (or file). But if you want more control over
+ * which class to use for the logger name, you can use this overload.
+ *
+ * ### Example
+ *
+ * ```
+ * package com.example
+ *
+ * import dev.hermannm.devlog.getLogger
+ *
+ * class Example {
+ *   companion object {
+ *     // Gets the name "com.example.Example"
+ *     private val log = getLogger(Example::class)
+ *   }
+ *
+ *   fun example() {
+ *     log.info { "Example message" }
+ *   }
+ * }
+ * ```
+ */
+public fun getLogger(forClass: KClass<*>): Logger {
+  return getLogger(name = getLoggerName(forClass))
 }
 
 /**
  * Returns a [Logger] with the given name.
  *
- * The name should follow fully qualified class name format, like `com.example.Example`, to enable
- * per-package log level filtering.
+ * The logger name is included in the log output, and can be used to enable/disable log levels for
+ * loggers based on their package names, or query for logs from a specific class. Because of this,
+ * the name given here should follow fully qualified class name format, like `com.example.Example`.
  *
- * To set the name automatically from the containing class/file, you can use the [getLogger]
- * overload with an empty lambda.
+ * To set the name automatically from the containing class/file, you can use the `getLogger`
+ * overload that takes an empty lambda.
+ *
+ * ### Example
+ *
+ * ```
+ * private val log = getLogger(name = "com.example.Example")
+ * ```
  */
 public fun getLogger(name: String): Logger {
   return Logger(underlyingLogger = getPlatformLogger(name))
@@ -40,7 +85,9 @@ public fun getLogger(name: String): Logger {
 /**
  * A logger provides methods for logging at various log levels ([info], [warn], [error], [debug] and
  * [trace]). It has a logger name, typically the same as the class that the logger is attached to
- * (e.g. `com.example.Example`), which is added to the log so you can see where it originated from.
+ * (e.g. `com.example.Example`). The name is included in the log output, and can be used to
+ * enable/disable log levels for loggers based on their package names, or query for logs from a
+ * specific class.
  *
  * The easiest way to construct a logger is by calling [getLogger] with an empty lambda argument.
  * This automatically gives the logger the name of its containing class (or file, if defined at the
@@ -61,11 +108,23 @@ public fun getLogger(name: String): Logger {
  * ```
  *
  * Alternatively, you can provide a custom name to `getLogger`. The name should follow fully
- * qualified class name format, like `com.example.Example`, to enable per-package log level
- * filtering.
+ * qualified class name format, like `com.example.Example`, to allow you to enable/disable log
+ * levels based on the package.
  *
  * ```
  * private val log = getLogger(name = "com.example.Example")
+ * ```
+ *
+ * You can also pass a class to `getLogger`, to give the logger the name of that class:
+ * ```
+ * package com.example
+ *
+ * class Example {
+ *   companion object {
+ *     // Gets the name "com.example.Example"
+ *     private val log = getLogger(Example::class)
+ *   }
+ * }
  * ```
  */
 @JvmInline // Inline value class, to avoid redundant indirection when we just wrap an SLF4J logger
@@ -364,10 +423,10 @@ internal constructor(
   }
 
   /**
-   * Returns true if the `INFO` log level is enabled for this logger.
+   * Returns true if the INFO log level is enabled for this logger.
    *
-   * When using Logback (on the JVM), you can configure different log levels for loggers based on
-   * their package names (see
+   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
+   * package names (see
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   @PublishedApi
@@ -375,10 +434,10 @@ internal constructor(
     get() = underlyingLogger.isInfoEnabled()
 
   /**
-   * Returns true if the `WARN` log level is enabled for this logger.
+   * Returns true if the WARN log level is enabled for this logger.
    *
-   * When using Logback (on the JVM), you can configure different log levels for loggers based on
-   * their package names (see
+   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
+   * package names (see
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   @PublishedApi
@@ -386,10 +445,10 @@ internal constructor(
     get() = underlyingLogger.isWarnEnabled()
 
   /**
-   * Returns true if the `ERROR` log level is enabled for this logger.
+   * Returns true if the ERROR log level is enabled for this logger.
    *
-   * When using Logback (on the JVM), you can configure different log levels for loggers based on
-   * their package names (see
+   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
+   * package names (see
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   @PublishedApi
@@ -397,10 +456,10 @@ internal constructor(
     get() = underlyingLogger.isErrorEnabled()
 
   /**
-   * Returns true if the `DEBUG` log level is enabled for this logger.
+   * Returns true if the DEBUG log level is enabled for this logger.
    *
-   * When using Logback (on the JVM), you can configure different log levels for loggers based on
-   * their package names (see
+   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
+   * package names (see
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   @PublishedApi
@@ -408,10 +467,10 @@ internal constructor(
     get() = underlyingLogger.isDebugEnabled()
 
   /**
-   * Returns true if the `TRACE` log level is enabled for this logger.
+   * Returns true if the TRACE log level is enabled for this logger.
    *
-   * When using Logback (on the JVM), you can configure different log levels for loggers based on
-   * their package names (see
+   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
+   * package names (see
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   @PublishedApi
@@ -421,8 +480,8 @@ internal constructor(
   /**
    * Returns true if the given log level is enabled for this logger.
    *
-   * When using Logback (on the JVM), you can configure different log levels for loggers based on
-   * their package names (see
+   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
+   * package names (see
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   @PublishedApi
@@ -651,8 +710,8 @@ public enum class LogLevel {
  *    END OF TERMS AND CONDITIONS
  * ```
  */
-internal fun getClassNameFromFunction(function: () -> Unit): String {
-  val name = function::class.qualifiedName ?: return "Logger"
+private fun getLoggerName(forClass: KClass<*>): String {
+  val name = forClass.qualifiedName ?: return "Logger"
   return when {
     name.contains("Kt$") -> name.substringBefore("Kt$")
     name.contains("$") -> name.substringBefore("$")
