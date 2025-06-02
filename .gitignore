@@ -21,10 +21,7 @@ target/
 !.idea/vcs.xml
 
 # Exclude example test directory, which we use to create examples for docstrings
-/src/test/kotlin/dev/hermannm/devlog/example
-
-# Exclude local Maven repository used for integration tests
-# (will be generated when running mvn verify)
-local-maven-repo/
+/src/commonTest/kotlin/dev/hermannm/devlog/example
+/src/jvmTest/kotlin/dev/hermannm/devlog/example
 
 .DS_Store

@@ -1,4 +1,3 @@
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import com.vanniktech.maven.publish.SonatypeHost
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
@@ -54,6 +53,14 @@ plugins {
   alias(libs.plugins.gradleVersions)
 }
 
+subprojects {
+  apply(plugin = rootProject.libs.plugins.kotlinJvm.get().pluginId)
+  apply(plugin = rootProject.libs.plugins.kotlinxSerialization.get().pluginId)
+  apply(plugin = rootProject.libs.plugins.spotless.get().pluginId)
+
+  repositories { mavenCentral() }
+}
+
 kotlin {
   sourceSets {
     commonMain {
@@ -76,7 +83,7 @@ kotlin {
         implementation(libs.slf4j)
         compileOnly(libs.logback)
         compileOnly(libs.logstashLogbackEncoder)
-        compileOnly(libs.jackson)
+        implementation(libs.jackson)
       }
     }
     jvmTest {
@@ -113,6 +120,26 @@ repositories { mavenCentral() }
 
 tasks.withType<Test> { useJUnitPlatform() }
 
+// Task that runs the tests of the different logger implementations under /integration-tests
+tasks.register<GradleBuild>("integrationTests") {
+  group = "verification"
+  tasks =
+      listOf(
+          ":clean",
+          ":spotlessApply",
+          ":allTests",
+          ":integration-tests:logback:clean",
+          ":integration-tests:logback:spotlessApply",
+          ":integration-tests:logback:test",
+          ":integration-tests:log4j:clean",
+          ":integration-tests:log4j:spotlessApply",
+          ":integration-tests:log4j:test",
+          ":integration-tests:jul:clean",
+          ":integration-tests:jul:spotlessApply",
+          ":integration-tests:jul:test",
+      )
+}
+
 spotless {
   kotlin {
     toggleOffOn()
@@ -120,7 +147,7 @@ spotless {
   }
 }
 
-tasks.withType<DependencyUpdatesTask> {
+tasks.dependencyUpdates {
   rejectVersionIf {
     val invalidVersionRegexes =
         listOf(
