@@ -133,7 +133,7 @@ internal constructor(
     @PublishedApi internal val underlyingLogger: PlatformLogger,
 ) {
   /**
-   * Calls the given lambda to build a log message, and logs it at the INFO log level, if enabled.
+   * Calls the given lambda to build a log message, and logs it at [LogLevel.INFO], if enabled.
    *
    * If the log was caused by an exception, you can attach it to the log with the optional [cause]
    * parameter before the lambda.
@@ -176,7 +176,7 @@ internal constructor(
   }
 
   /**
-   * Calls the given lambda to build a log message, and logs it at the WARN log level, if enabled.
+   * Calls the given lambda to build a log message, and logs it at [LogLevel.WARN], if enabled.
    *
    * If the log was caused by an exception, you can attach it to the log with the optional [cause]
    * parameter before the lambda.
@@ -223,7 +223,7 @@ internal constructor(
   }
 
   /**
-   * Calls the given lambda to build a log message, and logs it at the ERROR log level, if enabled.
+   * Calls the given lambda to build a log message, and logs it at [LogLevel.ERROR], if enabled.
    *
    * If the log was caused by an exception, you can attach it to the log with the optional [cause]
    * parameter before the lambda.
@@ -270,7 +270,7 @@ internal constructor(
   }
 
   /**
-   * Calls the given lambda to build a log message, and logs it at the DEBUG log level, if enabled.
+   * Calls the given lambda to build a log message, and logs it at [LogLevel.DEBUG], if enabled.
    *
    * If the log was caused by an exception, you can attach it to the log with the optional [cause]
    * parameter before the lambda.
@@ -313,7 +313,7 @@ internal constructor(
   }
 
   /**
-   * Calls the given lambda to build a log message, and logs it at the TRACE log level, if enabled.
+   * Calls the given lambda to build a log message, and logs it at the [LogLevel.TRACE], if enabled.
    *
    * If the log was caused by an exception, you can attach it to the log with the optional [cause]
    * parameter before the lambda.
@@ -410,6 +410,73 @@ internal constructor(
     }
   }
 
+  /**
+   * Returns true if [LogLevel.INFO] is enabled for this logger.
+   *
+   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
+   * package names (see
+   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   */
+  public val isInfoEnabled: Boolean
+    get() = underlyingLogger.isInfoEnabled()
+
+  /**
+   * Returns true if [LogLevel.WARN] is enabled for this logger.
+   *
+   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
+   * package names (see
+   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   */
+  public val isWarnEnabled: Boolean
+    get() = underlyingLogger.isWarnEnabled()
+
+  /**
+   * Returns true if [LogLevel.ERROR] is enabled for this logger.
+   *
+   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
+   * package names (see
+   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   */
+  public val isErrorEnabled: Boolean
+    get() = underlyingLogger.isErrorEnabled()
+
+  /**
+   * Returns true if [LogLevel.DEBUG] is enabled for this logger.
+   *
+   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
+   * package names (see
+   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   */
+  public val isDebugEnabled: Boolean
+    get() = underlyingLogger.isDebugEnabled()
+
+  /**
+   * Returns true if [LogLevel.TRACE] is enabled for this logger.
+   *
+   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
+   * package names (see
+   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   */
+  public val isTraceEnabled: Boolean
+    get() = underlyingLogger.isTraceEnabled()
+
+  /**
+   * Returns true if the given log level is enabled for this logger.
+   *
+   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
+   * package names (see
+   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   */
+  public fun isEnabledFor(level: LogLevel): Boolean {
+    return when (level) {
+      LogLevel.INFO -> isInfoEnabled
+      LogLevel.WARN -> isWarnEnabled
+      LogLevel.ERROR -> isErrorEnabled
+      LogLevel.DEBUG -> isDebugEnabled
+      LogLevel.TRACE -> isTraceEnabled
+    }
+  }
+
   @PublishedApi
   internal inline fun log(level: LogLevel, cause: Throwable?, buildLog: LogBuilder.() -> String) {
     val builder = LogBuilder(createLogEvent(level, cause, underlyingLogger))
@@ -421,79 +488,51 @@ internal constructor(
 
     builder.logEvent.log(message, underlyingLogger)
   }
+}
 
+/**
+ * The severity of a log. From most to least severe:
+ * - `ERROR`
+ * - `WARN`
+ * - `INFO`
+ * - `DEBUG`
+ * - `TRACE`
+ *
+ * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
+ * package names (see
+ * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+ * You also set a "root" (default) log level - if this level is `INFO`, then `DEBUG`/`TRACE` logs
+ * will not produce any output unless explicitly enabled for a logger.
+ */
+public enum class LogLevel {
   /**
-   * Returns true if the INFO log level is enabled for this logger.
-   *
-   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
-   * package names (see
-   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   * The median log level - more severe than [TRACE] and [DEBUG], less severe than [WARN] and
+   * [ERROR]. The standard log level to use for informational output, that most consumers of your
+   * logs will be interested in, but that doesn't signal an error in your system.
    */
-  @PublishedApi
-  internal val isInfoEnabled: Boolean
-    get() = underlyingLogger.isInfoEnabled()
-
+  INFO,
   /**
-   * Returns true if the WARN log level is enabled for this logger.
-   *
-   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
-   * package names (see
-   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   * The second-most severe log level - more severe than [INFO], less severe than [ERROR]. Use this
+   * when a fault has occurred in the system, but that doesn't necessarily require the immediate
+   * attention that an [ERROR] would.
    */
-  @PublishedApi
-  internal val isWarnEnabled: Boolean
-    get() = underlyingLogger.isWarnEnabled()
-
+  WARN,
   /**
-   * Returns true if the ERROR log level is enabled for this logger.
-   *
-   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
-   * package names (see
-   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   * The highest-severity log level, for errors in your system that may require immediate attention.
    */
-  @PublishedApi
-  internal val isErrorEnabled: Boolean
-    get() = underlyingLogger.isErrorEnabled()
-
+  ERROR,
   /**
-   * Returns true if the DEBUG log level is enabled for this logger.
-   *
-   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
-   * package names (see
-   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   * The second-least severe log level - more severe than [TRACE], less severe than [INFO]. This is
+   * used for debug output, that you may not always have enabled, but that you may want to enable
+   * for certain packages and classes where you need information for debugging.
    */
-  @PublishedApi
-  internal val isDebugEnabled: Boolean
-    get() = underlyingLogger.isDebugEnabled()
-
+  DEBUG,
   /**
-   * Returns true if the TRACE log level is enabled for this logger.
-   *
-   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
-   * package names (see
-   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   * The least severe log level, for tracing minute application details. This log level will
+   * typically be disabled by default, and so will not produce any log output unless explicitly
+   * enabled for a logger.
    */
-  @PublishedApi
-  internal val isTraceEnabled: Boolean
-    get() = underlyingLogger.isTraceEnabled()
-
-  /**
-   * Returns true if the given log level is enabled for this logger.
-   *
-   * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
-   * package names (see
-   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
-   */
-  @PublishedApi
-  internal fun isEnabledFor(level: LogLevel): Boolean {
-    return when (level) {
-      LogLevel.INFO -> isInfoEnabled
-      LogLevel.WARN -> isWarnEnabled
-      LogLevel.ERROR -> isErrorEnabled
-      LogLevel.DEBUG -> isDebugEnabled
-      LogLevel.TRACE -> isTraceEnabled
-    }
-  }
+  TRACE,
 }
 
 /**
@@ -514,14 +553,6 @@ internal expect interface PlatformLogger {
 }
 
 internal expect fun getPlatformLogger(name: String): PlatformLogger
-
-public enum class LogLevel {
-  INFO,
-  WARN,
-  ERROR,
-  DEBUG,
-  TRACE,
-}
 
 /**
  * Implementation based on the

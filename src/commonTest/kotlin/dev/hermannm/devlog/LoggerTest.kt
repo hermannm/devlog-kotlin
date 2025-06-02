@@ -5,6 +5,8 @@ import ch.qos.logback.classic.Logger as LogbackLogger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.spi.ThrowableProxy
 import ch.qos.logback.core.read.ListAppender
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.date.shouldBeBetween
@@ -200,6 +202,51 @@ internal class LoggerTest {
 
       logbackLogger.level = LogbackLevel.OFF
       log.error(null, failingLogBuilder)
+    } finally {
+      // Reset logger level, so this test doesn't affect other tests
+      logbackLogger.level = LogbackLevel.TRACE
+    }
+  }
+
+  @Test
+  fun `isEnabled methods return expected results for enabled and disabled log levels`() {
+    try {
+      log.isTraceEnabled.shouldBeTrue()
+      log.isEnabledFor(LogLevel.TRACE).shouldBeTrue()
+
+      // Incrementally raise the log level, and verify that the isEnabled methods return expected
+      logbackLogger.level = LogbackLevel.DEBUG
+
+      log.isTraceEnabled.shouldBeFalse()
+      log.isEnabledFor(LogLevel.TRACE).shouldBeFalse()
+      log.isDebugEnabled.shouldBeTrue()
+      log.isEnabledFor(LogLevel.DEBUG).shouldBeTrue()
+
+      logbackLogger.level = LogbackLevel.INFO
+
+      log.isDebugEnabled.shouldBeFalse()
+      log.isEnabledFor(LogLevel.DEBUG).shouldBeFalse()
+      log.isInfoEnabled.shouldBeTrue()
+      log.isEnabledFor(LogLevel.INFO).shouldBeTrue()
+
+      logbackLogger.level = LogbackLevel.WARN
+
+      log.isInfoEnabled.shouldBeFalse()
+      log.isEnabledFor(LogLevel.INFO).shouldBeFalse()
+      log.isWarnEnabled.shouldBeTrue()
+      log.isEnabledFor(LogLevel.WARN).shouldBeTrue()
+
+      logbackLogger.level = LogbackLevel.ERROR
+
+      log.isWarnEnabled.shouldBeFalse()
+      log.isEnabledFor(LogLevel.WARN).shouldBeFalse()
+      log.isErrorEnabled.shouldBeTrue()
+      log.isEnabledFor(LogLevel.ERROR).shouldBeTrue()
+
+      logbackLogger.level = LogbackLevel.OFF
+
+      log.isErrorEnabled.shouldBeFalse()
+      log.isEnabledFor(LogLevel.ERROR).shouldBeFalse()
     } finally {
       // Reset logger level, so this test doesn't affect other tests
       logbackLogger.level = LogbackLevel.TRACE
