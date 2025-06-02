@@ -7,15 +7,10 @@ import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.matchers.string.shouldContain
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
+import kotlin.test.Test
 import kotlinx.serialization.Serializable
-import org.junit.jupiter.api.MethodOrderer
-import org.junit.jupiter.api.Order
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestMethodOrder
 
-@TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class LogbackLoggerTest {
-  @Order(1) // Run this first, to test constructing a JSON log field without Logback on classpath
   @Test
   fun log() {
     /**
@@ -45,7 +40,6 @@ class LogbackLoggerTest {
     output shouldContain """"contextField":{"test":true}"""
   }
 
-  @Order(2)
   @Test
   fun `Logback should be on classpath`() {
     shouldNotThrowAny { Class.forName("ch.qos.logback.classic.Logger") }

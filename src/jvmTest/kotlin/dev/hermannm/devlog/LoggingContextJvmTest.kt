@@ -1,5 +1,12 @@
 package dev.hermannm.devlog
 
+import dev.hermannm.devlog.testutils.Event
+import dev.hermannm.devlog.testutils.EventType
+import dev.hermannm.devlog.testutils.TestCase
+import dev.hermannm.devlog.testutils.captureLogOutput
+import dev.hermannm.devlog.testutils.parameterizedTest
+import dev.hermannm.devlog.testutils.shouldBeEmpty
+import dev.hermannm.devlog.testutils.shouldContainExactly
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.maps.shouldContainExactly
 import java.util.concurrent.Callable
@@ -9,17 +16,61 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.thread
+import kotlin.concurrent.withLock
+import kotlin.test.Test
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.MethodSource
 
 private val log = getLogger {}
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class LoggingContextJvmTest {
+  /** We use JVM synchronization primitives here, hence we place it under jvmTest. */
+  @Test
+  fun `getLoggingContext allows passing logging context between threads`() {
+    val event = Event(id = 1001, type = EventType.ORDER_PLACED)
+
+    val lock = ReentrantLock()
+    // Used to wait for the child thread to complete its log
+    val latch = CountDownLatch(1)
+
+    val output = captureLogOutput {
+      // Aquire a lock around the outer withLoggingContext in the parent thread, to test that
+      // the logging context works in the child thread even when the outer context has exited
+      lock.withLock {
+        withLoggingContext(field("event", event)) {
+          // Get the parent logging context (the one we just entered)
+          val loggingContext = getLoggingContext()
+
+          thread {
+            // Acquire the lock here in the child thread - this will block until the outer
+            // logging context has exited
+            lock.withLock {
+              // Use the parent logging context here in the child thread
+              withLoggingContext(loggingContext) { log.error { "Test" } }
+              latch.countDown()
+            }
+          }
+        }
+      }
+
+      latch.await() // Waits until completed
+    }
+
+    output.contextFields shouldContainExactly
+        mapOf(
+            "event" to
+                JsonObject(
+                    mapOf(
+                        "id" to JsonPrimitive(1001),
+                        "type" to JsonPrimitive("ORDER_PLACED"),
+                    ),
+                ),
+        )
+  }
+
   @Test
   fun `withLoggingContextMap merges given map with existing fields`() {
     withLoggingContext(field("existingField", "value")) {
@@ -48,16 +99,14 @@ internal class LoggingContextJvmTest {
    * every executor method.
    */
   class ExecutorTestCase(
-      private val name: String,
+      override val name: String,
       /**
        * `invokeAll` and `invokeAny` on [ExecutorService] block the calling thread. This affects how
        * we run our tests, so we set this flag to true for those cases.
        */
       val isBlocking: Boolean = false,
       val runTask: (ExecutorService, () -> Unit) -> Unit,
-  ) {
-    override fun toString() = name
-  }
+  ) : TestCase
 
   val executorTestCases =
       listOf(
@@ -85,35 +134,34 @@ internal class LoggingContextJvmTest {
           },
       )
 
-  @ParameterizedTest
-  @MethodSource("getExecutorTestCases")
-  fun `ExecutorService with inheritLoggingContext allows passing logging context between threads`(
-      test: ExecutorTestCase
-  ) {
-    val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
-    val lock = ReentrantLock()
-    val latch = CountDownLatch(1) // Used to wait for the child thread to complete its log
+  @Test
+  fun `ExecutorService with inheritLoggingContext allows passing logging context between threads`() {
+    parameterizedTest(executorTestCases) { test ->
+      val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
+      val lock = ReentrantLock()
+      val latch = CountDownLatch(1) // Used to wait for the child thread to complete its log
 
-    val output = captureLogOutput {
-      // Aquire a lock around the outer withLoggingContext in the parent thread, to test that
-      // the logging context works in the child thread even when the outer context has exited.
-      // Only relevant if the executor method is non-blocking (see ExecutorTestCase.isBlocking).
-      lock.conditionallyLock(!test.isBlocking) {
-        withLoggingContext(field("fieldFromParentThread", "value")) {
-          test.runTask(executor) {
-            // Acquire the lock here in the child thread - this will block until the outer
-            // logging context has exited
-            lock.conditionallyLock(!test.isBlocking) { log.error { "Test" } }
-            latch.countDown()
+      val output = captureLogOutput {
+        // Aquire a lock around the outer withLoggingContext in the parent thread, to test that
+        // the logging context works in the child thread even when the outer context has exited.
+        // Only relevant if the executor method is non-blocking (see ExecutorTestCase.isBlocking).
+        lock.conditionallyLock(!test.isBlocking) {
+          withLoggingContext(field("fieldFromParentThread", "value")) {
+            test.runTask(executor) {
+              // Acquire the lock here in the child thread - this will block until the outer
+              // logging context has exited
+              lock.conditionallyLock(!test.isBlocking) { log.error { "Test" } }
+              latch.countDown()
+            }
           }
         }
+
+        latch.await() // Waits until child thread calls countDown()
       }
 
-      latch.await() // Waits until child thread calls countDown()
+      output.contextFields shouldContainExactly
+          mapOf("fieldFromParentThread" to JsonPrimitive("value"))
     }
-
-    output.contextFields shouldContainExactly
-        mapOf("fieldFromParentThread" to JsonPrimitive("value"))
   }
 
   /**
@@ -121,28 +169,27 @@ internal class LoggingContextJvmTest {
    * there are fields in the logging context. Otherwise, we just forward the tasks directly - we
    * want to test that that works.
    */
-  @ParameterizedTest
-  @MethodSource("getExecutorTestCases")
-  fun `ExecutorService with inheritLoggingContext works when there are no fields in the context`(
-      test: ExecutorTestCase
-  ) {
-    val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
+  @Test
+  fun `ExecutorService with inheritLoggingContext works when there are no fields in the context`() {
+    parameterizedTest(executorTestCases) { test ->
+      val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
 
-    // Verify that there are no fields in parent thread context
-    LoggingContext.shouldBeEmpty()
-
-    val latch = CountDownLatch(1) // Used to wait for the child thread to complete its log
-    val executed = AtomicBoolean(false)
-
-    test.runTask(executor) {
-      // Verify that there are no fields in child thread context
+      // Verify that there are no fields in parent thread context
       LoggingContext.shouldBeEmpty()
-      executed.set(true)
-      latch.countDown()
-    }
 
-    latch.await()
-    executed.get().shouldBeTrue()
+      val latch = CountDownLatch(1) // Used to wait for the child thread to complete its log
+      val executed = AtomicBoolean(false)
+
+      test.runTask(executor) {
+        // Verify that there are no fields in child thread context
+        LoggingContext.shouldBeEmpty()
+        executed.set(true)
+        latch.countDown()
+      }
+
+      latch.await()
+      executed.get().shouldBeTrue()
+    }
   }
 
   @Test
@@ -179,5 +226,17 @@ internal class LoggingContextJvmTest {
       LoggingContext shouldContainExactly mapOf("parentField" to "value")
       barrier.await() // 2nd synchronization point
     }
+  }
+}
+
+/**
+ * Acquires the lock around the given block if the given condition is true - otherwise, just calls
+ * the block directly.
+ */
+private inline fun Lock.conditionallyLock(condition: Boolean, block: () -> Unit) {
+  if (condition) {
+    this.withLock(block)
+  } else {
+    block()
   }
 }

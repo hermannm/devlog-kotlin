@@ -163,11 +163,11 @@ internal open class JsonLogField(
  *
  * Certain types that `kotlinx.serialization` doesn't support natively have special-case handling
  * here, using their `toString()` representation instead:
- * - [java.time.Instant]
- * - [java.util.UUID]
- * - [java.net.URI]
- * - [java.net.URL]
- * - [java.math.BigDecimal]
+ * - `java.time.Instant`
+ * - `java.util.UUID`
+ * - `java.net.URI`
+ * - `java.net.URL`
+ * - `java.math.BigDecimal`
  */
 public inline fun <reified ValueT> field(key: String, value: ValueT): LogField {
   return encodeFieldValue(
@@ -199,11 +199,11 @@ public inline fun <reified ValueT> field(key: String, value: ValueT): LogField {
  *
  * Certain types that `kotlinx.serialization` doesn't support natively have special-case handling
  * here, using their `toString()` representation instead:
- * - [java.time.Instant]
- * - [java.util.UUID]
- * - [java.net.URI]
- * - [java.net.URL]
- * - [java.math.BigDecimal]
+ * - `java.time.Instant`
+ * - `java.util.UUID`
+ * - `java.net.URI`
+ * - `java.net.URL`
+ * - `java.math.BigDecimal`
  */
 public fun <ValueT : Any> field(
     key: String,

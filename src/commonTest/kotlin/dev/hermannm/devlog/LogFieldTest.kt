@@ -1,23 +1,24 @@
 package dev.hermannm.devlog
 
+import dev.hermannm.devlog.testutils.Event
+import dev.hermannm.devlog.testutils.EventType
+import dev.hermannm.devlog.testutils.TestCase
+import dev.hermannm.devlog.testutils.captureLogOutput
+import dev.hermannm.devlog.testutils.parameterizedTest
 import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import kotlin.test.Test
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonNull
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.MethodSource
 
 private val log = getLogger {}
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class LogFieldTest {
   @Test
   fun `basic log field test`() {
@@ -220,12 +221,10 @@ internal class LogFieldTest {
    * JSON handling.
    */
   class RawJsonTestCase(
-      private val name: String,
+      override val name: String,
       val addRawJsonField:
           (logBuilder: LogBuilder, key: String, json: String, validJson: Boolean) -> Unit,
-  ) {
-    override fun toString() = name
-  }
+  ) : TestCase
 
   val rawJsonTestCases: List<RawJsonTestCase> =
       listOf(
@@ -241,47 +240,49 @@ internal class LogFieldTest {
           },
       )
 
-  @ParameterizedTest
-  @MethodSource("getRawJsonTestCases")
-  fun `raw JSON field works for valid JSON`(test: RawJsonTestCase) {
-    val eventJson = """{"id":1001,"type":"ORDER_UPDATED"}"""
+  @Test
+  fun `raw JSON field works for valid JSON`() {
+    parameterizedTest(rawJsonTestCases) { test ->
+      val eventJson = """{"id":1001,"type":"ORDER_UPDATED"}"""
 
-    // The above JSON should work both for validJson = true and validJson = false
-    for (assumeValidJson in listOf(true, false)) {
-      withClue({ "assumeValidJson = ${assumeValidJson}" }) {
-        val output = captureLogOutput {
-          log.info {
-            test.addRawJsonField(this, "event", eventJson, assumeValidJson)
-            "Test"
+      // The above JSON should work both for validJson = true and validJson = false
+      for (assumeValidJson in listOf(true, false)) {
+        withClue({ "assumeValidJson = ${assumeValidJson}" }) {
+          val output = captureLogOutput {
+            log.info {
+              test.addRawJsonField(this, "event", eventJson, assumeValidJson)
+              "Test"
+            }
           }
-        }
 
-        output.logFields shouldBe
-            """
+          output.logFields shouldBe
+              """
               "event":${eventJson}
             """
-                .trimIndent()
+                  .trimIndent()
+        }
       }
     }
   }
 
-  @ParameterizedTest
-  @MethodSource("getRawJsonTestCases")
-  fun `raw JSON field escapes invalid JSON by default`(test: RawJsonTestCase) {
-    val invalidJson = """{"id":1"""
+  @Test
+  fun `raw JSON field escapes invalid JSON by default`() {
+    parameterizedTest(rawJsonTestCases) { test ->
+      val invalidJson = """{"id":1"""
 
-    val output = captureLogOutput {
-      log.info {
-        test.addRawJsonField(this, "event", invalidJson, false)
-        "Test"
+      val output = captureLogOutput {
+        log.info {
+          test.addRawJsonField(this, "event", invalidJson, false)
+          "Test"
+        }
       }
-    }
 
-    output.logFields shouldBe
-        """
+      output.logFields shouldBe
+          """
           "event":"{\"id\":1"
         """
-            .trimIndent()
+              .trimIndent()
+    }
   }
 
   /**
@@ -289,51 +290,51 @@ internal class LogFieldTest {
    * so it should be passed on as-is. We therefore verify here that no validity checks are made on
    * the given JSON, although the user _should_ never pass invalid JSON to rawJsonField like this.
    */
-  @ParameterizedTest
-  @MethodSource("getRawJsonTestCases")
-  fun `raw JSON field does not escape invalid JSON when validJson is set to true`(
-      test: RawJsonTestCase
-  ) {
-    val invalidJson = """{"id":1"""
+  @Test
+  fun `raw JSON field does not escape invalid JSON when validJson is set to true`() {
+    parameterizedTest(rawJsonTestCases) { test ->
+      val invalidJson = """{"id":1"""
 
-    val output = captureLogOutput {
-      log.info {
-        test.addRawJsonField(this, "event", invalidJson, true)
-        "Test"
+      val output = captureLogOutput {
+        log.info {
+          test.addRawJsonField(this, "event", invalidJson, true)
+          "Test"
+        }
       }
-    }
 
-    output.logFields shouldBe
-        """
+      output.logFields shouldBe
+          """
           "event":${invalidJson}
         """
-            .trimIndent()
+              .trimIndent()
+    }
   }
 
-  @ParameterizedTest
-  @MethodSource("getRawJsonTestCases")
-  fun `raw JSON field re-encodes JSON when it contains newlines`(test: RawJsonTestCase) {
-    val jsonWithNewlines =
-        """
+  @Test
+  fun `raw JSON field re-encodes JSON when it contains newlines`() {
+    parameterizedTest(rawJsonTestCases) { test ->
+      val jsonWithNewlines =
+          """
           {
             "id": 1001,
             "type": "ORDER_UPDATED"
           }
         """
-            .trimIndent()
+              .trimIndent()
 
-    val output = captureLogOutput {
-      log.info {
-        test.addRawJsonField(this, "event", jsonWithNewlines, false)
-        "Test"
+      val output = captureLogOutput {
+        log.info {
+          test.addRawJsonField(this, "event", jsonWithNewlines, false)
+          "Test"
+        }
       }
-    }
 
-    output.logFields shouldBe
-        """
+      output.logFields shouldBe
+          """
           "event":{"id":1001,"type":"ORDER_UPDATED"}
         """
-            .trimIndent()
+              .trimIndent()
+    }
   }
 
   /**
@@ -347,7 +348,7 @@ internal class LogFieldTest {
     value shouldBe JsonNull
   }
 
-  fun validJsonTestCases() =
+  val validJsonTestCases =
       listOf(
           // Valid literals
           "\"string\"",
@@ -371,20 +372,21 @@ internal class LogFieldTest {
           "9e123456789",
       )
 
-  @ParameterizedTest
-  @MethodSource("validJsonTestCases")
-  fun `validateRawJson accepts valid JSON`(validJson: String) {
-    val isValid: Boolean =
-        validateRawJson(
-            validJson,
-            isValid = false,
-            onValidJson = { true },
-            onInvalidJson = { false },
-        )
-    isValid.shouldBeTrue()
+  @Test
+  fun `validateRawJson accepts valid JSON`() {
+    parameterizedTest(validJsonTestCases) { validJson ->
+      val isValid: Boolean =
+          validateRawJson(
+              validJson,
+              isValid = false,
+              onValidJson = { true },
+              onInvalidJson = { false },
+          )
+      isValid.shouldBeTrue()
+    }
   }
 
-  fun invalidJsonTestCases() =
+  val invalidJsonTestCases =
       listOf(
           // Unquoted string
           "test",
@@ -398,17 +400,18 @@ internal class LogFieldTest {
           "     ",
       )
 
-  @ParameterizedTest
-  @MethodSource("invalidJsonTestCases")
-  fun `validateRawJson rejects invalid JSON`(invalidJson: String) {
-    val isValid: Boolean =
-        validateRawJson(
-            invalidJson,
-            isValid = false,
-            onValidJson = { true },
-            onInvalidJson = { false },
-        )
-    isValid.shouldBeFalse()
+  @Test
+  fun `validateRawJson rejects invalid JSON`() {
+    parameterizedTest(invalidJsonTestCases) { invalidJson ->
+      val isValid: Boolean =
+          validateRawJson(
+              invalidJson,
+              isValid = false,
+              onValidJson = { true },
+              onInvalidJson = { false },
+          )
+      isValid.shouldBeFalse()
+    }
   }
 
   @Test

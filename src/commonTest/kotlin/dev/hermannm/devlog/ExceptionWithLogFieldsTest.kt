@@ -1,10 +1,13 @@
 package dev.hermannm.devlog
 
+import dev.hermannm.devlog.testutils.Event
+import dev.hermannm.devlog.testutils.EventType
+import dev.hermannm.devlog.testutils.captureLogOutput
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import kotlin.test.Test
 import kotlinx.serialization.json.JsonPrimitive
-import org.junit.jupiter.api.Test
 
 private val log = getLogger {}
 

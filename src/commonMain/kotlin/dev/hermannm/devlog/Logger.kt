@@ -1,5 +1,6 @@
 package dev.hermannm.devlog
 
+import kotlin.jvm.JvmInline
 import kotlin.reflect.KClass
 
 /**
@@ -498,6 +499,8 @@ internal constructor(
  * On the JVM, we use SLF4J as the underlying logger.
  */
 internal expect interface PlatformLogger {
+  fun getName(): String
+
   fun isInfoEnabled(): Boolean
 
   fun isWarnEnabled(): Boolean

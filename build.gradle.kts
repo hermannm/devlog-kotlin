@@ -75,19 +75,16 @@ kotlin {
     }
     commonTest {
       dependencies {
-        implementation(libs.junit)
-        implementation(libs.junitParams)
-        runtimeOnly(libs.junitPlatformEngine)
-        runtimeOnly(libs.junitPlatformLauncher)
+        implementation(libs.kotlinTest)
         implementation(libs.kotest)
       }
     }
     jvmMain {
       dependencies {
         implementation(libs.slf4j)
+        implementation(libs.jackson)
         compileOnly(libs.logback)
         compileOnly(libs.logstashLogbackEncoder)
-        implementation(libs.jackson)
       }
     }
     jvmTest {
@@ -105,6 +102,8 @@ kotlin {
       // Needed due to https://youtrack.jetbrains.com/issue/KT-49746
       freeCompilerArgs.add("-Xjdk-release=1.8")
     }
+
+    testRuns["test"].executionTask.configure { useJUnitPlatform() }
   }
 
   compilerOptions {
@@ -121,8 +120,6 @@ kotlin {
 }
 
 repositories { mavenCentral() }
-
-tasks.withType<Test> { useJUnitPlatform() }
 
 // Task that runs the tests of the different logger implementations under /integration-tests
 tasks.register<GradleBuild>("integrationTests") {

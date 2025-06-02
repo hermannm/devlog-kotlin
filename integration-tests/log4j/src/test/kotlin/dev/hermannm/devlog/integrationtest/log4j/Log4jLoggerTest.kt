@@ -7,8 +7,8 @@ import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.matchers.string.shouldContain
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
+import kotlin.test.Test
 import kotlinx.serialization.Serializable
-import org.junit.jupiter.api.Test
 
 private val log = getLogger {}
 

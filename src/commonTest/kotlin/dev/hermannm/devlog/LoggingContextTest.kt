@@ -1,22 +1,21 @@
 package dev.hermannm.devlog
 
+import dev.hermannm.devlog.testutils.Event
+import dev.hermannm.devlog.testutils.EventType
+import dev.hermannm.devlog.testutils.LogOutput
+import dev.hermannm.devlog.testutils.captureLogOutput
+import dev.hermannm.devlog.testutils.shouldContainExactly
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.thread
-import kotlin.concurrent.withLock
+import kotlin.test.Test
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
 
 private val log = getLogger {}
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class LoggingContextTest {
   @Test
   fun `field from logging context is included in log`() {
@@ -247,48 +246,5 @@ internal class LoggingContextTest {
       // This won't compile if withLoggingContext isn't inline, and we want to verify that
       return
     }
-  }
-
-  @Test
-  fun `getLoggingContext allows passing logging context between threads`() {
-    val event = Event(id = 1001, type = EventType.ORDER_PLACED)
-
-    val lock = ReentrantLock()
-    // Used to wait for the child thread to complete its log
-    val latch = CountDownLatch(1)
-
-    val output = captureLogOutput {
-      // Aquire a lock around the outer withLoggingContext in the parent thread, to test that
-      // the logging context works in the child thread even when the outer context has exited
-      lock.withLock {
-        withLoggingContext(field("event", event)) {
-          // Get the parent logging context (the one we just entered)
-          val loggingContext = getLoggingContext()
-
-          thread {
-            // Acquire the lock here in the child thread - this will block until the outer
-            // logging context has exited
-            lock.withLock {
-              // Use the parent logging context here in the child thread
-              withLoggingContext(loggingContext) { log.error { "Test" } }
-              latch.countDown()
-            }
-          }
-        }
-      }
-
-      latch.await() // Waits until completed
-    }
-
-    output.contextFields shouldContainExactly
-        mapOf(
-            "event" to
-                JsonObject(
-                    mapOf(
-                        "id" to JsonPrimitive(1001),
-                        "type" to JsonPrimitive("ORDER_PLACED"),
-                    ),
-                ),
-        )
   }
 }

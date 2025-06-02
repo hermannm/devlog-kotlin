@@ -1,42 +1,19 @@
-package dev.hermannm.devlog
+package dev.hermannm.devlog.testutils
 
-import ch.qos.logback.classic.Logger as LogbackLogger
-import io.kotest.assertions.withClue
-import io.kotest.matchers.collections.shouldBeEmpty
+import dev.hermannm.devlog.logFieldJson
 import io.kotest.matchers.nulls.shouldNotBeNull
-import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContainOnlyOnce
-import io.kotest.matchers.types.shouldBeInstanceOf
-import io.kotest.matchers.types.shouldNotBeInstanceOf
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
-import java.util.concurrent.locks.Lock
-import kotlin.concurrent.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
-import org.slf4j.Logger as Slf4jLogger
-import org.slf4j.event.Level
-import org.slf4j.spi.LocationAwareLogger
-import org.slf4j.spi.LoggingEventAware
-import org.slf4j.spi.LoggingEventBuilder
-
-internal data class LogOutput(
-    /** String of all JSON-encoded log-event-specific fields from log output, in order. */
-    val logFields: String,
-    /**
-     * Map of context fields in the log output. We don't use a String here and verify order, since
-     * SLF4J's MDC (which we use for our logging context) uses a HashMap internally, which does not
-     * guarantee order.
-     */
-    val contextFields: Map<String, JsonElement>,
-)
 
 /**
  * Since we have configured Logback in resources/logback-test.xml to use the Logstash JSON encoder,
  * we can verify in our tests that user-provided log fields have the expected JSON output.
  */
-internal fun captureLogOutput(block: () -> Unit): LogOutput {
+internal actual fun captureLogOutput(block: () -> Unit): LogOutput {
   val originalStdout = System.out
 
   // We redirect System.out to our own output stream, so we can capture the log output
@@ -50,6 +27,7 @@ internal fun captureLogOutput(block: () -> Unit): LogOutput {
   }
 
   val logOutput = outputStream.toString("UTF-8")
+
   // We expect each call to captureLogFields to capture just a single log line, so it should only
   // contain 1 newline. If we get more, that is likely an error and should fail our tests.
   logOutput shouldContainOnlyOnce "\n"
@@ -173,84 +151,3 @@ private fun indexAfterJsonNumberField(json: String, startIndex: Int): Int? {
 
   return null
 }
-
-internal class EventAwareSlf4jLogger(
-    private val logbackLogger: LogbackLogger,
-) : Slf4jLogger by logbackLogger, LoggingEventAware by logbackLogger {
-  init {
-    this.shouldNotBeInstanceOf<LogbackLogger>()
-    this.shouldBeInstanceOf<LoggingEventAware>()
-  }
-
-  override fun makeLoggingEventBuilder(level: Level): LoggingEventBuilder =
-      logbackLogger.makeLoggingEventBuilder(level)
-}
-
-internal class LocationAwareSlf4jLogger(
-    private val logbackLogger: LogbackLogger,
-) : LocationAwareLogger by logbackLogger {
-  init {
-    this.shouldNotBeInstanceOf<LogbackLogger>()
-    this.shouldNotBeInstanceOf<LoggingEventAware>()
-    this.shouldBeInstanceOf<LocationAwareLogger>()
-  }
-
-  override fun makeLoggingEventBuilder(level: Level): LoggingEventBuilder =
-      logbackLogger.makeLoggingEventBuilder(level)
-}
-
-internal class PlainSlf4jLogger(
-    private val logbackLogger: LogbackLogger,
-) : Slf4jLogger by logbackLogger {
-  init {
-    this.shouldNotBeInstanceOf<LogbackLogger>()
-    this.shouldNotBeInstanceOf<LoggingEventAware>()
-    this.shouldNotBeInstanceOf<LocationAwareSlf4jLogger>()
-  }
-
-  override fun makeLoggingEventBuilder(level: Level): LoggingEventBuilder =
-      logbackLogger.makeLoggingEventBuilder(level)
-}
-
-/** Serializable example class for tests. */
-@Serializable internal data class Event(val id: Long, val type: EventType)
-
-internal enum class EventType {
-  ORDER_PLACED,
-  ORDER_UPDATED,
-}
-
-internal infix fun LoggingContext.shouldContainExactly(map: Map<String, String>) {
-  val contextFields = this.getFieldList()
-
-  contextFields.size shouldBe map.size
-  for ((key, value) in map) {
-    withClue({ "key='${key}', value='${value}'" }) {
-      val field = contextFields.find { field -> field.keyForLoggingContext == key }
-      field.shouldNotBeNull()
-      field.value shouldBe value
-    }
-  }
-}
-
-internal fun LoggingContext.shouldBeEmpty() {
-  this.getFieldList().shouldBeEmpty()
-}
-
-/**
- * Acquires the lock around the given block if the given condition is true - otherwise, just calls
- * the block directly.
- */
-internal inline fun Lock.conditionallyLock(condition: Boolean, block: () -> Unit) {
-  if (condition) {
-    this.withLock(block)
-  } else {
-    block()
-  }
-}
-
-/**
- * Used in [LoggerTest] to test that the logger gets the expected name from the file it's
- * constructed in.
- */
-internal val loggerInOtherFile = getLogger {}

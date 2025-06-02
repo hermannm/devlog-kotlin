@@ -1,5 +1,8 @@
 package dev.hermannm.devlog
 
+import kotlin.concurrent.Volatile
+import kotlin.jvm.JvmInline
+
 /**
  * Adds the given [log fields][LogField] to every log made by a [Logger] in the context of the given
  * [block].
@@ -9,8 +12,8 @@ package dev.hermannm.devlog
  * you can wrap the event processing in `withLoggingContext` with the event as a log field, and then
  * all logs inside that context will include the event.
  *
- * The implementation uses [MDC][org.slf4j.MDC] from SLF4J, which only supports String values by
- * default. To encode object values as actual JSON (not escaped strings), you can use
+ * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. To
+ * encode object values as actual JSON (not escaped strings), you can use
  * `dev.hermannm.devlog.LoggingContextJsonFieldWriter` with Logback.
  *
  * ### Note on coroutines
@@ -60,8 +63,8 @@ public inline fun <ReturnT> withLoggingContext(
  * you can wrap the event processing in `withLoggingContext` with the event as a log field, and then
  * all logs inside that context will include the event.
  *
- * The implementation uses [MDC][org.slf4j.MDC] from SLF4J, which only supports String values by
- * default. To encode object values as actual JSON (not escaped strings), you can configure
+ * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. To
+ * encode object values as actual JSON (not escaped strings), you can configure
  * `dev.hermannm.devlog.LoggingContextJsonFieldWriter`.
  *
  * This overload of the function takes a list instead of varargs, for when you already have a list
@@ -139,7 +142,7 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  * [withLoggingContext]). This can be used to pass logging context between threads (see example
  * below).
  *
- * If you spawn threads using an [java.util.concurrent.ExecutorService], you may instead use the
+ * If you spawn threads using an `java.util.concurrent.ExecutorService`, you may instead use the
  * `dev.hermannm.devlog.inheritLoggingContext` extension function, which does the logging context
  * copying from parent to child for you.
  *
@@ -198,8 +201,8 @@ public fun getLoggingContext(): List<LogField> {
 /**
  * Thread-local log fields that will be included on every log within a given context.
  *
- * This object encapsulates SLF4J's [MDC][org.slf4j.MDC] (Mapped Diagnostic Context), allowing the
- * rest of our code to not concern itself with SLF4J-specific APIs.
+ * On the JVM, this object encapsulates SLF4J's `MDC` (Mapped Diagnostic Context), allowing the rest
+ * of our code to not concern itself with SLF4J-specific APIs.
  */
 @PublishedApi
 internal expect object LoggingContext {

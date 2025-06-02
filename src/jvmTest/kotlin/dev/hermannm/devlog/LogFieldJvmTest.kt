@@ -1,12 +1,13 @@
 package dev.hermannm.devlog
 
+import dev.hermannm.devlog.testutils.captureLogOutput
 import io.kotest.matchers.string.shouldContain
 import java.math.BigDecimal
 import java.net.URI
 import java.net.URL
 import java.time.Instant
 import java.util.UUID
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
 
 private val log = getLogger {}
 

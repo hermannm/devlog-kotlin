@@ -1,5 +1,6 @@
 package dev.hermannm.devlog
 
+import kotlin.jvm.JvmInline
 import kotlinx.serialization.SerializationStrategy
 
 /**
@@ -93,11 +94,11 @@ internal constructor(
    *
    * Certain types that `kotlinx.serialization` doesn't support natively have special-case handling
    * here, using their `toString()` representation instead:
-   * - [java.time.Instant]
-   * - [java.util.UUID]
-   * - [java.net.URI]
-   * - [java.net.URL]
-   * - [java.math.BigDecimal]
+   * - `java.time.Instant`
+   * - `java.util.UUID`
+   * - `java.net.URI`
+   * - `java.net.URL`
+   * - `java.math.BigDecimal`
    */
   public inline fun <reified ValueT> field(key: String, value: ValueT) {
     if (!logEvent.isFieldKeyAdded(key)) {
@@ -169,11 +170,11 @@ internal constructor(
    *
    * Certain types that `kotlinx.serialization` doesn't support natively have special-case handling
    * here, using their `toString()` representation instead:
-   * - [java.time.Instant]
-   * - [java.util.UUID]
-   * - [java.net.URI]
-   * - [java.net.URL]
-   * - [java.math.BigDecimal]
+   * - `java.time.Instant`
+   * - `java.util.UUID`
+   * - `java.net.URI`
+   * - `java.net.URL`
+   * - `java.math.BigDecimal`
    */
   public fun <ValueT : Any> field(
       key: String,

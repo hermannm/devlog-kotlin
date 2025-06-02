@@ -9,8 +9,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
+import kotlin.test.Test
 import kotlinx.serialization.Serializable
-import org.junit.jupiter.api.Test
 
 private val log = getLogger {}
 
