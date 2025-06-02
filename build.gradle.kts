@@ -54,6 +54,7 @@ plugins {
   alias(libs.plugins.gradleMavenPublish)
   alias(libs.plugins.dokka)
   alias(libs.plugins.gradleVersions)
+  signing
 }
 
 subprojects {
@@ -147,6 +148,20 @@ spotless {
   kotlin {
     toggleOffOn()
     ktfmt(libs.versions.ktfmt.get())
+  }
+}
+
+// Use GPG agent for signing Maven Central publication
+signing { useGpgCmd() }
+
+// Provides `publishing/publishAllPublicationsToTestRepository` task to check publication output
+// before we publish to Maven Central
+publishing {
+  repositories {
+    maven {
+      name = "Test"
+      url = uri(layout.buildDirectory.dir("testPublication"))
+    }
   }
 }
 
