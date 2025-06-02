@@ -1,6 +1,5 @@
 package dev.hermannm.devlog
 
-import kotlin.jvm.JvmInline
 import kotlin.reflect.KClass
 
 /**
@@ -27,7 +26,8 @@ import kotlin.reflect.KClass
  * ```
  */
 public fun getLogger(emptyLambdaToGetName: () -> Unit): Logger {
-  return getLogger(name = getLoggerName(emptyLambdaToGetName::class))
+  val name = getLoggerName(emptyLambdaToGetName::class)
+  return Logger(underlyingLogger = getPlatformLogger(name))
 }
 
 /**
@@ -60,7 +60,8 @@ public fun getLogger(emptyLambdaToGetName: () -> Unit): Logger {
  * ```
  */
 public fun getLogger(forClass: KClass<*>): Logger {
-  return getLogger(name = getLoggerName(forClass))
+  val name = getLoggerName(forClass)
+  return Logger(underlyingLogger = getPlatformLogger(name))
 }
 
 /**
@@ -512,6 +513,11 @@ internal expect interface PlatformLogger {
   fun isTraceEnabled(): Boolean
 }
 
+/**
+ * Returns a platform-specific underlying logger with the given name.
+ *
+ * On the JVM, this returns an SLF4J `Logger`.
+ */
 internal expect fun getPlatformLogger(name: String): PlatformLogger
 
 /**

@@ -6,7 +6,7 @@ package dev.hermannm.devlog
  * instead construct the log event in-place on `LogBuilder`, we can avoid allocations on the hot
  * path.
  *
- * SLF4J has support for building log events, through the `LoggingEvent` interface,
+ * On the JVM, SLF4J has support for building log events, through the `LoggingEvent` interface,
  * `DefaultLoggingEvent` implementation, and `LoggingEventAware` logger interface. And Logback's
  * logger implements `LoggingEventAware` - great! Except Logback uses a different event format
  * internally, so in its implementation of `LoggingEventAware.log`, it has to map from the SLF4J
@@ -30,6 +30,12 @@ internal interface LogEvent {
   fun log(message: String, logger: PlatformLogger)
 }
 
+/**
+ * Returns a platform-specific implementation of [LogEvent].
+ *
+ * On the JVM, this returns an SLF4J `LoggingEvent`, or a specialized optimized version for Logback
+ * if Logback is used as the logging backend.
+ */
 @PublishedApi
 internal expect fun createLogEvent(
     level: LogLevel,
