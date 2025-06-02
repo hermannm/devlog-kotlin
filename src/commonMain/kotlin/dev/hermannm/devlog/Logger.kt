@@ -411,14 +411,14 @@ internal constructor(
   }
 
   /**
-   * Returns true if [LogLevel.INFO] is enabled for this logger.
+   * Returns true if [LogLevel.ERROR] is enabled for this logger.
    *
    * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
    * package names (see
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
-  public val isInfoEnabled: Boolean
-    get() = underlyingLogger.isInfoEnabled()
+  public val isErrorEnabled: Boolean
+    get() = underlyingLogger.isErrorEnabled()
 
   /**
    * Returns true if [LogLevel.WARN] is enabled for this logger.
@@ -431,14 +431,14 @@ internal constructor(
     get() = underlyingLogger.isWarnEnabled()
 
   /**
-   * Returns true if [LogLevel.ERROR] is enabled for this logger.
+   * Returns true if [LogLevel.INFO] is enabled for this logger.
    *
    * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
    * package names (see
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
-  public val isErrorEnabled: Boolean
-    get() = underlyingLogger.isErrorEnabled()
+  public val isInfoEnabled: Boolean
+    get() = underlyingLogger.isInfoEnabled()
 
   /**
    * Returns true if [LogLevel.DEBUG] is enabled for this logger.
@@ -474,6 +474,8 @@ internal constructor(
       LogLevel.ERROR -> isErrorEnabled
       LogLevel.DEBUG -> isDebugEnabled
       LogLevel.TRACE -> isTraceEnabled
+      /** Unreachable - see [LogLevel.unrecognized] for why we need this. */
+      else -> throw level.unrecognized()
     }
   }
 
@@ -488,51 +490,6 @@ internal constructor(
 
     builder.logEvent.log(message, underlyingLogger)
   }
-}
-
-/**
- * The severity of a log. From most to least severe:
- * - `ERROR`
- * - `WARN`
- * - `INFO`
- * - `DEBUG`
- * - `TRACE`
- *
- * When using Logback (on the JVM), you can enable/disable log levels for loggers based on their
- * package names (see
- * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
- * You also set a "root" (default) log level - if this level is `INFO`, then `DEBUG`/`TRACE` logs
- * will not produce any output unless explicitly enabled for a logger.
- */
-public enum class LogLevel {
-  /**
-   * The median log level - more severe than [TRACE] and [DEBUG], less severe than [WARN] and
-   * [ERROR]. The standard log level to use for informational output, that most consumers of your
-   * logs will be interested in, but that doesn't signal an error in your system.
-   */
-  INFO,
-  /**
-   * The second-most severe log level - more severe than [INFO], less severe than [ERROR]. Use this
-   * when a fault has occurred in the system, but that doesn't necessarily require the immediate
-   * attention that an [ERROR] would.
-   */
-  WARN,
-  /**
-   * The highest-severity log level, for errors in your system that may require immediate attention.
-   */
-  ERROR,
-  /**
-   * The second-least severe log level - more severe than [TRACE], less severe than [INFO]. This is
-   * used for debug output, that you may not always have enabled, but that you may want to enable
-   * for certain packages and classes where you need information for debugging.
-   */
-  DEBUG,
-  /**
-   * The least severe log level, for tracing minute application details. This log level will
-   * typically be disabled by default, and so will not produce any log output unless explicitly
-   * enabled for a logger.
-   */
-  TRACE,
 }
 
 /**

@@ -109,6 +109,8 @@ internal fun LogLevel.toLogback(): LogbackLevel {
     LogLevel.ERROR -> LogbackLevel.ERROR
     LogLevel.DEBUG -> LogbackLevel.DEBUG
     LogLevel.TRACE -> LogbackLevel.TRACE
+    /** Unreachable - see [LogLevel.unrecognized] for why we need this. */
+    else -> throw this.unrecognized()
   }
 }
 
@@ -215,6 +217,8 @@ internal fun LogLevel.toSlf4j(): Slf4jLevel {
     LogLevel.ERROR -> Slf4jLevel.ERROR
     LogLevel.DEBUG -> Slf4jLevel.DEBUG
     LogLevel.TRACE -> Slf4jLevel.TRACE
+    /** Unreachable - see [LogLevel.unrecognized] for why we need this. */
+    else -> throw this.unrecognized()
   }
 }
 
