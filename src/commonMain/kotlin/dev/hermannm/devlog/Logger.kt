@@ -1,5 +1,3 @@
-@file:OptIn(InternalLoggingApi::class)
-
 package dev.hermannm.devlog
 
 /**
@@ -113,7 +111,7 @@ internal constructor(
    *   to add structured key-value data to the log.
    */
   public inline fun info(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
-    if (underlyingLogger.isInfoEnabled()) {
+    if (isInfoEnabled) {
       log(LogLevel.INFO, cause, buildLog)
     }
   }
@@ -160,7 +158,7 @@ internal constructor(
    *   to add structured key-value data to the log.
    */
   public inline fun warn(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
-    if (underlyingLogger.isWarnEnabled()) {
+    if (isWarnEnabled) {
       log(LogLevel.WARN, cause, buildLog)
     }
   }
@@ -207,7 +205,7 @@ internal constructor(
    *   to add structured key-value data to the log.
    */
   public inline fun error(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
-    if (underlyingLogger.isErrorEnabled()) {
+    if (isErrorEnabled) {
       log(LogLevel.ERROR, cause, buildLog)
     }
   }
@@ -250,7 +248,7 @@ internal constructor(
    *   to add structured key-value data to the log.
    */
   public inline fun debug(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
-    if (underlyingLogger.isDebugEnabled()) {
+    if (isDebugEnabled) {
       log(LogLevel.DEBUG, cause, buildLog)
     }
   }
@@ -293,7 +291,7 @@ internal constructor(
    *   to add structured key-value data to the log.
    */
   public inline fun trace(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
-    if (underlyingLogger.isTraceEnabled()) {
+    if (isTraceEnabled) {
       log(LogLevel.TRACE, cause, buildLog)
     }
   }
@@ -365,34 +363,98 @@ internal constructor(
     builder.logEvent.log(message, underlyingLogger)
   }
 
+  /**
+   * Returns true if the `INFO` log level is enabled for this logger.
+   *
+   * When using Logback (on the JVM), you can configure different log levels for loggers based on
+   * their package names (see
+   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   */
+  @PublishedApi
+  internal val isInfoEnabled: Boolean
+    get() = underlyingLogger.isInfoEnabled()
+
+  /**
+   * Returns true if the `WARN` log level is enabled for this logger.
+   *
+   * When using Logback (on the JVM), you can configure different log levels for loggers based on
+   * their package names (see
+   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   */
+  @PublishedApi
+  internal val isWarnEnabled: Boolean
+    get() = underlyingLogger.isWarnEnabled()
+
+  /**
+   * Returns true if the `ERROR` log level is enabled for this logger.
+   *
+   * When using Logback (on the JVM), you can configure different log levels for loggers based on
+   * their package names (see
+   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   */
+  @PublishedApi
+  internal val isErrorEnabled: Boolean
+    get() = underlyingLogger.isErrorEnabled()
+
+  /**
+   * Returns true if the `DEBUG` log level is enabled for this logger.
+   *
+   * When using Logback (on the JVM), you can configure different log levels for loggers based on
+   * their package names (see
+   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   */
+  @PublishedApi
+  internal val isDebugEnabled: Boolean
+    get() = underlyingLogger.isDebugEnabled()
+
+  /**
+   * Returns true if the `TRACE` log level is enabled for this logger.
+   *
+   * When using Logback (on the JVM), you can configure different log levels for loggers based on
+   * their package names (see
+   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   */
+  @PublishedApi
+  internal val isTraceEnabled: Boolean
+    get() = underlyingLogger.isTraceEnabled()
+
+  /**
+   * Returns true if the given log level is enabled for this logger.
+   *
+   * When using Logback (on the JVM), you can configure different log levels for loggers based on
+   * their package names (see
+   * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
+   */
   @PublishedApi
   internal fun isEnabledFor(level: LogLevel): Boolean {
     return when (level) {
-      LogLevel.INFO -> underlyingLogger.isInfoEnabled()
-      LogLevel.WARN -> underlyingLogger.isWarnEnabled()
-      LogLevel.ERROR -> underlyingLogger.isErrorEnabled()
-      LogLevel.DEBUG -> underlyingLogger.isDebugEnabled()
-      LogLevel.TRACE -> underlyingLogger.isTraceEnabled()
+      LogLevel.INFO -> isInfoEnabled
+      LogLevel.WARN -> isWarnEnabled
+      LogLevel.ERROR -> isErrorEnabled
+      LogLevel.DEBUG -> isDebugEnabled
+      LogLevel.TRACE -> isTraceEnabled
     }
   }
 }
 
-@InternalLoggingApi
-public expect interface PlatformLogger {
-  public fun isInfoEnabled(): Boolean
+/**
+ * Platform-neutral interface for the underlying logger implementation used by [Logger].
+ *
+ * On the JVM, we use SLF4J as the underlying logger.
+ */
+internal expect interface PlatformLogger {
+  fun isInfoEnabled(): Boolean
 
-  public fun isWarnEnabled(): Boolean
+  fun isWarnEnabled(): Boolean
 
-  public fun isErrorEnabled(): Boolean
+  fun isErrorEnabled(): Boolean
 
-  public fun isDebugEnabled(): Boolean
+  fun isDebugEnabled(): Boolean
 
-  public fun isTraceEnabled(): Boolean
+  fun isTraceEnabled(): Boolean
 }
 
 internal expect fun getPlatformLogger(name: String): PlatformLogger
-
-@RequiresOptIn public annotation class InternalLoggingApi
 
 public enum class LogLevel {
   INFO,

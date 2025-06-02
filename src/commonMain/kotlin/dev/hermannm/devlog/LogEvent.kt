@@ -1,5 +1,3 @@
-@file:OptIn(InternalLoggingApi::class)
-
 package dev.hermannm.devlog
 
 /**
