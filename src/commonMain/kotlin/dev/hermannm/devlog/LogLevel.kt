@@ -1,3 +1,6 @@
+// `@JvmField` is auto-imported on JVM, but for multiplatform we need to use fully-qualified name
+@file:Suppress("RemoveRedundantQualifierName")
+
 package dev.hermannm.devlog
 
 /**
@@ -21,7 +24,9 @@ public class LogLevel private constructor(private val name: String) {
      *
      * See [LogLevel] for more on how to configure log levels.
      */
+    @kotlin.jvm.JvmField // Compiles this as a static field on the JVM, for faster access
     public val ERROR: LogLevel = LogLevel("ERROR")
+
     /**
      * The second-highest log level - less severe than `ERROR`, more severe than `INFO`. Use this
      * when a fault has occurred in the system, but it doesn't necessarily require the immediate
@@ -29,7 +34,9 @@ public class LogLevel private constructor(private val name: String) {
      *
      * See [LogLevel] for more on how to configure log levels.
      */
+    @kotlin.jvm.JvmField // Compiles this as a static field on the JVM, for faster access
     public val WARN: LogLevel = LogLevel("WARN")
+
     /**
      * The median log level - less severe than `ERROR` and `WARN`, more severe than `DEBUG` and
      * `TRACE`. The standard log level to use for informational output, that most consumers of your
@@ -37,7 +44,9 @@ public class LogLevel private constructor(private val name: String) {
      *
      * See [LogLevel] for more on how to configure log levels.
      */
+    @kotlin.jvm.JvmField // Compiles this as a static field on the JVM, for faster access
     public val INFO: LogLevel = LogLevel("INFO")
+
     /**
      * The second-lowest log level - less severe than `INFO`, more severe than `TRACE`. This is used
      * for debug output, that you may not always have enabled, but that you may want to enable for
@@ -45,7 +54,9 @@ public class LogLevel private constructor(private val name: String) {
      *
      * See [LogLevel] for more on how to configure log levels.
      */
+    @kotlin.jvm.JvmField // Compiles this as a static field on the JVM, for faster access
     public val DEBUG: LogLevel = LogLevel("DEBUG")
+
     /**
      * The lowest log level, for tracing minute application details. This log level will typically
      * be disabled by default, and so will not produce any log output unless explicitly enabled for
@@ -53,6 +64,7 @@ public class LogLevel private constructor(private val name: String) {
      *
      * See [LogLevel] for more on how to configure log levels.
      */
+    @kotlin.jvm.JvmField // Compiles this as a static field on the JVM, for faster access
     public val TRACE: LogLevel = LogLevel("TRACE")
   }
 
