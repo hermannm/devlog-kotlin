@@ -1,3 +1,6 @@
+// `@JvmInline` is auto-imported on JVM, but for multiplatform we need to use fully-qualified name
+@file:Suppress("RemoveRedundantQualifierName")
+
 package dev.hermannm.devlog
 
 import kotlin.reflect.KClass
@@ -129,7 +132,7 @@ public fun getLogger(name: String): Logger {
  * }
  * ```
  */
-@JvmInline // Inline value class, to avoid redundant indirection when we just wrap an SLF4J logger
+@kotlin.jvm.JvmInline // Inline value class, to wrap the underlying platform logger without overhead
 public value class Logger
 internal constructor(
     @PublishedApi internal val underlyingLogger: PlatformLogger,

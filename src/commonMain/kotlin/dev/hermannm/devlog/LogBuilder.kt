@@ -1,6 +1,8 @@
+// `@JvmInline` is auto-imported on JVM, but for multiplatform we need to use fully-qualified name
+@file:Suppress("RemoveRedundantQualifierName")
+
 package dev.hermannm.devlog
 
-import kotlin.jvm.JvmInline
 import kotlinx.serialization.SerializationStrategy
 
 /**
@@ -28,7 +30,7 @@ import kotlinx.serialization.SerializationStrategy
  * }
  * ```
  */
-@JvmInline // Inline value class, since we just wrap a log event
+@kotlin.jvm.JvmInline // Inline value class, to wrap the underlying log event without overhead
 public value class LogBuilder
 @PublishedApi
 internal constructor(

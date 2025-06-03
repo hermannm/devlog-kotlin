@@ -1,7 +1,9 @@
+// `@JvmInline` is auto-imported on JVM, but for multiplatform we need to use fully-qualified name
+@file:Suppress("RemoveRedundantQualifierName")
+
 package dev.hermannm.devlog
 
 import kotlin.concurrent.Volatile
-import kotlin.jvm.JvmInline
 
 /**
  * Adds the given [log fields][LogField] to every log made by a [Logger] in the context of the given
@@ -251,7 +253,7 @@ internal expect object LoggingContext {
  *       [Kotlin docs](https://kotlinlang.org/docs/inline-classes.html#representation) for more on
  *       when inline value classes are boxed.
  */
-@JvmInline
+@kotlin.jvm.JvmInline
 internal value class OverwrittenContextFields(private val fields: Array<String?>?) {
   /**
    * If the overwritten context field array has not been initialized yet, we initialize it before
