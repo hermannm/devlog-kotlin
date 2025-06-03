@@ -68,32 +68,24 @@ subprojects {
 
 kotlin {
   sourceSets {
-    commonMain {
-      dependencies {
-        implementation(libs.kotlinxSerialization)
-        implementation(libs.kotlinReflect)
-      }
+    commonMain.dependencies {
+      implementation(libs.kotlinxSerialization)
+      implementation(libs.kotlinReflect)
     }
-    commonTest {
-      dependencies {
-        implementation(libs.kotlinTest)
-        implementation(libs.kotest)
-      }
+    commonTest.dependencies {
+      implementation(libs.kotlinTest)
+      implementation(libs.kotest)
     }
-    jvmMain {
-      dependencies {
-        implementation(libs.slf4j)
-        implementation(libs.jackson)
-        compileOnly(libs.logback)
-        compileOnly(libs.logstashLogbackEncoder)
-      }
+    jvmMain.dependencies {
+      implementation(libs.slf4j)
+      implementation(libs.jackson)
+      compileOnly(libs.logback)
+      compileOnly(libs.logstashLogbackEncoder)
     }
-    jvmTest {
-      dependencies {
-        runtimeOnly(libs.logback)
-        runtimeOnly(libs.logstashLogbackEncoder)
-        runtimeOnly(libs.jackson)
-      }
+    jvmTest.dependencies {
+      runtimeOnly(libs.logback)
+      runtimeOnly(libs.logstashLogbackEncoder)
+      runtimeOnly(libs.jackson)
     }
   }
 
