@@ -1,0 +1,170 @@
+public class dev/hermannm/devlog/ExceptionWithLogFields : java/lang/RuntimeException, dev/hermannm/devlog/HasLogFields {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;[Ldev/hermannm/devlog/LogField;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/lang/String;[Ldev/hermannm/devlog/LogField;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/util/List;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> ([Ldev/hermannm/devlog/LogField;Ljava/lang/Throwable;)V
+	public synthetic fun <init> ([Ldev/hermannm/devlog/LogField;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun getCause ()Ljava/lang/Throwable;
+	public final fun getLogFields ()Ljava/util/List;
+	public fun getMessage ()Ljava/lang/String;
+}
+
+public abstract interface class dev/hermannm/devlog/HasLogFields {
+	public abstract fun getLogFields ()Ljava/util/List;
+}
+
+public class dev/hermannm/devlog/JsonLogField : dev/hermannm/devlog/LogField {
+	public static final field Companion Ldev/hermannm/devlog/JsonLogField$Companion;
+	public static final field NULL_VALUE Ljava/lang/String;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class dev/hermannm/devlog/JsonLogField$Companion {
+}
+
+public final class dev/hermannm/devlog/JsonLogFieldFromContext : dev/hermannm/devlog/JsonLogField {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+}
+
+public final class dev/hermannm/devlog/LogBuilder {
+	public static final fun addField-impl (Ldev/hermannm/devlog/LogEvent;Ldev/hermannm/devlog/LogField;)V
+	public static final fun addFields-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/Iterable;)V
+	public static final fun addFieldsFromCauseException-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/Throwable;)V
+	public static final synthetic fun box-impl (Ldev/hermannm/devlog/LogEvent;)Ldev/hermannm/devlog/LogBuilder;
+	public static fun constructor-impl (Ldev/hermannm/devlog/LogEvent;)Ldev/hermannm/devlog/LogEvent;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ldev/hermannm/devlog/LogEvent;Ldev/hermannm/devlog/LogEvent;)Z
+	public static final fun field-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/String;Ljava/lang/Object;Lkotlinx/serialization/SerializationStrategy;)V
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ldev/hermannm/devlog/LogEvent;)I
+	public static final fun rawJsonField-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/String;Ljava/lang/String;Z)V
+	public static synthetic fun rawJsonField-impl$default (Ldev/hermannm/devlog/LogEvent;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)V
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ldev/hermannm/devlog/LogEvent;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ldev/hermannm/devlog/LogEvent;
+}
+
+public abstract interface class dev/hermannm/devlog/LogEvent {
+	public abstract fun addJsonField (Ljava/lang/String;Ljava/lang/String;)V
+	public abstract fun addStringField (Ljava/lang/String;Ljava/lang/String;)V
+	public abstract fun isFieldKeyAdded (Ljava/lang/String;)Z
+	public abstract fun log (Ljava/lang/String;Lorg/slf4j/Logger;)V
+}
+
+public final class dev/hermannm/devlog/LogEvent_jvmKt {
+	public static final fun createLogEvent (Ldev/hermannm/devlog/LogLevel;Ljava/lang/Throwable;Lorg/slf4j/Logger;)Ldev/hermannm/devlog/LogEvent;
+}
+
+public abstract class dev/hermannm/devlog/LogField {
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/hermannm/devlog/LogFieldKt {
+	public static final fun field (Ljava/lang/String;Ljava/lang/Object;Lkotlinx/serialization/SerializationStrategy;)Ldev/hermannm/devlog/LogField;
+	public static final fun getLogFieldJson ()Lkotlinx/serialization/json/Json;
+	public static final fun rawJson (Ljava/lang/String;Z)Lkotlinx/serialization/json/JsonElement;
+	public static synthetic fun rawJson$default (Ljava/lang/String;ZILjava/lang/Object;)Lkotlinx/serialization/json/JsonElement;
+	public static final fun rawJsonField (Ljava/lang/String;Ljava/lang/String;Z)Ldev/hermannm/devlog/LogField;
+	public static synthetic fun rawJsonField$default (Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)Ldev/hermannm/devlog/LogField;
+}
+
+public final class dev/hermannm/devlog/LogField_jvmKt {
+	public static final fun fieldValueShouldUseToString (Ljava/lang/Object;)Z
+}
+
+public final class dev/hermannm/devlog/LogLevel {
+	public static final field Companion Ldev/hermannm/devlog/LogLevel$Companion;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/hermannm/devlog/LogLevel$Companion {
+	public final fun getDEBUG ()Ldev/hermannm/devlog/LogLevel;
+	public final fun getERROR ()Ldev/hermannm/devlog/LogLevel;
+	public final fun getINFO ()Ldev/hermannm/devlog/LogLevel;
+	public final fun getTRACE ()Ldev/hermannm/devlog/LogLevel;
+	public final fun getWARN ()Ldev/hermannm/devlog/LogLevel;
+}
+
+public final class dev/hermannm/devlog/Logger {
+	public static final fun at-impl (Lorg/slf4j/Logger;Ldev/hermannm/devlog/LogLevel;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun at-impl$default (Lorg/slf4j/Logger;Ldev/hermannm/devlog/LogLevel;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public static final synthetic fun box-impl (Lorg/slf4j/Logger;)Ldev/hermannm/devlog/Logger;
+	public static final fun debug-impl (Lorg/slf4j/Logger;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun debug-impl$default (Lorg/slf4j/Logger;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Lorg/slf4j/Logger;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Lorg/slf4j/Logger;Lorg/slf4j/Logger;)Z
+	public static final fun error-impl (Lorg/slf4j/Logger;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun error-impl$default (Lorg/slf4j/Logger;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public fun hashCode ()I
+	public static fun hashCode-impl (Lorg/slf4j/Logger;)I
+	public static final fun info-impl (Lorg/slf4j/Logger;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun info-impl$default (Lorg/slf4j/Logger;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public static final fun isDebugEnabled-impl (Lorg/slf4j/Logger;)Z
+	public static final fun isEnabledFor-impl (Lorg/slf4j/Logger;Ldev/hermannm/devlog/LogLevel;)Z
+	public static final fun isErrorEnabled-impl (Lorg/slf4j/Logger;)Z
+	public static final fun isInfoEnabled-impl (Lorg/slf4j/Logger;)Z
+	public static final fun isTraceEnabled-impl (Lorg/slf4j/Logger;)Z
+	public static final fun isWarnEnabled-impl (Lorg/slf4j/Logger;)Z
+	public static final fun log-impl (Lorg/slf4j/Logger;Ldev/hermannm/devlog/LogLevel;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;)V
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Lorg/slf4j/Logger;)Ljava/lang/String;
+	public static final fun trace-impl (Lorg/slf4j/Logger;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun trace-impl$default (Lorg/slf4j/Logger;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+	public final synthetic fun unbox-impl ()Lorg/slf4j/Logger;
+	public static final fun warn-impl (Lorg/slf4j/Logger;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun warn-impl$default (Lorg/slf4j/Logger;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+}
+
+public final class dev/hermannm/devlog/LoggerKt {
+	public static final fun getLogger (Ljava/lang/String;)Lorg/slf4j/Logger;
+	public static final fun getLogger (Lkotlin/jvm/functions/Function0;)Lorg/slf4j/Logger;
+	public static final fun getLogger (Lkotlin/reflect/KClass;)Lorg/slf4j/Logger;
+}
+
+public final class dev/hermannm/devlog/LoggingContext {
+	public static final field INSTANCE Ldev/hermannm/devlog/LoggingContext;
+	public final fun addFields-jza-tHc ([Ldev/hermannm/devlog/LogField;)[Ljava/lang/String;
+	public final fun removeFields-vNTxQKI ([Ldev/hermannm/devlog/LogField;[Ljava/lang/String;)V
+}
+
+public final class dev/hermannm/devlog/LoggingContextJsonFieldWriter : net/logstash/logback/composite/loggingevent/mdc/MdcEntryWriter {
+	public fun <init> ()V
+	public fun writeMdcEntry (Lcom/fasterxml/jackson/core/JsonGenerator;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
+}
+
+public final class dev/hermannm/devlog/LoggingContextKt {
+	public static final fun getLoggingContext ()Ljava/util/List;
+	public static final fun withLoggingContext (Ljava/util/List;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+	public static final fun withLoggingContext ([Ldev/hermannm/devlog/LogField;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+	public static final fun withLoggingContextInternal ([Ldev/hermannm/devlog/LogField;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+}
+
+public final class dev/hermannm/devlog/LoggingContext_jvmKt {
+	public static final fun inheritLoggingContext (Ljava/util/concurrent/ExecutorService;)Ljava/util/concurrent/ExecutorService;
+}
+
+public final class dev/hermannm/devlog/RawJson : com/fasterxml/jackson/databind/JsonSerializable {
+	public fun <init> (Ljava/lang/String;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun serialize (Lcom/fasterxml/jackson/core/JsonGenerator;Lcom/fasterxml/jackson/databind/SerializerProvider;)V
+	public fun serializeWithType (Lcom/fasterxml/jackson/core/JsonGenerator;Lcom/fasterxml/jackson/databind/SerializerProvider;Lcom/fasterxml/jackson/databind/jsontype/TypeSerializer;)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public class dev/hermannm/devlog/StringLogField : dev/hermannm/devlog/LogField {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+}
+
+public final class dev/hermannm/devlog/StringLogFieldFromContext : dev/hermannm/devlog/StringLogField {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+}
+

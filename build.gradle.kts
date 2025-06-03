@@ -52,6 +52,7 @@ plugins {
   alias(libs.plugins.kotlinxSerialization)
   alias(libs.plugins.spotless)
   alias(libs.plugins.gradleMavenPublish)
+  alias(libs.plugins.binaryCompatibilityValidator)
   alias(libs.plugins.dokka)
   alias(libs.plugins.gradleVersions)
   signing
@@ -163,6 +164,8 @@ publishing {
     }
   }
 }
+
+apiValidation { ignoredProjects.addAll(subprojects.map { it.name }) }
 
 tasks.dependencyUpdates {
   rejectVersionIf {
