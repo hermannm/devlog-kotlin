@@ -95,8 +95,8 @@ internal class LoggingContextJvmTest {
   /**
    * [inheritLoggingContext] wraps an [ExecutorService], forwarding calls to the wrapped executor.
    * We want to verify that all these methods forward appropriately, so we make a test case for each
-   * executor method, and use this as a [MethodSource] on our executor tests to run each test on
-   * every executor method.
+   * executor method, and run [parameterizedTest] in our executor tests to run each test on every
+   * executor method.
    */
   class ExecutorTestCase(
       override val name: String,
