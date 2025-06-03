@@ -250,6 +250,18 @@ internal class LoggerTest {
   }
 
   @Test
+  fun `getLogger strips away Kt suffix`() {
+    val logger = getLogger(LoggerNameTestKt::class)
+    logger.underlyingLogger.getName() shouldBe "dev.hermannm.devlog.LoggerNameTest"
+  }
+
+  @Test
+  fun `getLogger only removes Kt if it is a suffix`() {
+    val logger = getLogger(ClassWithKtInName::class)
+    logger.underlyingLogger.getName() shouldBe "dev.hermannm.devlog.ClassWithKtInName"
+  }
+
+  @Test
   fun `log builder does not get called if log level is disabled`() {
     val failingLogBuilder: LogBuilder.() -> String = {
       throw Exception("This function should not get called when log level is disabled")
@@ -325,3 +337,15 @@ internal class LoggerTest {
 }
 
 private val loggerOutsideClass = getLogger {}
+
+/**
+ * Used to test that the `Kt` suffix is stripped away from classes passed to `getLogger`. This is
+ * the suffix used for the synthetic classes that Kotlin generates for the top-level of files.
+ */
+private object LoggerNameTestKt
+
+/**
+ * Used to test that the logic used for [LoggerNameTestKt] only applies to classes with `Kt` as a
+ * suffix, not when it has `Kt` in the middle of the name like this.
+ */
+private object ClassWithKtInName

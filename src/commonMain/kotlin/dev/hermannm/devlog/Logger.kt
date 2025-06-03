@@ -715,6 +715,7 @@ private fun getLoggerName(forClass: KClass<*>): String {
   return when {
     name.contains("Kt$") -> name.substringBefore("Kt$")
     name.contains("$") -> name.substringBefore("$")
+    name.endsWith("Kt") -> name.removeSuffix("Kt")
     else -> name
   }
 }
