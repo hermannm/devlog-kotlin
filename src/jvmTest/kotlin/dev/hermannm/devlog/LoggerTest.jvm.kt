@@ -61,7 +61,7 @@ internal actual fun LoggerTestCase.verifyLogOutput(expectedLogLevel: LogLevel, b
 
   logEvent.loggerName shouldBe this.logger.underlyingLogger.name
   logEvent.message shouldBe this.expectedMessage
-  logEvent.level.toString() shouldBe expectedLogLevel.toString()
+  logEvent.level shouldBe expectedLogLevel.toLogback()
   logEvent.instant.shouldBeBetween(timeBefore, timeAfter)
 
   if (this.expectedCause == null) {
