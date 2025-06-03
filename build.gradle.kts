@@ -103,6 +103,8 @@ kotlin {
       freeCompilerArgs.add("-Xjdk-release=1.8")
     }
 
+    // To use JUnit 5 rather than JUnit 4:
+    // https://kotlinlang.org/docs/gradle-configure-project.html#jvm-variants-of-kotlin-test
     testRuns["test"].executionTask.configure { useJUnitPlatform() }
   }
 
