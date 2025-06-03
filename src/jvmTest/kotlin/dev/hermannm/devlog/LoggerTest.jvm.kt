@@ -1,3 +1,5 @@
+@file:Suppress("UsePropertyAccessSyntax")
+
 package dev.hermannm.devlog
 
 import ch.qos.logback.classic.Level as LogbackLevel
@@ -137,6 +139,14 @@ internal class LoggerJvmTest {
   }
 
   @Test
+  fun `getLogger called in file with platform extension omits the extension from the name`() {
+    // `loggerOutsideClass` calls `getLogger {}` at the top-level scope, in this file
+    // `LoggerTest.jvm.kt`. The synthetic class for this file will be named `LoggerTest_jvmKt`, and
+    // we want to verify that that our `getLoggerName` function strips the `_jvmKt` suffix.
+    loggerOutsideClass.underlyingLogger.getName() shouldBe "dev.hermannm.devlog.LoggerTest"
+  }
+
+  @Test
   fun `log event caller boundaries have expected values`() {
     LogbackLogEvent.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.LogbackLogEvent"
     Slf4jLogEvent.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.Slf4jLogEvent"
@@ -147,3 +157,5 @@ internal class LoggerJvmTest {
     LOGBACK_IS_ON_CLASSPATH shouldBe true
   }
 }
+
+private val loggerOutsideClass = getLogger {}

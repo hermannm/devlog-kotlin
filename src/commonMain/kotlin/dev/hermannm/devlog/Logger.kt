@@ -712,9 +712,15 @@ internal expect fun getPlatformLogger(name: String): PlatformLogger
  */
 private fun getLoggerName(forClass: KClass<*>): String {
   val name = forClass.qualifiedName ?: return "Logger"
+
+  val multiplatformExtensionMatch = multiplatformExtensionRegex.find(name)
   return when {
+    multiplatformExtensionMatch != null ->
+        name.substring(0, multiplatformExtensionMatch.range.start)
     name.contains("Kt$") -> name.substringBefore("Kt$")
     name.contains("$") -> name.substringBefore("$")
     else -> name
   }
 }
+
+private val multiplatformExtensionRegex = Regex("""_[A-Za-z0-9]+Kt(?:\z|\$)""")
