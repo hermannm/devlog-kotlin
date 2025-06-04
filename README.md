@@ -12,6 +12,7 @@ Logging library for Kotlin JVM, that thinly wraps SLF4J and Logback to provide a
 - [Usage](#usage)
 - [Adding to your project](#adding-to-your-project)
 - [Implementation](#implementation)
+- [Project Structure](#project-structure)
 - [Credits](#credits)
 
 ## Usage
@@ -192,8 +193,43 @@ For more configuration options, see:
   it's actually logged.
 - `Logger`'s methods are also `inline`, so we avoid the cost of allocating a function object for the
   lambda argument.
-- Elsewhere in the library, we use inline value classes when wrapping Logback APIs, to get as close
-  as possible to a zero-cost abstraction.
+- Elsewhere in the library, we use inline value classes when wrapping SLF4J/Logback APIs, to get as
+  close as possible to a zero-cost abstraction.
+
+## Project Structure
+
+`devlog-kotlin` is structured as a Kotlin Multiplatform project, although currently the only
+supported platform is JVM. The library has been designed to keep as much code as possible in the
+common (platform-neutral) module, to make it easier to add support for other platforms in the
+future.
+
+Directory structure:
+
+- `src/commonMain` contains common, platform-neutral implementations
+  - This module implements the surface API of `devlog-kotlin`, namely `Logger`, `LogBuilder` and
+    `LogField`
+  - It declares `expect` classes and functions for the underlying APIs that must be implemented by
+    each platform, namely `PlatformLogger`, `LogEvent` and `LoggingContext`
+- `src/jvmMain` implements platform-specific APIs for the JVM
+  - It uses SLF4J, the de-facto standard JVM logging library, with extra optimizations for Logback
+  - It implements:
+    - `PlatformLogger` as a typealias for `org.slf4j.Logger`
+    - `LoggingContext` using SLF4J's `MDC` (Mapped Diagnostic Context)
+    - `LogEvent` with an SLF4J `DefaultLoggingEvent`, or a special-case optimization using
+      Logback's `LoggingEvent` if Logback is on the classpath
+- `src/commonTest` contains the library's tests that apply to all platforms
+  - In order to keep as many tests as possible in the common module, we write most of our tests
+    here, and delegate to platform-specific `expect` utilities where needed. This allows us to
+    define a common test suite for all platforms, just switching out the parts where we need
+    platform-specific implementations
+- `src/jvmTest` contains JVM-specific tests, and implements the test utilities expected by
+  `commonTest`
+  for the JVM
+- `integration-tests` contains Gradle subprojects that load various SLF4J logger backends (Logback,
+  Log4j and `java.util.logging`, a.k.a. `jul`), and verify that they all work as expected with
+  `devlog-kotlin`
+  - Since we do some special-case optimizations if Logback is loaded, this lets us test that these
+    Logback-specific optimizations do not interfere with other logger backends
 
 ## Credits
 
