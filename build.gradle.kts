@@ -177,6 +177,14 @@ publishing {
 apiValidation { ignoredProjects.addAll(subprojects.map { it.name }) }
 
 dokka {
+  dokkaSourceSets.configureEach {
+    sourceLink {
+      // Links to the Git tag for the current version of the library
+      remoteUrl("https://github.com/hermannm/devlog-kotlin/tree/v${rootProject.version}/src")
+      remoteLineSuffix = "#L"
+      localDirectory = file("src")
+    }
+  }
   pluginsConfiguration.html {
     homepageLink = "https://hermannm.dev/devlog"
     footerMessage =
