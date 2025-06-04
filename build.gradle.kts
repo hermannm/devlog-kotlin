@@ -134,18 +134,10 @@ tasks.register<GradleBuild>("integrationTests") {
   group = "verification"
   tasks =
       listOf(
-          ":clean",
-          ":spotlessApply",
-          ":allTests",
-          ":integration-tests:logback:clean",
-          ":integration-tests:logback:spotlessApply",
-          ":integration-tests:logback:test",
-          ":integration-tests:log4j:clean",
-          ":integration-tests:log4j:spotlessApply",
-          ":integration-tests:log4j:test",
-          ":integration-tests:jul:clean",
-          ":integration-tests:jul:spotlessApply",
-          ":integration-tests:jul:test",
+          ":check",
+          ":integration-tests:logback:check",
+          ":integration-tests:log4j:check",
+          ":integration-tests:jul:check",
       )
 }
 
@@ -168,8 +160,8 @@ tasks.withType<Jar> {
   manifest.attributes("Automatic-Module-Name" to "dev.hermannm.devlog")
 }
 
-// Provides `publishing/publishAllPublicationsToTestRepository` task to check publication output
-// before we publish to Maven Central
+// Provides `publishing/publishAllPublicationsToLocalTestRepository` task to check publication
+// output before we publish to Maven Central
 publishing {
   repositories {
     maven {
