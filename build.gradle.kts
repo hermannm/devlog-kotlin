@@ -132,18 +132,6 @@ kotlin {
 
 repositories { mavenCentral() }
 
-// Task that runs the tests of the different logger implementations under /integration-tests
-tasks.register<GradleBuild>("integrationTests") {
-  group = "verification"
-  tasks =
-      listOf(
-          ":check",
-          ":integration-tests:logback:check",
-          ":integration-tests:log4j:check",
-          ":integration-tests:jul:check",
-      )
-}
-
 spotless {
   kotlin {
     toggleOffOn()
