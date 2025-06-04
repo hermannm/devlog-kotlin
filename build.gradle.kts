@@ -119,6 +119,12 @@ kotlin {
 
   // Require explicit public modifiers, to avoid accidentally publishing internal APIs
   explicitApi()
+
+  // Workaround to support single-target multiplatform projects in Dokka:
+  // https://github.com/Kotlin/dokka/issues/3122
+  if (gradle.startParameter.taskNames.contains("dokkaGeneratePublicationHtml")) {
+    linuxX64()
+  }
 }
 
 repositories { mavenCentral() }
