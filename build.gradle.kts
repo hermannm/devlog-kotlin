@@ -146,12 +146,21 @@ spotless {
 // Use GPG agent for signing Maven Central publication
 signing { useGpgCmd() }
 
+tasks.withType<Jar> {
+  // Copy license into META-INF in output jars
+  metaInf.with(copySpec().from("${project.rootDir}/LICENSE"))
+
+  // Add Automatic-Module-Name to META-INF/MANIFEST for better Java module interop:
+  // https://dev.java/learn/modules/automatic-module/
+  manifest.attributes("Automatic-Module-Name" to "dev.hermannm.devlog")
+}
+
 // Provides `publishing/publishAllPublicationsToTestRepository` task to check publication output
 // before we publish to Maven Central
 publishing {
   repositories {
     maven {
-      name = "Test"
+      name = "LocalTest"
       url = uri(layout.buildDirectory.dir("testPublication"))
     }
   }
