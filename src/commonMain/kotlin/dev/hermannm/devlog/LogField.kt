@@ -240,25 +240,18 @@ internal inline fun <reified ValueT, ReturnT> encodeFieldValue(
     crossinline onString: (String) -> ReturnT,
 ): ReturnT {
   try {
-    if (value == null) {
-      return onJson(JsonLogField.NULL_VALUE)
+    return when {
+      value == null -> onJson(JsonLogField.NULL_VALUE)
+      // Special case for String, to avoid redundant serialization
+      value is String -> onString(value)
+      // Special case for common types that kotlinx.serialization doesn't handle by default
+      fieldValueShouldUseToString(value) -> onString(value.toString())
+      // Try to serialize with kotlinx.serialization - if it fails, we fall back to toString below
+      else -> onJson(logFieldJson.encodeToString(value))
     }
-
-    // Special case for String, to avoid redundant serialization
-    if (value is String) {
-      return onString(value)
-    }
-
-    // Special cases for common types that kotlinx.serialization doesn't handle by default
-    if (fieldValueShouldUseToString(value)) {
-      return onString(value.toString())
-    }
-
-    val serializedValue = logFieldJson.encodeToString(value)
-    return onJson(serializedValue)
   } catch (_: Exception) {
     // We don't want to ever throw an exception from constructing a log field, which may happen if
-    // serialization fails, for example. So in these cases we fall back to toString().
+    // serialization fails, for example. So in these cases we fall back to toString()
     return onString(value.toString())
   }
 }
@@ -271,12 +264,12 @@ internal inline fun <ValueT : Any, ReturnT> encodeFieldValueWithSerializer(
     crossinline onString: (String) -> ReturnT,
 ): ReturnT {
   try {
-    if (value == null) {
-      return onJson(JsonLogField.NULL_VALUE)
+    return when {
+      // Handle nulls here, so users don't have to deal with passing a null-handling serializer
+      value == null -> onJson(JsonLogField.NULL_VALUE)
+      // Try to serialize with kotlinx.serialization - if it fails, we fall back to toString below
+      else -> onJson(logFieldJson.encodeToString(serializer, value))
     }
-
-    val serializedValue = logFieldJson.encodeToString(serializer, value)
-    return onJson(serializedValue)
   } catch (_: Exception) {
     // We don't want to ever throw an exception from constructing a log field, which may happen if
     // serialization fails, for example. So in these cases we fall back to toString().
