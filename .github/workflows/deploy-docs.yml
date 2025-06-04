@@ -1,0 +1,51 @@
+# Generates library docs with Dokka and deploys it to devlog-kotlin.hermannm.dev
+name: Deploy documentation
+on:
+  # Trigger deployment when a new release is published
+  release:
+    types: [ published ]
+  # Allow deployment to be triggered manually
+  workflow_dispatch:
+    inputs:
+      ref_to_deploy:
+        description: Tag / commit / branch name to use for the manual deploy
+        required: true
+        type: string
+env:
+  FORCE_COLOR: 1
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref_to_deploy || github.ref }}
+
+      - name: Build docs
+        run: ./gradlew :dokkaGeneratePublicationHtml
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./build/dokka/html
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4.0.5
+
+    environment:
+      name: devlog-kotlin.hermannm.dev
+      url: ${{ steps.deploy.outputs.page_url }}
