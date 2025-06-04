@@ -157,7 +157,17 @@ publishing {
   }
 }
 
+// We only want to use the binary compatibility validator on the main library, not our
+// integration test sub-projects
 apiValidation { ignoredProjects.addAll(subprojects.map { it.name }) }
+
+dokka {
+  pluginsConfiguration.html {
+    homepageLink = "https://hermannm.dev/devlog"
+    footerMessage =
+        """Developed by Hermann Mørkrid (<a href="https://hermannm.dev" style="color: inherit; text-decoration: underline">https://hermannm.dev</a>). Licensed under <a href="https://github.com/hermannm/devlog-kotlin/blob/main/LICENSE" style="color: inherit; text-decoration: underline">MIT</a>."""
+  }
+}
 
 tasks.dependencyUpdates {
   rejectVersionIf {
