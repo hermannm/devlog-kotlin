@@ -130,11 +130,11 @@ To set up `devlog-kotlin` with Logback and JSON output, add the following depend
   ```kotlin
   dependencies {
     // Logger API
-    implementation("dev.hermannm:devlog-kotlin:0.4.0")
+    implementation("dev.hermannm:devlog-kotlin:0.5.0")
     // Logger implementation
-    implementation("ch.qos.logback:logback-classic:1.5.15")
+    implementation("ch.qos.logback:logback-classic:1.5.18")
     // JSON encoding of logs
-    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
+    implementation("net.logstash.logback:logstash-logback-encoder:8.1")
   }
   ```
 - **Maven:**
@@ -143,20 +143,20 @@ To set up `devlog-kotlin` with Logback and JSON output, add the following depend
     <!-- Logger API -->
     <dependency>
       <groupId>dev.hermannm</groupId>
-      <artifactId>devlog-kotlin</artifactId>
-      <version>0.4.0</version>
+      <artifactId>devlog-kotlin-jvm</artifactId>
+      <version>0.5.0</version>
     </dependency>
     <!-- Logger implementation -->
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.5.15</version>
+      <version>1.5.18</version>
     </dependency>
     <!-- JSON encoding of logs -->
     <dependency>
       <groupId>net.logstash.logback</groupId>
       <artifactId>logstash-logback-encoder</artifactId>
-      <version>8.0</version>
+      <version>8.1</version>
     </dependency>
   </dependencies>
   ```
