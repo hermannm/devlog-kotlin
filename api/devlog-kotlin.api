@@ -68,7 +68,7 @@ public abstract class dev/hermannm/devlog/LogField {
 
 public final class dev/hermannm/devlog/LogFieldKt {
 	public static final fun field (Ljava/lang/String;Ljava/lang/Object;Lkotlinx/serialization/SerializationStrategy;)Ldev/hermannm/devlog/LogField;
-	public static final fun getLogFieldJson ()Lkotlinx/serialization/json/Json;
+	public static final fun getJsonEncoder ()Lkotlinx/serialization/json/Json;
 	public static final fun rawJson (Ljava/lang/String;Z)Lkotlinx/serialization/json/JsonElement;
 	public static synthetic fun rawJson$default (Ljava/lang/String;ZILjava/lang/Object;)Lkotlinx/serialization/json/JsonElement;
 	public static final fun rawJsonField (Ljava/lang/String;Ljava/lang/String;Z)Ldev/hermannm/devlog/LogField;
@@ -81,15 +81,15 @@ public final class dev/hermannm/devlog/LogField_jvmKt {
 
 public final class dev/hermannm/devlog/LogLevel {
 	public static final field Companion Ldev/hermannm/devlog/LogLevel$Companion;
+	public static final field DEBUG Ldev/hermannm/devlog/LogLevel;
+	public static final field ERROR Ldev/hermannm/devlog/LogLevel;
+	public static final field INFO Ldev/hermannm/devlog/LogLevel;
+	public static final field TRACE Ldev/hermannm/devlog/LogLevel;
+	public static final field WARN Ldev/hermannm/devlog/LogLevel;
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class dev/hermannm/devlog/LogLevel$Companion {
-	public final fun getDEBUG ()Ldev/hermannm/devlog/LogLevel;
-	public final fun getERROR ()Ldev/hermannm/devlog/LogLevel;
-	public final fun getINFO ()Ldev/hermannm/devlog/LogLevel;
-	public final fun getTRACE ()Ldev/hermannm/devlog/LogLevel;
-	public final fun getWARN ()Ldev/hermannm/devlog/LogLevel;
 }
 
 public final class dev/hermannm/devlog/Logger {
