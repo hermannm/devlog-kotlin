@@ -178,7 +178,7 @@ apiValidation { ignoredProjects.addAll(subprojects.map { it.name }) }
 dokka {
   dokkaSourceSets.configureEach {
     // Embeds this Markdown file on the module documentation page
-    includes.from("docs/module-docs.md")
+    includes.from("gradle/dokka-module-docs.md")
 
     sourceLink {
       // Links to the Git tag for the current version of the library
