@@ -41,7 +41,12 @@ mavenPublishing {
     }
   }
 
-  configure(KotlinMultiplatform(javadocJar = JavadocJar.Dokka("dokkaGenerate"), sourcesJar = true))
+  configure(
+      KotlinMultiplatform(
+          javadocJar = JavadocJar.Dokka("dokkaGeneratePublicationJavadoc"),
+          sourcesJar = true,
+      ),
+  )
   signAllPublications()
   publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, automaticRelease = false)
 }
@@ -54,6 +59,7 @@ plugins {
   alias(libs.plugins.gradleMavenPublish)
   alias(libs.plugins.binaryCompatibilityValidator)
   alias(libs.plugins.dokka)
+  alias(libs.plugins.dokkaJavadoc)
   alias(libs.plugins.gradleVersions)
   signing
 }

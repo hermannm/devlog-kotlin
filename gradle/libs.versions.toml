@@ -33,6 +33,7 @@ gradleMavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "gradl
 binaryCompatibilityValidator = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binaryCompatibilityValidator" }
 # Kotlin documentation rendering
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+dokkaJavadoc = { id = "org.jetbrains.dokka-javadoc", version.ref = "dokka" }
 # Provides dependencyUpdates task to check for new library versions
 gradleVersions = { id = "com.github.ben-manes.versions", version.ref = "gradleVersions" }
 
