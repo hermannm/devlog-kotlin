@@ -1,4 +1,4 @@
-// `@JvmInline` is auto-imported on JVM, but for multiplatform we need to use fully-qualified name
+// `kotlin.jvm` is auto-imported on JVM, but for multiplatform we need to use fully-qualified name
 @file:Suppress("RemoveRedundantQualifierName")
 
 package dev.hermannm.devlog
@@ -248,23 +248,27 @@ public fun getLoggingContext(): List<LogField> {
  */
 @PublishedApi
 internal expect object LoggingContext {
-  @PublishedApi internal fun addFields(fields: Array<out LogField>): OverwrittenContextFields
+  @PublishedApi
+  @kotlin.jvm.JvmStatic
+  internal fun addFields(fields: Array<out LogField>): OverwrittenContextFields
 
   /**
    * Takes the array of overwritten field values returned by [LoggingContext.addFields], to restore
    * the previous context values after the current context exits.
    */
   @PublishedApi
+  @kotlin.jvm.JvmStatic
   internal fun removeFields(
       fields: Array<out LogField>,
       overwrittenFields: OverwrittenContextFields
   )
 
-  internal fun hasKey(@Suppress("unused") key: String): Boolean
+  @kotlin.jvm.JvmStatic internal fun hasKey(@Suppress("unused") key: String): Boolean
 
-  internal fun getFieldList(): List<LogField>
+  @kotlin.jvm.JvmStatic internal fun getFieldList(): List<LogField>
 
   /** Combines the given log fields with any fields from [withLoggingContext]. */
+  @kotlin.jvm.JvmStatic
   internal fun combineFieldListWithContextFields(
       @Suppress("unused") fields: List<LogField>
   ): List<LogField>

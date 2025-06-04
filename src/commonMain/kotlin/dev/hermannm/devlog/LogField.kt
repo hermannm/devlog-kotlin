@@ -1,3 +1,6 @@
+// `kotlin.jvm` is auto-imported on JVM, but for multiplatform we need to use fully-qualified name
+@file:Suppress("RemoveRedundantQualifierName")
+
 package dev.hermannm.devlog
 
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -70,9 +73,10 @@ import kotlinx.serialization.json.longOrNull
  * }
  * ```
  */
-public sealed class LogField {
-  internal abstract val key: String
-  internal abstract val value: String
+public sealed class LogField(
+    @kotlin.jvm.JvmField internal val key: String,
+    @kotlin.jvm.JvmField internal val value: String,
+) {
   /**
    * [JsonLogField] adds a suffix ([LOGGING_CONTEXT_JSON_KEY_SUFFIX]) to the key in the logging
    * context to identify the value as raw JSON (so we can write the JSON unescaped in
@@ -97,25 +101,22 @@ public sealed class LogField {
 }
 
 @PublishedApi
-internal open class StringLogField(
-    final override val key: String,
-    final override val value: String,
-) : LogField() {
+internal open class StringLogField(key: String, value: String) : LogField(key, value) {
   final override val keyForLoggingContext: String
     get() = key
 }
 
 @PublishedApi
 internal open class JsonLogField(
-    final override val key: String,
-    final override val value: String,
+    key: String,
+    value: String,
     final override val keyForLoggingContext: String =
         if (ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS) {
           key + LOGGING_CONTEXT_JSON_KEY_SUFFIX
         } else {
           key
         }
-) : LogField() {
+) : LogField(key, value) {
   @PublishedApi
   internal companion object {
     /**
@@ -484,6 +485,7 @@ internal fun isValidJson(jsonElement: JsonElement): Boolean {
 }
 
 @PublishedApi
+@kotlin.jvm.JvmField
 internal val jsonEncoder: Json = Json {
   encodeDefaults = true
   ignoreUnknownKeys = true

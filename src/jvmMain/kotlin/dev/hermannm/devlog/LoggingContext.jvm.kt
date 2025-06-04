@@ -1,3 +1,6 @@
+// `kotlin.jvm` is auto-imported on JVM, but for multiplatform we need to use fully-qualified name
+@file:Suppress("RemoveRedundantQualifierName")
+
 package dev.hermannm.devlog
 
 import dev.hermannm.devlog.LoggingContext.addFields
@@ -18,6 +21,7 @@ import org.slf4j.MDC
 @PublishedApi
 internal actual object LoggingContext {
   @PublishedApi
+  @kotlin.jvm.JvmStatic
   internal actual fun addFields(fields: Array<out LogField>): OverwrittenContextFields {
     var overwrittenFields = OverwrittenContextFields(null)
 
@@ -81,6 +85,7 @@ internal actual object LoggingContext {
    * context values after the current context exits.
    */
   @PublishedApi
+  @kotlin.jvm.JvmStatic
   internal actual fun removeFields(
       fields: Array<out LogField>,
       overwrittenFields: OverwrittenContextFields
@@ -119,11 +124,13 @@ internal actual object LoggingContext {
     return false
   }
 
+  @kotlin.jvm.JvmStatic
   internal actual fun hasKey(key: String): Boolean {
     val existingValue: String? = MDC.get(key)
     return existingValue != null
   }
 
+  @kotlin.jvm.JvmStatic
   internal actual fun getFieldList(): List<LogField> {
     val fieldMap = getFieldMap()
     if (fieldMap.isNullOrEmpty()) {
@@ -135,6 +142,7 @@ internal actual object LoggingContext {
     return fieldList
   }
 
+  @kotlin.jvm.JvmStatic
   internal actual fun combineFieldListWithContextFields(fields: List<LogField>): List<LogField> {
     val contextFields = getFieldMap()
 
@@ -152,10 +160,12 @@ internal actual object LoggingContext {
     return combinedFields
   }
 
+  @kotlin.jvm.JvmStatic
   internal fun getFieldMap(): Map<String, String?>? {
     return MDC.getCopyOfContextMap()
   }
 
+  @kotlin.jvm.JvmStatic
   private fun mapFieldMapToList(fieldMap: Map<String, String?>, target: ArrayList<LogField>) {
     for ((key, value) in fieldMap) {
       if (value == null) {
@@ -166,6 +176,7 @@ internal actual object LoggingContext {
     }
   }
 
+  @kotlin.jvm.JvmStatic
   private fun getNonNullFieldCount(fieldMap: Map<String, String?>): Int {
     return fieldMap.count { field -> field.value != null }
   }
@@ -260,7 +271,7 @@ public fun ExecutorService.inheritLoggingContext(): ExecutorService {
  * take a [Callable]/[Runnable] with [wrapCallable]/[wrapRunnable], which copy the logging context
  * fields from the spawning thread to the spawned tasks.
  */
-@JvmInline // Inline value class, since we just wrap another ExecutorService
+@kotlin.jvm.JvmInline // Inline value class, since we just wrap another ExecutorService
 internal value class ExecutorServiceWithInheritedLoggingContext(
     private val wrappedExecutor: ExecutorService,
 ) :
