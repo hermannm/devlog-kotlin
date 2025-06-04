@@ -178,6 +178,9 @@ apiValidation { ignoredProjects.addAll(subprojects.map { it.name }) }
 
 dokka {
   dokkaSourceSets.configureEach {
+    // Embeds this Markdown file on the module documentation page
+    includes.from("docs/module-docs.md")
+
     sourceLink {
       // Links to the Git tag for the current version of the library
       remoteUrl("https://github.com/hermannm/devlog-kotlin/tree/v${rootProject.version}/src")
@@ -185,6 +188,7 @@ dokka {
       localDirectory = file("src")
     }
   }
+
   pluginsConfiguration.html {
     homepageLink = "https://hermannm.dev/devlog"
     footerMessage =
