@@ -16,7 +16,7 @@ mavenPublishing {
     name = "devlog-kotlin"
     description =
         "Logging library for Kotlin JVM, that thinly wraps SLF4J and Logback to provide a more ergonomic API."
-    url = "https://hermannm.dev/devlog"
+    url = "https://devlog-kotlin.hermannm.dev"
     inceptionYear = "2024"
 
     licenses {
@@ -169,7 +169,7 @@ apiValidation { ignoredProjects.addAll(subprojects.map { it.name }) }
 dokka {
   dokkaSourceSets.configureEach {
     // Embeds this Markdown file on the module documentation page
-    includes.from("gradle/dokka-module-docs.md")
+    includes.from("gradle/dokka/module-docs.md")
 
     sourceLink {
       // Links to the Git tag for the current version of the library
@@ -185,8 +185,12 @@ dokka {
   }
 
   pluginsConfiguration.html {
+    homepageLink = "https://github.com/hermannm/devlog-kotlin"
     footerMessage =
         """Developed by Hermann Mørkrid (<a href="https://hermannm.dev" target="_blank" style="color: inherit; text-decoration: underline">https://hermannm.dev</a>). Licensed under <a href="https://github.com/hermannm/devlog-kotlin/blob/main/LICENSE" target="_blank" style="color: inherit; text-decoration: underline">MIT</a>."""
+    // Overrides the default homepage link icon with a GitHub icon
+    customAssets.from("gradle/dokka/github-icon.svg")
+    customStyleSheets.from("gradle/dokka/custom-styles.css")
   }
 }
 
