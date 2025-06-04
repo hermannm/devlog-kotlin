@@ -1,6 +1,7 @@
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SonatypeHost
+import java.net.URI
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
@@ -183,9 +184,14 @@ dokka {
 
     sourceLink {
       // Links to the Git tag for the current version of the library
-      remoteUrl("https://github.com/hermannm/devlog-kotlin/tree/v${rootProject.version}/src")
+      remoteUrl = URI("https://github.com/hermannm/devlog-kotlin/tree/v${rootProject.version}/src")
       remoteLineSuffix = "#L"
-      localDirectory = file("src")
+      localDirectory = projectDir.resolve("src")
+    }
+
+    externalDocumentationLinks.register("kotlinx.serialization") {
+      url = URI("https://kotlinlang.org/api/kotlinx.serialization/")
+      packageListUrl = URI("https://kotlinlang.org/api/kotlinx.serialization/package-list")
     }
   }
 
