@@ -103,15 +103,13 @@ internal class LogbackLogEvent(level: LogLevel, cause: Throwable?, logger: Logba
  * loading Logback may interfere with the user's chosen SLF4J logger.
  */
 internal fun LogLevel.toLogback(): LogbackLevel {
-  return when (this) {
-    LogLevel.INFO -> LogbackLevel.INFO
-    LogLevel.WARN -> LogbackLevel.WARN
-    LogLevel.ERROR -> LogbackLevel.ERROR
-    LogLevel.DEBUG -> LogbackLevel.DEBUG
-    LogLevel.TRACE -> LogbackLevel.TRACE
-    /** Unreachable - see [LogLevel.unrecognized] for why we need this. */
-    else -> throw this.unrecognized()
-  }
+  return this.match(
+      INFO = { LogbackLevel.INFO },
+      WARN = { LogbackLevel.WARN },
+      ERROR = { LogbackLevel.ERROR },
+      DEBUG = { LogbackLevel.DEBUG },
+      TRACE = { LogbackLevel.TRACE },
+  )
 }
 
 /** Extends SLF4J's log event class to implement [LogEvent]. */
@@ -211,15 +209,13 @@ internal class Slf4jLogEvent(level: LogLevel, cause: Throwable?, logger: Slf4jLo
 }
 
 internal fun LogLevel.toSlf4j(): Slf4jLevel {
-  return when (this) {
-    LogLevel.INFO -> Slf4jLevel.INFO
-    LogLevel.WARN -> Slf4jLevel.WARN
-    LogLevel.ERROR -> Slf4jLevel.ERROR
-    LogLevel.DEBUG -> Slf4jLevel.DEBUG
-    LogLevel.TRACE -> Slf4jLevel.TRACE
-    /** Unreachable - see [LogLevel.unrecognized] for why we need this. */
-    else -> throw this.unrecognized()
-  }
+  return this.match(
+      INFO = { Slf4jLevel.INFO },
+      WARN = { Slf4jLevel.WARN },
+      ERROR = { Slf4jLevel.ERROR },
+      DEBUG = { Slf4jLevel.DEBUG },
+      TRACE = { Slf4jLevel.TRACE },
+  )
 }
 
 /**

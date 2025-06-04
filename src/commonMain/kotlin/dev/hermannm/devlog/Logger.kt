@@ -473,15 +473,13 @@ internal constructor(
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   public fun isEnabledFor(level: LogLevel): Boolean {
-    return when (level) {
-      LogLevel.INFO -> isInfoEnabled
-      LogLevel.WARN -> isWarnEnabled
-      LogLevel.ERROR -> isErrorEnabled
-      LogLevel.DEBUG -> isDebugEnabled
-      LogLevel.TRACE -> isTraceEnabled
-      /** Unreachable - see [LogLevel.unrecognized] for why we need this. */
-      else -> throw level.unrecognized()
-    }
+    return level.match(
+        INFO = { isInfoEnabled },
+        WARN = { isWarnEnabled },
+        ERROR = { isErrorEnabled },
+        DEBUG = { isDebugEnabled },
+        TRACE = { isTraceEnabled },
+    )
   }
 
   @PublishedApi

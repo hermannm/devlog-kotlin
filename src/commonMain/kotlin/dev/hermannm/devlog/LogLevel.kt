@@ -17,7 +17,7 @@ package dev.hermannm.devlog
  * You also set a "root" (default) log level - if this level is `INFO`, then `DEBUG`/`TRACE` logs
  * will not produce any output unless explicitly enabled for a logger.
  */
-public class LogLevel private constructor(private val name: String) {
+public class LogLevel private constructor() {
   public companion object {
     /**
      * The highest log level, for errors in your system that may require immediate attention.
@@ -25,7 +25,7 @@ public class LogLevel private constructor(private val name: String) {
      * See [LogLevel] for more on how to configure log levels.
      */
     @kotlin.jvm.JvmField // Compiles this as a static field on the JVM, for faster access
-    public val ERROR: LogLevel = LogLevel("ERROR")
+    public val ERROR: LogLevel = LogLevel()
 
     /**
      * The second-highest log level - less severe than `ERROR`, more severe than `INFO`. Use this
@@ -35,7 +35,7 @@ public class LogLevel private constructor(private val name: String) {
      * See [LogLevel] for more on how to configure log levels.
      */
     @kotlin.jvm.JvmField // Compiles this as a static field on the JVM, for faster access
-    public val WARN: LogLevel = LogLevel("WARN")
+    public val WARN: LogLevel = LogLevel()
 
     /**
      * The median log level - less severe than `ERROR` and `WARN`, more severe than `DEBUG` and
@@ -45,7 +45,7 @@ public class LogLevel private constructor(private val name: String) {
      * See [LogLevel] for more on how to configure log levels.
      */
     @kotlin.jvm.JvmField // Compiles this as a static field on the JVM, for faster access
-    public val INFO: LogLevel = LogLevel("INFO")
+    public val INFO: LogLevel = LogLevel()
 
     /**
      * The second-lowest log level - less severe than `INFO`, more severe than `TRACE`. This is used
@@ -55,7 +55,7 @@ public class LogLevel private constructor(private val name: String) {
      * See [LogLevel] for more on how to configure log levels.
      */
     @kotlin.jvm.JvmField // Compiles this as a static field on the JVM, for faster access
-    public val DEBUG: LogLevel = LogLevel("DEBUG")
+    public val DEBUG: LogLevel = LogLevel()
 
     /**
      * The lowest log level, for tracing minute application details. This log level will typically
@@ -65,7 +65,7 @@ public class LogLevel private constructor(private val name: String) {
      * See [LogLevel] for more on how to configure log levels.
      */
     @kotlin.jvm.JvmField // Compiles this as a static field on the JVM, for faster access
-    public val TRACE: LogLevel = LogLevel("TRACE")
+    public val TRACE: LogLevel = LogLevel()
   }
 
   /**
@@ -76,23 +76,51 @@ public class LogLevel private constructor(private val name: String) {
    * - `"DEBUG"` for [LogLevel.DEBUG]
    * - `"TRACE"` for [LogLevel.TRACE]
    */
-  override fun toString(): String = name
+  override fun toString(): String {
+    return this.match(
+        ERROR = { "ERROR" },
+        WARN = { "WARN" },
+        INFO = { "INFO" },
+        DEBUG = { "DEBUG" },
+        TRACE = { "TRACE" },
+    )
+  }
 
   /**
+   * Emulates a `when` expression for all the possible variants of [LogLevel].
+   *
    * If we made [LogLevel] an enum or a sealed class, we could have exhaustive `when` expressions
    * without an `else` branch. However, that would freeze the current members of `LogLevel` as part
    * of our public API, as introducing new members would break compatibility. Library consumers
    * should only be using log levels as constants to pass to the library, so we don't want to expand
    * our public API needlessly like that.
    *
-   * But since we now lose exhaustive `when` checks, we need an `else` branch. We use this method as
-   * the exception in those branches, although it should always be unreachable. Our tests ensure
-   * that we cover all cases.
+   * But since we now lose exhaustive `when` checks, we need an `else` branch. This `else` branch
+   * will always be unreachable as long as we check all the levels defined on the companion object
+   * here - since the constructor is private, there will be no other instances. To keep this logic
+   * in one place, we provide this method to emulate a `when` expression on a log level:
+   * - We take a lambda argument for each log level, to ensure that all cases are covered
+   *     - We make the method `inline`, so we don't pay a cost for the lambdas
+   * - In the unreachable else branch, we throw an exception
    *
    * We may be able to use an enum/sealed class instead if this issue moves along:
    * https://youtrack.jetbrains.com/issue/KT-38750/Support-declaration-site-nonexhaustiveness-for-enums-and-sealed-classes
    */
-  internal fun unrecognized(): Exception {
-    return IllegalStateException("Unrecognized log level '${name}'")
+  @Suppress("LocalVariableName") // We want the argument names here to be the same as the constants
+  internal inline fun <ReturnT> match(
+      crossinline ERROR: () -> ReturnT,
+      crossinline WARN: () -> ReturnT,
+      crossinline INFO: () -> ReturnT,
+      crossinline DEBUG: () -> ReturnT,
+      crossinline TRACE: () -> ReturnT,
+  ): ReturnT {
+    return when (this) {
+      LogLevel.ERROR -> ERROR()
+      LogLevel.WARN -> WARN()
+      LogLevel.INFO -> INFO()
+      LogLevel.DEBUG -> DEBUG()
+      LogLevel.TRACE -> TRACE()
+      else -> throw IllegalStateException("Unrecognized log level")
+    }
   }
 }
