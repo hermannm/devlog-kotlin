@@ -41,8 +41,8 @@ fun example() {
 }
 ```
 
-You can also add _fields_ (structured key-value data) to your logs. The `field` method uses
-`kotlinx.serialization` to serialize the value.
+You can also add _fields_ (structured key-value data) to your logs, by calling the `field` method in
+the scope of a log lambda. It uses `kotlinx.serialization` to serialize the value.
 
 ```kotlin
 import kotlinx.serialization.Serializable
