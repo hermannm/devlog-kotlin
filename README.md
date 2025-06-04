@@ -2,7 +2,10 @@
 
 Logging library for Kotlin JVM, that thinly wraps SLF4J and Logback to provide a more ergonomic API.
 
-Published on Maven Central: https://central.sonatype.com/artifact/dev.hermannm/devlog-kotlin
+- Docs: https://devlog-kotlin.hermannm.dev
+- Published on:
+  - klibs.io: https://klibs.io/project/hermannm/devlog-kotlin
+  - Maven Central: https://central.sonatype.com/artifact/dev.hermannm/devlog-kotlin
 
 **Contents:**
 
