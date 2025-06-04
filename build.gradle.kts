@@ -194,9 +194,8 @@ dokka {
   }
 
   pluginsConfiguration.html {
-    homepageLink = "https://hermannm.dev/devlog"
     footerMessage =
-        """Developed by Hermann Mørkrid (<a href="https://hermannm.dev" style="color: inherit; text-decoration: underline">https://hermannm.dev</a>). Licensed under <a href="https://github.com/hermannm/devlog-kotlin/blob/main/LICENSE" style="color: inherit; text-decoration: underline">MIT</a>."""
+        """Developed by Hermann Mørkrid (<a href="https://hermannm.dev" target="_blank" style="color: inherit; text-decoration: underline">https://hermannm.dev</a>). Licensed under <a href="https://github.com/hermannm/devlog-kotlin/blob/main/LICENSE" target="_blank" style="color: inherit; text-decoration: underline">MIT</a>."""
   }
 }
 
