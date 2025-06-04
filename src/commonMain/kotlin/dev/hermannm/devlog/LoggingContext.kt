@@ -7,16 +7,38 @@ import kotlin.concurrent.Volatile
 
 /**
  * Adds the given [log fields][LogField] to every log made by a [Logger] in the context of the given
- * [block].
+ * [block]. Use the [field]/[rawJsonField] functions to construct log fields.
  *
  * An example of when this is useful is when processing an event, and you want the event to be
  * attached to every log while processing it. Instead of manually attaching the event to each log,
  * you can wrap the event processing in `withLoggingContext` with the event as a log field, and then
  * all logs inside that context will include the event.
  *
+ * ### Field value encoding with SLF4J
+ *
  * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. To
- * encode object values as actual JSON (not escaped strings), you can use
- * `dev.hermannm.devlog.LoggingContextJsonFieldWriter` with Logback.
+ * encode object values as actual JSON (not escaped strings), you can add
+ * `dev.hermannm.devlog.LoggingContextJsonFieldWriter` as an `mdcEntryWriter` for
+ * [`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder), like this:
+ * ```xml
+ * <!-- Example Logback config (in src/main/resources/logback.xml) -->
+ * <?xml version="1.0" encoding="UTF-8"?>
+ * <configuration>
+ *   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+ *     <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+ *       <!-- Writes object values from logging context as actual JSON (not escaped) -->
+ *       <mdcEntryWriter class="dev.hermannm.devlog.LoggingContextJsonFieldWriter"/>
+ *     </encoder>
+ *   </appender>
+ *
+ *   <root level="INFO">
+ *     <appender-ref ref="STDOUT"/>
+ *   </root>
+ * </configuration
+ * ```
+ *
+ * This requires that you have added `ch.qos.logback:logback-classic` and
+ * `net.logstash.logback:logstash-logback-encoder` as dependencies.
  *
  * ### Note on coroutines
  *
@@ -58,20 +80,38 @@ public inline fun <ReturnT> withLoggingContext(
 
 /**
  * Adds the given [log fields][LogField] to every log made by a [Logger] in the context of the given
- * [block].
+ * [block]. Use the [field]/[rawJsonField] functions to construct log fields.
  *
  * An example of when this is useful is when processing an event, and you want the event to be
  * attached to every log while processing it. Instead of manually attaching the event to each log,
  * you can wrap the event processing in `withLoggingContext` with the event as a log field, and then
  * all logs inside that context will include the event.
  *
- * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. To
- * encode object values as actual JSON (not escaped strings), you can configure
- * `dev.hermannm.devlog.LoggingContextJsonFieldWriter`.
+ * ### Field value encoding with SLF4J
  *
- * This overload of the function takes a list instead of varargs, for when you already have a list
- * of log fields available. This can be used together with [getLoggingContext] to pass context
- * fields between threads ([see example][getLoggingContext]).
+ * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. To
+ * encode object values as actual JSON (not escaped strings), you can add
+ * `dev.hermannm.devlog.LoggingContextJsonFieldWriter` as an `mdcEntryWriter` for
+ * [`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder), like this:
+ * ```xml
+ * <!-- Example Logback config (in src/main/resources/logback.xml) -->
+ * <?xml version="1.0" encoding="UTF-8"?>
+ * <configuration>
+ *   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+ *     <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+ *       <!-- Writes object values from logging context as actual JSON (not escaped) -->
+ *       <mdcEntryWriter class="dev.hermannm.devlog.LoggingContextJsonFieldWriter"/>
+ *     </encoder>
+ *   </appender>
+ *
+ *   <root level="INFO">
+ *     <appender-ref ref="STDOUT"/>
+ *   </root>
+ * </configuration
+ * ```
+ *
+ * This requires that you have added `ch.qos.logback:logback-classic` and
+ * `net.logstash.logback:logstash-logback-encoder` as dependencies.
  *
  * ### Note on coroutines
  *
@@ -100,8 +140,8 @@ public inline fun <ReturnT> withLoggingContext(
  * If you have configured `dev.hermannm.devlog.LoggingContextJsonFieldWriter`, the field from
  * `withLoggingContext` will then be attached to every log as follows:
  * ```json
- * { "message": "Started processing event", "event": { /* ... */  } }
- * { "message": "Finished processing event", "event": { /* ... */  } }
+ * { "message": "Started processing event", "event": { ... } }
+ * { "message": "Finished processing event", "event": { ... } }
  * ```
  */
 public inline fun <ReturnT> withLoggingContext(
@@ -144,7 +184,7 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  * [withLoggingContext]). This can be used to pass logging context between threads (see example
  * below).
  *
- * If you spawn threads using an `java.util.concurrent.ExecutorService`, you may instead use the
+ * If you spawn threads using a `java.util.concurrent.ExecutorService`, you may instead use the
  * `dev.hermannm.devlog.inheritLoggingContext` extension function, which does the logging context
  * copying from parent to child for you.
  *
