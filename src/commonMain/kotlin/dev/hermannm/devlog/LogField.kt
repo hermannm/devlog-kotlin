@@ -98,18 +98,18 @@ public sealed class LogField {
 
 @PublishedApi
 internal open class StringLogField(
-    override val key: String,
-    override val value: String,
+    final override val key: String,
+    final override val value: String,
 ) : LogField() {
-  override val keyForLoggingContext: String
+  final override val keyForLoggingContext: String
     get() = key
 }
 
 @PublishedApi
 internal open class JsonLogField(
-    override val key: String,
-    override val value: String,
-    override val keyForLoggingContext: String =
+    final override val key: String,
+    final override val value: String,
+    final override val keyForLoggingContext: String =
         if (ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS) {
           key + LOGGING_CONTEXT_JSON_KEY_SUFFIX
         } else {
