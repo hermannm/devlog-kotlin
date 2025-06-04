@@ -5,6 +5,8 @@ package dev.hermannm.devlog
  * `cause` exception to one of the methods on [Logger], it will check if the given exception is an
  * instance of this class, and if it is, these fields will be added to the log.
  *
+ * Use the [field]/[rawJsonField] functions to construct log fields.
+ *
  * The exception also includes any log fields from [withLoggingContext], from the scope in which the
  * exception is constructed. This way, we don't lose any logging context if the exception escapes
  * the context it was thrown from. If you don't want this behavior, you can create a custom
@@ -106,6 +108,8 @@ public open class ExceptionWithLogFields(
  * Interface to allow you to attach [log fields][LogField] to exceptions. When passing a `cause`
  * exception to one of the methods on [Logger], it will check if the given exception implements this
  * interface, and if it does, these fields will be added to the log.
+ *
+ * Use the [field]/[rawJsonField] functions to construct log fields.
  *
  * This is useful when you are throwing an exception from somewhere down in the stack, but do
  * logging further up the stack, and you have structured data that you want to attach to the
