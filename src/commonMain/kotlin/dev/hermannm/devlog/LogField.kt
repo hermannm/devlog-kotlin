@@ -41,7 +41,7 @@ import kotlinx.serialization.json.longOrNull
  * import dev.hermannm.devlog.getLogger
  * import kotlinx.serialization.Serializable
  *
- * private val log = getLogger {}
+ * private val log = getLogger()
  *
  * fun example() {
  *   val event = Event(id = 1001, type = EventType.ORDER_PLACED)
@@ -312,7 +312,7 @@ internal inline fun <ValueT : Any, ReturnT> encodeFieldValueWithSerializer(
  * import dev.hermannm.devlog.rawJsonField
  * import dev.hermannm.devlog.withLoggingContext
  *
- * private val log = getLogger {}
+ * private val log = getLogger()
  *
  * fun example() {
  *   val eventJson = """{"id":1001,"type":"ORDER_PLACED"}"""
@@ -366,7 +366,7 @@ public fun rawJsonField(key: String, json: String, validJson: Boolean = false): 
  * import kotlinx.serialization.Serializable
  * import kotlinx.serialization.json.JsonElement
  *
- * private val log = getLogger {}
+ * private val log = getLogger()
  *
  * fun example() {
  *   // We hope the external service returns valid JSON, but we can't trust that fully. If it did

@@ -14,7 +14,7 @@ import kotlin.test.Test
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
-private val log = getLogger {}
+private val log = getLogger()
 
 internal class LoggingContextTest {
   @Test

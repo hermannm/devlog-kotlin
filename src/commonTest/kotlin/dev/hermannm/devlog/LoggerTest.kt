@@ -51,11 +51,11 @@ internal expect fun getTestLogger(level: LogLevel?): Logger
 internal expect fun resetLoggerTest()
 
 internal class LoggerTest {
-  private val loggerInsideClass = getLogger {}
+  private val loggerInsideClass = getLogger()
 
   companion object {
-    private val log = getLogger {}
-    private val loggerOnCompanionObject = getLogger {}
+    private val log = getLogger()
+    private val loggerOnCompanionObject = getLogger()
   }
 
   /** Input passed to the [loggerTestCases] in the tests on this class. */
@@ -336,7 +336,7 @@ internal class LoggerTest {
   }
 }
 
-private val loggerOutsideClass = getLogger {}
+private val loggerOutsideClass = getLogger()
 
 /**
  * Used to test that the `Kt` suffix is stripped away from classes passed to `getLogger`. This is

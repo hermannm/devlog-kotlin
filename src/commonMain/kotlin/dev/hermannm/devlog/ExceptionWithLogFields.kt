@@ -24,7 +24,7 @@ package dev.hermannm.devlog
  * import dev.hermannm.devlog.field
  * import dev.hermannm.devlog.getLogger
  *
- * private val log = getLogger {}
+ * private val log = getLogger()
  *
  * fun example(event: OrderUpdateEvent) {
  *   try {
@@ -126,7 +126,7 @@ public open class ExceptionWithLogFields(
  * import dev.hermannm.devlog.field
  * import dev.hermannm.devlog.getLogger
  *
- * private val log = getLogger {}
+ * private val log = getLogger()
  *
  * fun example(order: Order) {
  *   try {

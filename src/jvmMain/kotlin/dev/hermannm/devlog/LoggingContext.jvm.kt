@@ -228,7 +228,7 @@ internal inline fun <ReturnT> withLoggingContextMap(
  * import dev.hermannm.devlog.withLoggingContext
  * import java.util.concurrent.Executors
  *
- * private val log = getLogger {}
+ * private val log = getLogger()
  *
  * class OrderService(
  *     private val orderRepository: OrderRepository,

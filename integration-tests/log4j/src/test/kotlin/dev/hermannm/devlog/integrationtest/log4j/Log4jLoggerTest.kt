@@ -10,7 +10,7 @@ import java.io.PrintStream
 import kotlin.test.Test
 import kotlinx.serialization.Serializable
 
-private val log = getLogger {}
+private val log = getLogger()
 
 class Log4jLoggerTest {
   @Test

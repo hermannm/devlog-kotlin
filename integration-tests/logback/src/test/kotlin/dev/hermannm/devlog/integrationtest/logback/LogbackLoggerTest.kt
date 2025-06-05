@@ -23,7 +23,7 @@ class LogbackLoggerTest {
 
     val event = Event(id = 1001, type = "ORDER_UPDATED")
 
-    val log = getLogger {}
+    val log = getLogger()
 
     val output = captureStdout {
       withLoggingContext(jsonField) {

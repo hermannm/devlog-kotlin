@@ -17,7 +17,7 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonNull
 
-private val log = getLogger {}
+private val log = getLogger()
 
 internal class LogFieldTest {
   @Test

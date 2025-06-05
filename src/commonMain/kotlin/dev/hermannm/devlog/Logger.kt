@@ -1,4 +1,4 @@
-// `kotlin.jvm` is auto-imported on JVM, but for multiplatform we need to use fully-qualified name
+// `kotlin.jvm` is auto-imported on JVM, but for multiplatform we need to use qualified name
 @file:Suppress("RemoveRedundantQualifierName")
 
 package dev.hermannm.devlog
@@ -6,8 +6,8 @@ package dev.hermannm.devlog
 import kotlin.reflect.KClass
 
 /**
- * Returns a [Logger], using the given lambda to automatically give the logger the name of its
- * containing class (or file, if defined at the top level).
+ * Returns a [Logger], with its name inferred from the class in which it's called (or file, if
+ * defined at the top level).
  *
  * The logger name is included in the log output, and can be used to enable/disable log levels for
  * loggers based on their package names, or query for logs from a specific class.
@@ -21,17 +21,26 @@ import kotlin.reflect.KClass
  * import dev.hermannm.devlog.getLogger
  *
  * // Gets the name "com.example.Example"
- * private val log = getLogger {}
+ * private val log = getLogger()
  *
  * fun example() {
  *   log.info { "Example message" }
  * }
  * ```
+ *
+ * ### Implementation
+ *
+ * In the JVM implementation, this calls `MethodHandles.lookup().lookupClass()`, which returns the
+ * calling class. Since this function is inline, that will actually return the class that called
+ * `getLogger`, so we can use it to get the name of the caller. When called at file scope, the
+ * calling class will be the synthetic `Kt` class that Kotlin generates for the file, so we can use
+ * the file name in that case.
+ *
+ * This is the pattern that
+ * [the SLF4J docs recommends](https://www.slf4j.org/faq.html#declaration_pattern) for getting
+ * loggers for a class in a generic manner.
  */
-public fun getLogger(emptyLambdaToGetName: () -> Unit): Logger {
-  val name = getLoggerName(emptyLambdaToGetName::class)
-  return Logger(underlyingLogger = getPlatformLogger(name))
-}
+public expect inline fun getLogger(): Logger
 
 /**
  * Returns a [Logger] with the name of the given class.
@@ -39,9 +48,9 @@ public fun getLogger(emptyLambdaToGetName: () -> Unit): Logger {
  * The logger name is included in the log output, and can be used to enable/disable log levels for
  * loggers based on their package names, or query for logs from a specific class.
  *
- * In most cases, you should prefer the `getLogger` overload that takes an empty lambda, to
- * automatically get the name of the containing class (or file). But if you want more control over
- * which class to use for the logger name, you can use this overload.
+ * In most cases, you should prefer the zero-argument `getLogger()` overload, to automatically get
+ * the name of the containing class (or file). But if you want more control over which class to use
+ * for the logger name, you can use this overload.
  *
  * ### Example
  *
@@ -62,10 +71,7 @@ public fun getLogger(emptyLambdaToGetName: () -> Unit): Logger {
  * }
  * ```
  */
-public fun getLogger(forClass: KClass<*>): Logger {
-  val name = getLoggerName(forClass)
-  return Logger(underlyingLogger = getPlatformLogger(name))
-}
+public expect fun getLogger(forClass: KClass<*>): Logger
 
 /**
  * Returns a [Logger] with the given name.
@@ -74,8 +80,8 @@ public fun getLogger(forClass: KClass<*>): Logger {
  * loggers based on their package names, or query for logs from a specific class. Because of this,
  * the name given here should follow fully qualified class name format, like `com.example.Example`.
  *
- * To set the name automatically from the containing class/file, you can use the `getLogger`
- * overload that takes an empty lambda.
+ * To set the name automatically from the containing class/file, you can use the zero-argument
+ * `getLogger()` overload instead.
  *
  * ### Example
  *
@@ -83,9 +89,7 @@ public fun getLogger(forClass: KClass<*>): Logger {
  * private val log = getLogger(name = "com.example.Example")
  * ```
  */
-public fun getLogger(name: String): Logger {
-  return Logger(underlyingLogger = getPlatformLogger(name))
-}
+public expect fun getLogger(name: String): Logger
 
 /**
  * A logger provides methods for logging at various log levels ([info], [warn], [error], [debug] and
@@ -105,7 +109,7 @@ public fun getLogger(name: String): Logger {
  * import dev.hermannm.devlog.getLogger
  *
  * // Gets the name "com.example.Example"
- * private val log = getLogger {}
+ * private val log = getLogger()
  *
  * fun example() {
  *   log.info { "Example message" }
@@ -134,6 +138,7 @@ public fun getLogger(name: String): Logger {
  */
 @kotlin.jvm.JvmInline // Inline value class, to wrap the underlying platform logger without overhead
 public value class Logger
+@PublishedApi
 internal constructor(
     @PublishedApi internal val underlyingLogger: PlatformLogger,
 ) {
@@ -149,7 +154,7 @@ internal constructor(
    * ### Example
    *
    * ```
-   * private val log = getLogger {}
+   * private val log = getLogger()
    *
    * fun example(event: Event) {
    *   log.info {
@@ -192,7 +197,7 @@ internal constructor(
    * ### Example
    *
    * ```
-   * private val log = getLogger {}
+   * private val log = getLogger()
    *
    * fun example(event: Event) {
    *   try {
@@ -239,7 +244,7 @@ internal constructor(
    * ### Example
    *
    * ```
-   * private val log = getLogger {}
+   * private val log = getLogger()
    *
    * fun example(event: Event) {
    *   try {
@@ -286,7 +291,7 @@ internal constructor(
    * ### Example
    *
    * ```
-   * private val log = getLogger {}
+   * private val log = getLogger()
    *
    * fun example(event: Event) {
    *   log.debug {
@@ -329,7 +334,7 @@ internal constructor(
    * ### Example
    *
    * ```
-   * private val log = getLogger {}
+   * private val log = getLogger()
    *
    * fun example(event: Event) {
    *   log.trace {
@@ -374,7 +379,7 @@ internal constructor(
    * ### Example
    *
    * ```
-   * private val log = getLogger {}
+   * private val log = getLogger()
    *
    * fun example(event: Event) {
    *   try {
@@ -515,21 +520,16 @@ internal expect interface PlatformLogger {
 }
 
 /**
- * Returns a platform-specific underlying logger with the given name.
+ * Removes any `Kt` suffix from the given class name (added to
  *
- * On the JVM, this returns an SLF4J `Logger`.
- */
-internal expect fun getPlatformLogger(name: String): PlatformLogger
-
-/**
  * Implementation based on the
  * [KLoggerNameResolver from kotlin-logging](https://github.com/oshai/kotlin-logging/blob/e9c6ec570cd503c626fca5878efcf1291d4125b7/src/jvmMain/kotlin/mu/internal/KLoggerNameResolver.kt#L9-L19),
  * with minor changes. Licensed under
  * [Apache 2.0](https://github.com/oshai/kotlin-logging/blob/e9c6ec570cd503c626fca5878efcf1291d4125b7/LICENSE).
  */
-private fun getLoggerName(forClass: KClass<*>): String {
-  val name = forClass.qualifiedName ?: return "Logger"
+internal fun normalizeLoggerName(name: String?): String {
   return when {
+    name == null -> "Logger"
     name.contains("Kt$") -> name.substringBefore("Kt$")
     name.contains("$") -> name.substringBefore("$")
     name.endsWith("Kt") -> name.removeSuffix("Kt")

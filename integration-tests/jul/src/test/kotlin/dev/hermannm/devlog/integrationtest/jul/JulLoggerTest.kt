@@ -12,7 +12,7 @@ import java.io.PrintStream
 import kotlin.test.Test
 import kotlinx.serialization.Serializable
 
-private val log = getLogger {}
+private val log = getLogger()
 
 /** Tests the slf4j-jdk14 implementation, which uses java.util.logging (commonly called JUL). */
 class JulLoggerTest {

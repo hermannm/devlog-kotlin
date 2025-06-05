@@ -18,7 +18,7 @@ import kotlinx.serialization.SerializationStrategy
  * ### Example
  *
  * ```
- * private val log = getLogger {}
+ * private val log = getLogger()
  *
  * fun example(event: Event) {
  *   log.info {
@@ -60,7 +60,7 @@ internal constructor(
    * import dev.hermannm.devlog.getLogger
    * import kotlinx.serialization.Serializable
    *
-   * private val log = getLogger {}
+   * private val log = getLogger()
    *
    * fun example() {
    *   val event = Event(id = 1001, type = EventType.ORDER_PLACED)
@@ -136,7 +136,7 @@ internal constructor(
    * import dev.hermannm.devlog.getLogger
    * import kotlinx.serialization.Serializable
    *
-   * private val log = getLogger {}
+   * private val log = getLogger()
    *
    * fun example() {
    *   val event = Event(id = 1001, type = EventType.ORDER_PLACED)
@@ -212,7 +212,7 @@ internal constructor(
    * ```
    * import dev.hermannm.devlog.getLogger
    *
-   * private val log = getLogger {}
+   * private val log = getLogger()
    *
    * fun example() {
    *   val eventJson = """{"id":1001,"type":"ORDER_PLACED"}"""

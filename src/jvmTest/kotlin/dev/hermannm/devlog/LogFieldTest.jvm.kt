@@ -9,7 +9,7 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
 
-private val log = getLogger {}
+private val log = getLogger()
 
 internal class LogFieldJvmTest {
   @Test

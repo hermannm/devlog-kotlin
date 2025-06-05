@@ -53,7 +53,7 @@ import kotlin.concurrent.Volatile
  * import dev.hermannm.devlog.getLogger
  * import dev.hermannm.devlog.withLoggingContext
  *
- * private val log = getLogger {}
+ * private val log = getLogger()
  *
  * fun example(event: Event) {
  *   withLoggingContext(field("event", event)) {
@@ -126,7 +126,7 @@ public inline fun <ReturnT> withLoggingContext(
  * import dev.hermannm.devlog.getLogger
  * import dev.hermannm.devlog.withLoggingContext
  *
- * private val log = getLogger {}
+ * private val log = getLogger()
  *
  * fun example(event: Event) {
  *   withLoggingContext(field("event", event)) {
@@ -200,7 +200,7 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  * import dev.hermannm.devlog.withLoggingContext
  * import kotlin.concurrent.thread
  *
- * private val log = getLogger {}
+ * private val log = getLogger()
  *
  * class OrderService(
  *     private val orderRepository: OrderRepository,
