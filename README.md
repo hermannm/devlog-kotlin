@@ -13,6 +13,8 @@ runtime overhead. Currently only supports the JVM platform, wrapping SLF4J and L
 - [Usage](#usage)
 - [Adding to your project](#adding-to-your-project)
 - [Implementation](#implementation)
+  - [Performance](#performance)
+  - [Automatic logger names](#automatic-logger-names)
 - [Project Structure](#project-structure)
 - [Credits](#credits)
 
@@ -20,7 +22,8 @@ runtime overhead. Currently only supports the JVM platform, wrapping SLF4J and L
 
 The `Logger` class is the entry point to `devlog-kotlin`'s logging API. You can get a `Logger` by
 calling `getLogger()`, which automatically gives the logger the name of its containing class (or
-file, if defined at the top level).
+file, if defined at the top level). See [Implementation](#automatic-logger-names) below for how this
+works.
 
 ```kotlin
 // File Example.kt
@@ -194,6 +197,8 @@ For more configuration options, see:
 
 ## Implementation
 
+### Performance
+
 - All the methods on `Logger` take a lambda argument to build the log, which is only called if the
   log level is enabled - so you only pay for message string concatenation and log field
   serialization if it's actually logged.
@@ -201,6 +206,18 @@ For more configuration options, see:
   lambda argument.
 - Elsewhere in the library, we use inline value classes when wrapping SLF4J/Logback APIs, to get as
   close as possible to a zero-cost abstraction.
+
+### Automatic logger names
+
+In the JVM implementation, `getLogger()` calls `MethodHandles.lookup().lookupClass()`, which returns
+the calling class. Since `getLogger` is inline, that will actually return the class that called
+`getLogger`, so we can use it to get the name of the caller. When called at file scope, the calling
+class will be the synthetic `Kt` class that Kotlin generates for the file, so we can use the file
+name in that case.
+
+This is the pattern that
+[the SLF4J docs recommends](https://www.slf4j.org/faq.html#declaration_pattern) for getting loggers
+for a class in a generic manner.
 
 ## Project Structure
 
