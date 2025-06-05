@@ -131,17 +131,20 @@ Like SLF4J, `devlog-kotlin` only provides a logging _API_, and you have to add a
 _implementation_ to actually output logs. Any SLF4J logger implementation will work, but the
 library is specially optimized for Logback.
 
-To set up `devlog-kotlin` with Logback and JSON output, add the following dependencies:
+To set up `devlog-kotlin` with
+[Logback](https://mvnrepository.com/artifact/ch.qos.logback/logback-classic) and
+[Logstash Logback Encoder](https://mvnrepository.com/artifact/net.logstash.logback/logstash-logback-encoder)
+for JSON output, add the following dependencies:
 
 - **Gradle:**
   ```kotlin
   dependencies {
     // Logger API
-    implementation("dev.hermannm:devlog-kotlin:0.5.0")
+    implementation("dev.hermannm:devlog-kotlin:${devlogKotlinVersion}")
     // Logger implementation
-    runtimeOnly("ch.qos.logback:logback-classic:1.5.18")
+    runtimeOnly("ch.qos.logback:logback-classic:${logbackVersion}")
     // JSON encoding of logs
-    runtimeOnly("net.logstash.logback:logstash-logback-encoder:8.1")
+    runtimeOnly("net.logstash.logback:logstash-logback-encoder:${logstashLogbackEncoderVersion}")
   }
   ```
 - **Maven:**
@@ -151,20 +154,20 @@ To set up `devlog-kotlin` with Logback and JSON output, add the following depend
     <dependency>
       <groupId>dev.hermannm</groupId>
       <artifactId>devlog-kotlin-jvm</artifactId>
-      <version>0.5.0</version>
+      <version>${devlog-kotlin.version}</version>
     </dependency>
     <!-- Logger implementation -->
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.5.18</version>
+      <version>${logback.version}</version>
       <scope>runtime</scope>
     </dependency>
     <!-- JSON encoding of logs -->
     <dependency>
       <groupId>net.logstash.logback</groupId>
       <artifactId>logstash-logback-encoder</artifactId>
-      <version>8.1</version>
+      <version>${logstash-logback-encoder.version}</version>
       <scope>runtime</scope>
     </dependency>
   </dependencies>
@@ -191,9 +194,7 @@ Then, configure Logback with a `logback.xml` file under `src/main/resources`:
 For more configuration options, see:
 
 - [The Configuration chapter of the Logback manual](https://logback.qos.ch/manual/configuration.html)
-- [The Usage docs of
-  `logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder#usage)
-  (the library to use for JSON encoding of logs)
+- [The Usage docs for Logstash Logback Encoder](https://github.com/logfellow/logstash-logback-encoder#usage)
 
 ## Implementation
 
