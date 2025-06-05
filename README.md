@@ -1,6 +1,7 @@
 # devlog-kotlin
 
-Logging library for Kotlin JVM, that thinly wraps SLF4J and Logback to provide a more ergonomic API.
+Structured logging library for Kotlin, that aims to provide a developer-friendly API with near-zero
+runtime overhead. Currently only supports the JVM platform, wrapping SLF4J and Logback.
 
 - Docs: https://devlog-kotlin.hermannm.dev
 - Published on:
@@ -118,6 +119,9 @@ fun example() {
 }
 ```
 
+For more detailed documentation of the classes and functions provided by the library, see
+<https://devlog-kotlin.hermannm.dev>.
+
 ## Adding to your project
 
 Like SLF4J, `devlog-kotlin` only provides a logging _API_, and you have to add a logging
@@ -191,8 +195,8 @@ For more configuration options, see:
 ## Implementation
 
 - All the methods on `Logger` take a lambda argument to build the log, which is only called if the
-  log level is enabled - so you only pay for log field serialization and message concatenation if
-  it's actually logged.
+  log level is enabled - so you only pay for message string concatenation and log field
+  serialization if it's actually logged.
 - `Logger`'s methods are also `inline`, so we avoid the cost of allocating a function object for the
   lambda argument.
 - Elsewhere in the library, we use inline value classes when wrapping SLF4J/Logback APIs, to get as

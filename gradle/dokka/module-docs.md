@@ -1,6 +1,7 @@
 # Module devlog-kotlin
 
-Logging library for Kotlin JVM, that thinly wraps SLF4J and Logback to provide a more ergonomic API.
+Structured logging library for Kotlin, that aims to provide a developer-friendly API with near-zero
+runtime overhead. Currently only supports the JVM platform, wrapping SLF4J and Logback.
 
 Repository: <https://github.com/hermannm/devlog-kotlin>
 
