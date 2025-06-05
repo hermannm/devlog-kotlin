@@ -82,7 +82,7 @@ public sealed class LogField(
    * context to identify the value as raw JSON (so we can write the JSON unescaped in
    * `LoggingContextJsonFieldWriter`).
    */
-  internal abstract val keyForLoggingContext: String
+  internal abstract fun getKeyForLoggingContext(): String
 
   /**
    * Returns false if the field should not be included in the log (used by
@@ -102,21 +102,22 @@ public sealed class LogField(
 
 @PublishedApi
 internal open class StringLogField(key: String, value: String) : LogField(key, value) {
-  final override val keyForLoggingContext: String
-    get() = key
+  final override fun getKeyForLoggingContext(): String = key
 }
 
 @PublishedApi
 internal open class JsonLogField(
     key: String,
     value: String,
-    final override val keyForLoggingContext: String =
+    private val keyForLoggingContext: String =
         if (ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS) {
           key + LOGGING_CONTEXT_JSON_KEY_SUFFIX
         } else {
           key
         }
 ) : LogField(key, value) {
+  final override fun getKeyForLoggingContext(): String = keyForLoggingContext
+
   @PublishedApi
   internal companion object {
     /**

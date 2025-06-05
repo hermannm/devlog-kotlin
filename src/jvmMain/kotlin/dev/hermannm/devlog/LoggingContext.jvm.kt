@@ -27,6 +27,7 @@ internal actual object LoggingContext {
 
     for (index in fields.indices) {
       val field = fields[index]
+      val keyForLoggingContext = field.getKeyForLoggingContext()
 
       // Skip duplicate keys in the field array
       if (isDuplicateField(field, index, fields)) {
@@ -51,30 +52,30 @@ internal actual object LoggingContext {
            * here. The previous field will then be restored by [removeFields] after the context
            * exits.
            */
-          if (field.key != field.keyForLoggingContext) {
+          if (field.key != keyForLoggingContext) {
             MDC.remove(field.key)
           }
         }
       }
 
       /**
-       * [JsonLogField] adds a suffix to [LogField.keyForLoggingContext], i.e. it will be different
-       * from [LogField.key]. In this case, we want to check existing context field values for both
-       * [LogField.key] _and_ [LogField.keyForLoggingContext].
+       * [JsonLogField] adds a suffix to `keyForLoggingContext`, i.e. it will be different from
+       * [LogField.key]. In this case, we want to check existing context field values for both `key`
+       * _and_ `keyForLoggingContext`.
        */
-      if (field.key != field.keyForLoggingContext && existingValue == null) {
-        existingValue = MDC.get(field.keyForLoggingContext)
+      if (field.key != keyForLoggingContext && existingValue == null) {
+        existingValue = MDC.get(keyForLoggingContext)
         when (existingValue) {
           null -> {}
           field.value -> continue
           else -> {
             overwrittenFields =
-                overwrittenFields.set(index, field.keyForLoggingContext, existingValue, fields.size)
+                overwrittenFields.set(index, keyForLoggingContext, existingValue, fields.size)
           }
         }
       }
 
-      MDC.put(field.keyForLoggingContext, field.value)
+      MDC.put(keyForLoggingContext, field.value)
     }
 
     return overwrittenFields
@@ -92,6 +93,7 @@ internal actual object LoggingContext {
   ) {
     for (index in fields.indices) {
       val field = fields[index]
+      val keyForLoggingContext = field.getKeyForLoggingContext()
 
       // Skip duplicate keys, like we do in addFields
       if (isDuplicateField(field, index, fields)) {
@@ -106,12 +108,12 @@ internal actual object LoggingContext {
          * to call `MDC.remove` below (these may not always match for [JsonLogField] - see docstring
          * over `MDC.remove` in [addFields]).
          */
-        if (overwrittenKey == field.keyForLoggingContext) {
+        if (overwrittenKey == keyForLoggingContext) {
           continue
         }
       }
 
-      MDC.remove(field.keyForLoggingContext)
+      MDC.remove(keyForLoggingContext)
     }
   }
 

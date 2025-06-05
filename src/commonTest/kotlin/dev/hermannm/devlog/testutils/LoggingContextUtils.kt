@@ -12,7 +12,7 @@ internal infix fun LoggingContext.shouldContainExactly(map: Map<String, String>)
   contextFields.size shouldBe map.size
   for ((key, value) in map) {
     withClue({ "key='${key}', value='${value}'" }) {
-      val field = contextFields.find { field -> field.keyForLoggingContext == key }
+      val field = contextFields.find { field -> field.getKeyForLoggingContext() == key }
       field.shouldNotBeNull()
       field.value shouldBe value
     }
