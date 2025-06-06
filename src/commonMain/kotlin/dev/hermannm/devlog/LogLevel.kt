@@ -103,8 +103,8 @@ public class LogLevel private constructor() {
    *     - We make the method `inline`, so we don't pay a cost for the lambdas
    * - In the unreachable else branch, we throw an exception
    *
-   * We may be able to use an enum/sealed class instead if this issue moves along:
-   * https://youtrack.jetbrains.com/issue/KT-38750/Support-declaration-site-nonexhaustiveness-for-enums-and-sealed-classes
+   * We may be able to use an enum/sealed class instead if
+   * [this issue moves along](https://youtrack.jetbrains.com/issue/KT-38750/Support-declaration-site-nonexhaustiveness-for-enums-and-sealed-classes).
    */
   @Suppress("LocalVariableName") // We want the argument names here to be the same as the constants
   internal inline fun <ReturnT> match(

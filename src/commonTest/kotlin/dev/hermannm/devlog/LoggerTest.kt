@@ -311,29 +311,6 @@ internal class LoggerTest {
     disabledLogger.isErrorEnabled.shouldBeFalse()
     disabledLogger.isEnabledFor(LogLevel.ERROR).shouldBeFalse()
   }
-
-  @Test
-  fun `non-local return works in all logger methods`() {
-    // This won't compile if the methods aren't inline, and we want to verify that
-    log.info {
-      return
-    }
-    log.warn {
-      return
-    }
-    log.error {
-      return
-    }
-    log.debug {
-      return
-    }
-    log.trace {
-      return
-    }
-    log.at(LogLevel.INFO) {
-      return
-    }
-  }
 }
 
 private val loggerOutsideClass = getLogger()

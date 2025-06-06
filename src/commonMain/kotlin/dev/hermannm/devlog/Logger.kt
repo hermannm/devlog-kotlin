@@ -178,8 +178,14 @@ internal constructor(
    *
    *   The [LogBuilder] receiver lets you call [field][LogBuilder.field] in the scope of the lambda,
    *   to add structured key-value data to the log.
+   *
+   *   We mark the lambda as `crossinline`, so you don't accidentally do a non-local return in it,
+   *   which would drop the log.
    */
-  public inline fun info(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
+  public inline fun info(
+      cause: Throwable? = null,
+      crossinline buildLog: LogBuilder.() -> String,
+  ) {
     if (isInfoEnabled) {
       log(LogLevel.INFO, cause, buildLog)
     }
@@ -225,8 +231,14 @@ internal constructor(
    *
    *   The [LogBuilder] receiver lets you call [field][LogBuilder.field] in the scope of the lambda,
    *   to add structured key-value data to the log.
+   *
+   *   We mark the lambda as `crossinline`, so you don't accidentally do a non-local return in it,
+   *   which would drop the log.
    */
-  public inline fun warn(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
+  public inline fun warn(
+      cause: Throwable? = null,
+      crossinline buildLog: LogBuilder.() -> String,
+  ) {
     if (isWarnEnabled) {
       log(LogLevel.WARN, cause, buildLog)
     }
@@ -272,8 +284,14 @@ internal constructor(
    *
    *   The [LogBuilder] receiver lets you call [field][LogBuilder.field] in the scope of the lambda,
    *   to add structured key-value data to the log.
+   *
+   *   We mark the lambda as `crossinline`, so you don't accidentally do a non-local return in it,
+   *   which would drop the log.
    */
-  public inline fun error(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
+  public inline fun error(
+      cause: Throwable? = null,
+      crossinline buildLog: LogBuilder.() -> String,
+  ) {
     if (isErrorEnabled) {
       log(LogLevel.ERROR, cause, buildLog)
     }
@@ -315,8 +333,14 @@ internal constructor(
    *
    *   The [LogBuilder] receiver lets you call [field][LogBuilder.field] in the scope of the lambda,
    *   to add structured key-value data to the log.
+   *
+   *   We mark the lambda as `crossinline`, so you don't accidentally do a non-local return in it,
+   *   which would drop the log.
    */
-  public inline fun debug(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
+  public inline fun debug(
+      cause: Throwable? = null,
+      crossinline buildLog: LogBuilder.() -> String,
+  ) {
     if (isDebugEnabled) {
       log(LogLevel.DEBUG, cause, buildLog)
     }
@@ -358,8 +382,14 @@ internal constructor(
    *
    *   The [LogBuilder] receiver lets you call [field][LogBuilder.field] in the scope of the lambda,
    *   to add structured key-value data to the log.
+   *
+   *   We mark the lambda as `crossinline`, so you don't accidentally do a non-local return in it,
+   *   which would drop the log.
    */
-  public inline fun trace(cause: Throwable? = null, buildLog: LogBuilder.() -> String) {
+  public inline fun trace(
+      cause: Throwable? = null,
+      crossinline buildLog: LogBuilder.() -> String,
+  ) {
     if (isTraceEnabled) {
       log(LogLevel.TRACE, cause, buildLog)
     }
@@ -409,15 +439,34 @@ internal constructor(
    *
    *   The [LogBuilder] receiver lets you call [field][LogBuilder.field] in the scope of the lambda,
    *   to add structured key-value data to the log.
+   *
+   *   We mark the lambda as `crossinline`, so you don't accidentally do a non-local return in it,
+   *   which would drop the log.
    */
   public inline fun at(
       level: LogLevel,
       cause: Throwable? = null,
-      buildLog: LogBuilder.() -> String
+      crossinline buildLog: LogBuilder.() -> String,
   ) {
     if (isEnabledFor(level)) {
       log(level, cause, buildLog)
     }
+  }
+
+  @PublishedApi
+  internal inline fun log(
+      level: LogLevel,
+      cause: Throwable?,
+      crossinline buildLog: LogBuilder.() -> String,
+  ) {
+    val builder = LogBuilder(createLogEvent(level, cause, underlyingLogger))
+    val message = builder.buildLog()
+    if (cause != null) {
+      // Call this after buildLog(), so cause exception fields don't overwrite LogBuilder fields
+      builder.addFieldsFromCauseException(cause)
+    }
+
+    builder.logEvent.log(message, underlyingLogger)
   }
 
   /**
@@ -486,18 +535,6 @@ internal constructor(
         TRACE = { isTraceEnabled },
     )
   }
-
-  @PublishedApi
-  internal inline fun log(level: LogLevel, cause: Throwable?, buildLog: LogBuilder.() -> String) {
-    val builder = LogBuilder(createLogEvent(level, cause, underlyingLogger))
-    val message = builder.buildLog()
-    if (cause != null) {
-      // Call this after buildLog(), so cause exception fields don't overwrite LogBuilder fields
-      builder.addFieldsFromCauseException(cause)
-    }
-
-    builder.logEvent.log(message, underlyingLogger)
-  }
 }
 
 /**
@@ -508,11 +545,11 @@ internal constructor(
 internal expect interface PlatformLogger {
   fun getName(): String
 
-  fun isInfoEnabled(): Boolean
+  fun isErrorEnabled(): Boolean
 
   fun isWarnEnabled(): Boolean
 
-  fun isErrorEnabled(): Boolean
+  fun isInfoEnabled(): Boolean
 
   fun isDebugEnabled(): Boolean
 
