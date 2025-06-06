@@ -37,8 +37,8 @@ import kotlin.reflect.KClass
  * the file name in that case.
  *
  * This is the pattern that
- * [the SLF4J docs recommends](https://www.slf4j.org/faq.html#declaration_pattern) for getting
- * loggers for a class in a generic manner.
+ * [the SLF4J docs recommends](https://www.slf4j.org/faq.html#declaration_pattern) for instantiating
+ * loggers in a generic manner.
  */
 public expect inline fun getLogger(): Logger
 
@@ -557,7 +557,8 @@ internal expect interface PlatformLogger {
 }
 
 /**
- * Removes any `Kt` suffix from the given class name (added to
+ * Removes any `Kt` suffix from the given class name (which Kotlin adds to the classes that are
+ * generated for the top-level of files).
  *
  * Implementation based on the
  * [KLoggerNameResolver from kotlin-logging](https://github.com/oshai/kotlin-logging/blob/e9c6ec570cd503c626fca5878efcf1291d4125b7/src/jvmMain/kotlin/mu/internal/KLoggerNameResolver.kt#L9-L19),
@@ -566,6 +567,9 @@ internal expect interface PlatformLogger {
  */
 internal fun normalizeLoggerName(name: String?): String {
   return when {
+    // We may get a null name from `KClass.qualifiedName` in the `getLogger(forClass: KClass<*>)`
+    // overload. Although this should be rare (as it would only happen if the user somehow passed a
+    // synthetic class), we want to gracefully handle this, using "Logger" as a generic fallback.
     name == null -> "Logger"
     name.contains("Kt$") -> name.substringBefore("Kt$")
     name.contains("$") -> name.substringBefore("$")

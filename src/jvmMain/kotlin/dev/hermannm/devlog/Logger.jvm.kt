@@ -14,6 +14,9 @@ public actual inline fun getLogger(): Logger {
   // inline, that will actually return the class that called `getLogger`, so we can use it to get
   // the name of the caller. When called at file scope, the calling class will be the synthetic `Kt`
   // class that Kotlin generates for the file, so we can use the file name in that case.
+  //
+  // This is the pattern that SLF4J recommends for instantiating loggers in a generic manner:
+  // https://www.slf4j.org/faq.html#declaration_pattern
   return getLogger(javaClass = MethodHandles.lookup().lookupClass())
 }
 
