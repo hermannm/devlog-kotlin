@@ -16,6 +16,7 @@ runtime overhead. Currently only supports the JVM platform, wrapping SLF4J and L
   - [Performance](#performance)
   - [Automatic logger names](#automatic-logger-names)
 - [Project Structure](#project-structure)
+- [Why another logging library?](#why-another-logging-library)
 - [Credits](#credits)
 
 ## Usage
@@ -133,7 +134,8 @@ library is specially optimized for Logback.
 
 To set up `devlog-kotlin` with
 [Logback](https://mvnrepository.com/artifact/ch.qos.logback/logback-classic) and
-[Logstash Logback Encoder](https://mvnrepository.com/artifact/net.logstash.logback/logstash-logback-encoder)
+[
+`logstash-logback-encoder`](https://mvnrepository.com/artifact/net.logstash.logback/logstash-logback-encoder)
 for JSON output, add the following dependencies:
 
 - **Gradle:**
@@ -194,7 +196,8 @@ Then, configure Logback with a `logback.xml` file under `src/main/resources`:
 For more configuration options, see:
 
 - [The Configuration chapter of the Logback manual](https://logback.qos.ch/manual/configuration.html)
-- [The Usage docs for Logstash Logback Encoder](https://github.com/logfellow/logstash-logback-encoder#usage)
+- [The Usage docs for
+  `logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder#usage)
 
 ## Implementation
 
@@ -229,38 +232,111 @@ future.
 
 Directory structure:
 
-- `src/commonMain` contains common, platform-neutral implementations
+- `src/commonMain` contains common, platform-neutral implementations.
   - This module implements the surface API of `devlog-kotlin`, namely `Logger`, `LogBuilder` and
-    `LogField`
+    `LogField`.
   - It declares `expect` classes and functions for the underlying APIs that must be implemented by
-    each platform, namely `PlatformLogger`, `LogEvent` and `LoggingContext`
-- `src/jvmMain` implements platform-specific APIs for the JVM
-  - It uses SLF4J, the de-facto standard JVM logging library, with extra optimizations for Logback
+    each platform, namely `PlatformLogger`, `LogEvent` and `LoggingContext`.
+- `src/jvmMain` implements platform-specific APIs for the JVM.
+  - It uses SLF4J, the de-facto standard JVM logging library, with extra optimizations for Logback.
   - It implements:
-    - `PlatformLogger` as a typealias for `org.slf4j.Logger`
-    - `LoggingContext` using SLF4J's `MDC` (Mapped Diagnostic Context)
+    - `PlatformLogger` as a typealias for `org.slf4j.Logger`.
+    - `LoggingContext` using SLF4J's `MDC` (Mapped Diagnostic Context).
     - `LogEvent` with an SLF4J `DefaultLoggingEvent`, or a special-case optimization using
-      Logback's `LoggingEvent` if Logback is on the classpath
-- `src/commonTest` contains the library's tests that apply to all platforms
+      Logback's `LoggingEvent` if Logback is on the classpath.
+- `src/commonTest` contains the library's tests that apply to all platforms.
   - In order to keep as many tests as possible in the common module, we write most of our tests
     here, and delegate to platform-specific `expect` utilities where needed. This allows us to
     define a common test suite for all platforms, just switching out the parts where we need
-    platform-specific implementations
+    platform-specific implementations.
 - `src/jvmTest` contains JVM-specific tests, and implements the test utilities expected by
-  `commonTest`
-  for the JVM
+  `commonTest` for the JVM.
 - `integration-tests` contains Gradle subprojects that load various SLF4J logger backends (Logback,
   Log4j and `java.util.logging`, a.k.a. `jul`), and verify that they all work as expected with
-  `devlog-kotlin`
+  `devlog-kotlin`.
   - Since we do some special-case optimizations if Logback is loaded, this lets us test that these
-    Logback-specific optimizations do not interfere with other logger backends
+    Logback-specific optimizations do not interfere with other logger backends.
+
+## Why another logging library?
+
+The inspiration for this library mostly came from some inconveniencies and limitations I've
+experienced with the [`kotlin-logging`](https://github.com/oshai/kotlin-logging) library (it's a
+great library, these are just subjective grievances!). Here are some of the things I wanted to
+improve with this library:
+
+- **Structured logging**
+  - In `kotlin-logging`, going from a log _without_ structured log fields to a log _with_  them
+    requires you to switch your logger method (`info` -> `atInfo`), use a different syntax
+    (`message = ` instead of returning a string), and construct a map for the fields.
+  - Having to switch syntax becomes a barrier for developers to do structured logging. In my
+    experience, the key to making structured logging work in practice is to reduce such barriers.
+  - So in `devlog-kotlin`, I wanted to make this easier: you use the same logger methods whether you
+    are adding fields or not, and adding structured data to an existing log is as simple as just
+    calling `field` in the scope of the log lambda.
+- **Using `kotlinx.serialization` for log field serialization**
+  - `kotlin-logging` also wraps SLF4J in the JVM implementation. It passes structured log fields as
+    `Map<String, Any?>`, and leaves it to the logger backend to serialize them. Since most SLF4J
+    logger implementations are Java-based, they typically use Jackson to serialize these fields (if
+    they support structured logging at all).
+  - But in Kotlin, we often use `kotlinx.serialization` instead of Jackson. There can be subtle
+    differences between how Jackson and `kotlinx` serialize objects, so we would prefer to use
+    `kotlinx` for our log fields, so that they serialize in the same way as in the rest of our
+    application.
+  - In `devlog-kotlin`, we solve this by serializing log fields _before_ sending them to the logger
+    backend, which allows us to control the serialization process with `kotlinx.serialization`.
+  - Controlling the serialization process also lets us handle failures better. One of the issues
+    I've experienced with Jackson serialization of log fields, is that `logstash-logback-encoder`
+    would drop an entire log line in some cases when one of the custom fields on that log failed
+    to serialize. `devlog-kotlin` never drops logs on serialization failures, instead defaulting to
+    `toString()`.
+- **Inline logger methods**
+  - One of the classic challenges for a logging library is how to handle calls to a logger method
+    when the log level is disabled. We want this to have as little overhead as possible, so that
+    we don't pay a runtime cost for a log that won't actually produce any output.
+  - In Kotlin, we have the opportunity to create such zero-cost abstractions, using `inline`
+    functions with lambda parameters. This lets us implement logger methods that compile down to a
+    simple `if` statement to check if the log level is enabled, and that do no work if the level is
+    disabled. Great!
+  - However, `kotlin-logging` does not use inline logger methods. This is partly because of how the
+    library is structured: `KLogger` is an interface, with different implementations for various
+    platforms - and interfaces can't have inline methods. So the methods that take lambdas won't be
+    inlined, which means that they may allocate function objects, which are not zero-cost.
+    [This `kotlin-logging` issue](https://github.com/oshai/kotlin-logging/issues/34) discusses some
+    of the performance implications.
+  - `devlog-kotlin` solves this by dividing up the problem: we make our `Logger` a concrete class,
+    with a single implementation in the `common` module. It wraps an internal `PlatformLogger`
+    interface (delegating to SLF4J in the JVM implementation). `Logger` provides the public API, and
+    since it's a single concrete class, we can make its methods `inline`. We also make it a
+    `value class`, so that it compiles down to just the underlying `PlatformLogger` at runtime. This
+    makes the abstraction as close to zero-cost as possible.
+  - One notable drawback of inline methods is that they don't work well with line numbers (i.e.,
+    getting file location information inside an inlined lambda will show an incorrect line number).
+    We deem this a worthy tradeoff for performance, because the class/file name + the log message is
+    typically enough to find the source of a log. Also, `logstash-logback-encoder`
+    [explicitly discourages enabling file locations](https://github.com/logfellow/logstash-logback-encoder/tree/logstash-logback-encoder-8.1#caller-info-fields),
+    due to the runtime cost. Still, this is something to be aware of if you want line numbers
+    included in your logs. This limitation is documented on all the methods on `Logger`.
+- **Supporting arbitrary types for logging context values**
+  - SLF4J's `MDC` has a limitation: values must be `String`. And the `withLoggingContext` function
+    from `kotlin-logging`, which uses `MDC`, inherits this limitation.
+  - But when doing structured logging, it can be useful to attach more than just strings in the
+    logging context - for example, attaching the JSON of an event in the scope that it's being
+    processed. If you pass serialized JSON to `MDC`, the resulting log output will include the JSON
+    as an escaped string. This defeats the purpose, as an escaped string will not be parsed
+    automatically by log analysis platforms - what we want is to include actual, unescaped JSON in
+    the logging context, so that we can filter and query on its fields.
+  - `devlog-kotlin` solves this limitation by instead taking a `LogField` type, which can have an
+    arbitrary serializable value, as the parameter to our `withLoggingContext` function. We then
+    provide `LoggingContextJsonFieldWriter` for interoperability with `MDC` when using Logback +
+    `logstash-logback-encoder`.
 
 ## Credits
 
-Credits to the [kotlin-logging library by Ohad Shai](https://github.com/oshai/kotlin-logging)
+Credits to the [`kotlin-logging` library by Ohad Shai](https://github.com/oshai/kotlin-logging)
 (licensed under
 [Apache 2.0](https://github.com/oshai/kotlin-logging/blob/c91fe6ab71b9d3470fae71fb28c453006de4e584/LICENSE)),
-which inspired the `getLogger()` syntax using a lambda to get the logger name.
-[This kotlin-logging issue](https://github.com/oshai/kotlin-logging/issues/34) (by
-[kosiakk](https://github.com/kosiakk)) also inspired the implementation using `inline` methods for
-minimal overhead.
+which was a great inspiration for this library.
+
+Also credits to [kosiakk](https://github.com/kosiakk) for
+[this `kotlin-logging` issue](https://github.com/oshai/kotlin-logging/issues/34), which inspired the
+implementation using `inline` methods for minimal overhead.
