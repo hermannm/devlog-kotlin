@@ -261,7 +261,7 @@ Directory structure:
 
 The inspiration for this library mostly came from some inconveniencies and limitations I've
 experienced with the [`kotlin-logging`](https://github.com/oshai/kotlin-logging) library (it's a
-great library, these are just subjective grievances!). Here are some of the things I wanted to
+great library, these are just my subjective opinions!). Here are some of the things I wanted to
 improve with this library:
 
 - **Structured logging**
