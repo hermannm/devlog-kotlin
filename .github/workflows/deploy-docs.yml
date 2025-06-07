@@ -8,8 +8,10 @@ on:
   workflow_dispatch:
     inputs:
       ref_to_deploy:
-        description: Tag / commit / branch name to use for the manual deploy
-        required: true
+        description: >-
+          Tag / commit / branch name to use for the manual deploy. Defaults to latest commit on the
+          chosen branch if not provided.
+        required: false
         type: string
 env:
   FORCE_COLOR: 1
