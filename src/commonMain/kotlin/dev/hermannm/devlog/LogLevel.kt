@@ -16,8 +16,13 @@ package dev.hermannm.devlog
  * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
  * You also set a "root" (default) log level - if this level is `INFO`, then `DEBUG`/`TRACE` logs
  * will not produce any output unless explicitly enabled for a logger.
+ *
+ * Log levels are implemented as static instances on the companion object, instead of as an enum.
+ * This is because we don't want to bind ourselves to the public API that an enum exposes
+ * ([Enum.name] and [Enum.ordinal]).
  */
 public class LogLevel private constructor() {
+  /** See [LogLevel]. */
   public companion object {
     /**
      * The highest log level, for errors in your system that may require immediate attention.

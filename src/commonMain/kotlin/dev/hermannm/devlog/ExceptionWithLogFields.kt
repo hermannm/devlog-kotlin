@@ -79,8 +79,13 @@ package dev.hermannm.devlog
  *       override `message` while also passing log fields as varargs
  */
 public open class ExceptionWithLogFields(
+    /** The exception message. */
     override val message: String?,
     logFields: List<LogField> = emptyList(),
+    /**
+     * The cause of the exception. If you're throwing this exception after catching another, you
+     * should include the original exception here.
+     */
     override val cause: Throwable? = null,
 ) : RuntimeException(), HasLogFields {
   // Final, since we want to ensure that fields from logging context are included

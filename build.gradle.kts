@@ -182,6 +182,9 @@ dokka {
       url = URI("https://kotlinlang.org/api/kotlinx.serialization/")
       packageListUrl = URI("https://kotlinlang.org/api/kotlinx.serialization/package-list")
     }
+
+    // Require docstrings for all public APIs
+    reportUndocumented = true
   }
 
   pluginsConfiguration.html {
@@ -192,6 +195,8 @@ dokka {
     customAssets.from("gradle/dokka/github-icon.svg")
     customStyleSheets.from("gradle/dokka/custom-styles.css")
   }
+
+  dokkaPublications.html { failOnWarning = true }
 }
 
 tasks.dependencyUpdates {

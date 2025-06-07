@@ -91,11 +91,18 @@ public sealed class LogField(
    */
   internal open fun includeInLog(): Boolean = true
 
+  /**
+   * Returns a string representation of the log field, formatted as `${key}=${value}`.
+   *
+   * You should not rely on this format for anything other than debugging.
+   */
   override fun toString(): String = "${key}=${value}"
 
+  /** Two log fields are equal if their keys and values are equal. */
   override fun equals(other: Any?): Boolean =
       other is LogField && this.key == other.key && this.value == other.value
 
+  /** Returns the combined hash code of the key and value for this log field. */
   override fun hashCode(): Int =
       key.hashCode() * 31 + value.hashCode() // 31 is default factor for aggregate hash codes
 }
