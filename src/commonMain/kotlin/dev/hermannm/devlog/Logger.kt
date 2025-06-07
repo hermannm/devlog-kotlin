@@ -6,92 +6,6 @@ package dev.hermannm.devlog
 import kotlin.reflect.KClass
 
 /**
- * Returns a [Logger], with its name inferred from the class in which it's called (or file, if
- * defined at the top level).
- *
- * The logger name is included in the log output, and can be used to enable/disable log levels for
- * loggers based on their package names, or query for logs from a specific class.
- *
- * ### Example
- *
- * ```
- * // In file Example.kt
- * package com.example
- *
- * import dev.hermannm.devlog.getLogger
- *
- * // Gets the name "com.example.Example"
- * private val log = getLogger()
- *
- * fun example() {
- *   log.info { "Example message" }
- * }
- * ```
- *
- * ### Implementation
- *
- * In the JVM implementation, this calls `MethodHandles.lookup().lookupClass()`, which returns the
- * calling class. Since this function is inline, that will actually return the class that called
- * `getLogger`, so we can use it to get the name of the caller. When called at file scope, the
- * calling class will be the synthetic `Kt` class that Kotlin generates for the file, so we can use
- * the file name in that case.
- *
- * This is the pattern that
- * [the SLF4J docs recommends](https://www.slf4j.org/faq.html#declaration_pattern) for instantiating
- * loggers in a generic manner.
- */
-public expect inline fun getLogger(): Logger
-
-/**
- * Returns a [Logger] with the name of the given class.
- *
- * The logger name is included in the log output, and can be used to enable/disable log levels for
- * loggers based on their package names, or query for logs from a specific class.
- *
- * In most cases, you should prefer the zero-argument `getLogger()` overload, to automatically get
- * the name of the containing class (or file). But if you want more control over which class to use
- * for the logger name, you can use this overload.
- *
- * ### Example
- *
- * ```
- * package com.example
- *
- * import dev.hermannm.devlog.getLogger
- *
- * class Example {
- *   companion object {
- *     // Gets the name "com.example.Example"
- *     private val log = getLogger(Example::class)
- *   }
- *
- *   fun example() {
- *     log.info { "Example message" }
- *   }
- * }
- * ```
- */
-public expect fun getLogger(forClass: KClass<*>): Logger
-
-/**
- * Returns a [Logger] with the given name.
- *
- * The logger name is included in the log output, and can be used to enable/disable log levels for
- * loggers based on their package names, or query for logs from a specific class. Because of this,
- * the name given here should follow fully qualified class name format, like `com.example.Example`.
- *
- * To set the name automatically from the containing class/file, you can use the zero-argument
- * `getLogger()` overload instead.
- *
- * ### Example
- *
- * ```
- * private val log = getLogger(name = "com.example.Example")
- * ```
- */
-public expect fun getLogger(name: String): Logger
-
-/**
  * A logger provides methods for logging at various log levels ([info], [warn], [error], [debug] and
  * [trace]). It has a logger name, typically the same as the class that the logger is attached to
  * (e.g. `com.example.Example`). The name is included in the log output, and can be used to
@@ -536,6 +450,92 @@ internal constructor(
     )
   }
 }
+
+/**
+ * Returns a [Logger], with its name inferred from the class in which it's called (or file, if
+ * defined at the top level).
+ *
+ * The logger name is included in the log output, and can be used to enable/disable log levels for
+ * loggers based on their package names, or query for logs from a specific class.
+ *
+ * ### Example
+ *
+ * ```
+ * // In file Example.kt
+ * package com.example
+ *
+ * import dev.hermannm.devlog.getLogger
+ *
+ * // Gets the name "com.example.Example"
+ * private val log = getLogger()
+ *
+ * fun example() {
+ *   log.info { "Example message" }
+ * }
+ * ```
+ *
+ * ### Implementation
+ *
+ * In the JVM implementation, this calls `MethodHandles.lookup().lookupClass()`, which returns the
+ * calling class. Since this function is inline, that will actually return the class that called
+ * `getLogger`, so we can use it to get the name of the caller. When called at file scope, the
+ * calling class will be the synthetic `Kt` class that Kotlin generates for the file, so we can use
+ * the file name in that case.
+ *
+ * This is the pattern that
+ * [the SLF4J docs recommends](https://www.slf4j.org/faq.html#declaration_pattern) for instantiating
+ * loggers in a generic manner.
+ */
+public expect inline fun getLogger(): Logger
+
+/**
+ * Returns a [Logger] with the name of the given class.
+ *
+ * The logger name is included in the log output, and can be used to enable/disable log levels for
+ * loggers based on their package names, or query for logs from a specific class.
+ *
+ * In most cases, you should prefer the zero-argument `getLogger()` overload, to automatically get
+ * the name of the containing class (or file). But if you want more control over which class to use
+ * for the logger name, you can use this overload.
+ *
+ * ### Example
+ *
+ * ```
+ * package com.example
+ *
+ * import dev.hermannm.devlog.getLogger
+ *
+ * class Example {
+ *   companion object {
+ *     // Gets the name "com.example.Example"
+ *     private val log = getLogger(Example::class)
+ *   }
+ *
+ *   fun example() {
+ *     log.info { "Example message" }
+ *   }
+ * }
+ * ```
+ */
+public expect fun getLogger(forClass: KClass<*>): Logger
+
+/**
+ * Returns a [Logger] with the given name.
+ *
+ * The logger name is included in the log output, and can be used to enable/disable log levels for
+ * loggers based on their package names, or query for logs from a specific class. Because of this,
+ * the name given here should follow fully qualified class name format, like `com.example.Example`.
+ *
+ * To set the name automatically from the containing class/file, you can use the zero-argument
+ * `getLogger()` overload instead.
+ *
+ * ### Example
+ *
+ * ```
+ * private val log = getLogger(name = "com.example.Example")
+ * ```
+ */
+public expect fun getLogger(name: String): Logger
 
 /**
  * Platform-neutral interface for the underlying logger implementation used by [Logger].
