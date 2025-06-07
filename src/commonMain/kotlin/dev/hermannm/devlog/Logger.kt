@@ -12,9 +12,9 @@ import kotlin.reflect.KClass
  * enable/disable log levels for loggers based on their package names, or query for logs from a
  * specific class.
  *
- * The easiest way to construct a logger is by calling [getLogger] with an empty lambda argument.
- * This automatically gives the logger the name of its containing class (or file, if defined at the
- * top level).
+ * The easiest way to construct a logger is by calling [getLogger] with zero arguments. This
+ * automatically gives the logger the name of its containing class (or file, if defined at the top
+ * level). See the "Implementation" section on [getLogger]'s docstring for how this works.
  *
  * ```
  * // In file Example.kt
@@ -494,7 +494,7 @@ public expect inline fun getLogger(): Logger
  * The logger name is included in the log output, and can be used to enable/disable log levels for
  * loggers based on their package names, or query for logs from a specific class.
  *
- * In most cases, you should prefer the zero-argument `getLogger()` overload, to automatically get
+ * In most cases, you should prefer the zero-parameter `getLogger()` overload, to automatically get
  * the name of the containing class (or file). But if you want more control over which class to use
  * for the logger name, you can use this overload.
  *
@@ -526,7 +526,7 @@ public expect fun getLogger(forClass: KClass<*>): Logger
  * loggers based on their package names, or query for logs from a specific class. Because of this,
  * the name given here should follow fully qualified class name format, like `com.example.Example`.
  *
- * To set the name automatically from the containing class/file, you can use the zero-argument
+ * To set the name automatically from the containing class/file, you can use the zero-parameter
  * `getLogger()` overload instead.
  *
  * ### Example
@@ -534,6 +534,8 @@ public expect fun getLogger(forClass: KClass<*>): Logger
  * ```
  * private val log = getLogger(name = "com.example.Example")
  * ```
+ *
+ * @param name Should follow fully qualified class name format, like `com.example.Example`.
  */
 public expect fun getLogger(name: String): Logger
 

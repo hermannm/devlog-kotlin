@@ -203,11 +203,11 @@ For more configuration options, see:
 
 ### Performance
 
-- All the methods on `Logger` take a lambda argument to build the log, which is only called if the
-  log level is enabled - so you only pay for message string concatenation and log field
-  serialization if it's actually logged.
+- All the methods on `Logger` take a lambda to build the log, which is only called if the log level
+  is enabled - so you only pay for message string concatenation and log field serialization if it's
+  actually logged.
 - `Logger`'s methods are also `inline`, so we avoid the cost of allocating a function object for the
-  lambda argument.
+  lambda parameter.
 - Elsewhere in the library, we use inline value classes when wrapping SLF4J/Logback APIs, to get as
   close as possible to a zero-cost abstraction.
 

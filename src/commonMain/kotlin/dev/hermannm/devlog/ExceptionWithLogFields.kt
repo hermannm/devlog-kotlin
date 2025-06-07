@@ -68,7 +68,7 @@ package dev.hermannm.devlog
  *       exception
  * - `(message: String?, vararg logFields: LogField, cause: Throwable?)`
  *     - Takes log fields as varargs, so you don't have to wrap them in a list
- *     - To pass `cause`, use a named parameter
+ *     - To pass `cause`, use a named argument
  * - `(logFields: List<LogField>, cause: Throwable?)`
  *     - Defaults `message` to `cause.message`. This lets you:
  *         - Wrap a cause exception with log fields, and use the cause exception's message

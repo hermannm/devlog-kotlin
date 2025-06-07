@@ -9,9 +9,9 @@ import kotlinx.serialization.SerializationStrategy
  * Class used in the logging methods on [Logger], allowing you to add structured key-value data to
  * the log by calling the [field] and [rawJsonField] methods.
  *
- * This class is given as a receiver to the lambda arguments on `Logger`'s methods, which lets you
- * call its methods directly in the scope of that lambda. This is a common technique for creating
- * _type-safe builders_ in Kotlin (see the
+ * This class is provided as a receiver for the `buildLog` lambda parameter on `Logger`'s methods,
+ * which lets you call its methods directly in the scope of the lambda. This is a common pattern for
+ * creating _type-safe builders_ in Kotlin (see the
  * [Kotlin docs](https://kotlinlang.org/docs/lambdas.html#function-literals-with-receiver) for more
  * on this).
  *
@@ -49,7 +49,7 @@ internal constructor(
    *
    * If you want to specify the serializer for the value explicitly, you can call the overload of
    * this method that takes a [SerializationStrategy][kotlinx.serialization.SerializationStrategy]
-   * as a third argument. That is also useful for cases where you can't call this method with a
+   * as a third parameter. That is also useful for cases where you can't call this method with a
    * reified type parameter.
    *
    * If you have a value that is already serialized, you should use [rawJsonField] instead.
@@ -125,7 +125,7 @@ internal constructor(
    *
    * If you want to specify the serializer for the value explicitly, you can call the overload of
    * this method that takes a [SerializationStrategy][kotlinx.serialization.SerializationStrategy]
-   * as a third argument. That is also useful for cases where you can't call this method with a
+   * as a third parameter. That is also useful for cases where you can't call this method with a
    * reified type parameter.
    *
    * If you have a value that is already serialized, you should use [rawJsonField] instead.

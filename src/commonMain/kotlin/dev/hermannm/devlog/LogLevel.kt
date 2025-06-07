@@ -99,14 +99,14 @@ public class LogLevel private constructor() {
    * will always be unreachable as long as we check all the levels defined on the companion object
    * here - since the constructor is private, there will be no other instances. To keep this logic
    * in one place, we provide this method to emulate a `when` expression on a log level:
-   * - We take a lambda argument for each log level, to ensure that all cases are covered
+   * - We take a lambda parameter for each log level, to ensure that all cases are covered
    *     - We make the method `inline`, so we don't pay a cost for the lambdas
    * - In the unreachable else branch, we throw an exception
    *
    * We may be able to use an enum/sealed class instead if
    * [this issue moves along](https://youtrack.jetbrains.com/issue/KT-38750/Support-declaration-site-nonexhaustiveness-for-enums-and-sealed-classes).
    */
-  @Suppress("LocalVariableName") // We want the argument names here to be the same as the constants
+  @Suppress("LocalVariableName") // We want the parameter names here to be the same as the constants
   internal inline fun <ReturnT> match(
       crossinline ERROR: () -> ReturnT,
       crossinline WARN: () -> ReturnT,

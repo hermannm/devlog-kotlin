@@ -156,7 +156,7 @@ internal open class JsonLogField(
  *
  * If you want to specify the serializer for the value explicitly, you can call the overload of this
  * function that takes a [SerializationStrategy][kotlinx.serialization.SerializationStrategy] as a
- * third argument. That is also useful for cases where you can't call this function with a reified
+ * third parameter. That is also useful for cases where you can't call this function with a reified
  * type parameter.
  *
  * If you have a value that is already serialized, you should use [rawJsonField] instead.
@@ -192,7 +192,7 @@ public inline fun <reified ValueT> field(key: String, value: ValueT): LogField {
  *
  * If you want to specify the serializer for the value explicitly, you can call the overload of this
  * function that takes a [SerializationStrategy][kotlinx.serialization.SerializationStrategy] as a
- * third argument. That is also useful for cases where you can't call this function with a reified
+ * third parameter. That is also useful for cases where you can't call this function with a reified
  * type parameter.
  *
  * If you have a value that is already serialized, you should use [rawJsonField] instead.
