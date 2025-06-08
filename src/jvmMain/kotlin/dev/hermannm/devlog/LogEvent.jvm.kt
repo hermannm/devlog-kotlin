@@ -96,12 +96,6 @@ internal class LogbackLogEvent(level: LogLevel, cause: Throwable?, logger: Logba
   }
 }
 
-/**
- * We use an extension function for converting a [LogLevel] to the Logback equivalent, instead of a
- * field on [LogLevel] (like we do for [Slf4jLevel]). This is to allow using this library without
- * Logback on the classpath (such as when using an alternative SLF4J implementation). In such cases,
- * loading Logback may interfere with the user's chosen SLF4J logger.
- */
 internal fun LogLevel.toLogback(): LogbackLevel {
   return this.match(
       INFO = { LogbackLevel.INFO },
