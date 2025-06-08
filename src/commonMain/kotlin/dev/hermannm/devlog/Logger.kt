@@ -442,9 +442,9 @@ internal constructor(
    */
   public fun isEnabledFor(level: LogLevel): Boolean {
     return level.match(
-        INFO = { isInfoEnabled },
-        WARN = { isWarnEnabled },
         ERROR = { isErrorEnabled },
+        WARN = { isWarnEnabled },
+        INFO = { isInfoEnabled },
         DEBUG = { isDebugEnabled },
         TRACE = { isTraceEnabled },
     )

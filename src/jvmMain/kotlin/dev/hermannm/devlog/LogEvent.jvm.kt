@@ -98,9 +98,9 @@ internal class LogbackLogEvent(level: LogLevel, cause: Throwable?, logger: Logba
 
 internal fun LogLevel.toLogback(): LogbackLevel {
   return this.match(
-      INFO = { LogbackLevel.INFO },
-      WARN = { LogbackLevel.WARN },
       ERROR = { LogbackLevel.ERROR },
+      WARN = { LogbackLevel.WARN },
+      INFO = { LogbackLevel.INFO },
       DEBUG = { LogbackLevel.DEBUG },
       TRACE = { LogbackLevel.TRACE },
   )
@@ -204,9 +204,9 @@ internal class Slf4jLogEvent(level: LogLevel, cause: Throwable?, logger: Slf4jLo
 
 internal fun LogLevel.toSlf4j(): Slf4jLevel {
   return this.match(
-      INFO = { Slf4jLevel.INFO },
-      WARN = { Slf4jLevel.WARN },
       ERROR = { Slf4jLevel.ERROR },
+      WARN = { Slf4jLevel.WARN },
+      INFO = { Slf4jLevel.INFO },
       DEBUG = { Slf4jLevel.DEBUG },
       TRACE = { Slf4jLevel.TRACE },
   )
