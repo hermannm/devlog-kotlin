@@ -99,7 +99,7 @@ internal constructor(
       cause: Throwable? = null,
       crossinline buildLog: LogBuilder.() -> String,
   ) {
-    if (isInfoEnabled) {
+    if (underlyingLogger.isInfoEnabled()) {
       log(LogLevel.INFO, cause, buildLog)
     }
   }
@@ -152,7 +152,7 @@ internal constructor(
       cause: Throwable? = null,
       crossinline buildLog: LogBuilder.() -> String,
   ) {
-    if (isWarnEnabled) {
+    if (underlyingLogger.isWarnEnabled()) {
       log(LogLevel.WARN, cause, buildLog)
     }
   }
@@ -205,7 +205,7 @@ internal constructor(
       cause: Throwable? = null,
       crossinline buildLog: LogBuilder.() -> String,
   ) {
-    if (isErrorEnabled) {
+    if (underlyingLogger.isErrorEnabled()) {
       log(LogLevel.ERROR, cause, buildLog)
     }
   }
@@ -254,7 +254,7 @@ internal constructor(
       cause: Throwable? = null,
       crossinline buildLog: LogBuilder.() -> String,
   ) {
-    if (isDebugEnabled) {
+    if (underlyingLogger.isDebugEnabled()) {
       log(LogLevel.DEBUG, cause, buildLog)
     }
   }
@@ -303,7 +303,7 @@ internal constructor(
       cause: Throwable? = null,
       crossinline buildLog: LogBuilder.() -> String,
   ) {
-    if (isTraceEnabled) {
+    if (underlyingLogger.isTraceEnabled()) {
       log(LogLevel.TRACE, cause, buildLog)
     }
   }
@@ -390,7 +390,7 @@ internal constructor(
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   public val isErrorEnabled: Boolean
-    get() = underlyingLogger.isErrorEnabled()
+    inline get() = underlyingLogger.isErrorEnabled()
 
   /**
    * Returns true if [LogLevel.WARN] is enabled for this logger.
@@ -400,7 +400,7 @@ internal constructor(
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   public val isWarnEnabled: Boolean
-    get() = underlyingLogger.isWarnEnabled()
+    inline get() = underlyingLogger.isWarnEnabled()
 
   /**
    * Returns true if [LogLevel.INFO] is enabled for this logger.
@@ -410,7 +410,7 @@ internal constructor(
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   public val isInfoEnabled: Boolean
-    get() = underlyingLogger.isInfoEnabled()
+    inline get() = underlyingLogger.isInfoEnabled()
 
   /**
    * Returns true if [LogLevel.DEBUG] is enabled for this logger.
@@ -420,7 +420,7 @@ internal constructor(
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   public val isDebugEnabled: Boolean
-    get() = underlyingLogger.isDebugEnabled()
+    inline get() = underlyingLogger.isDebugEnabled()
 
   /**
    * Returns true if [LogLevel.TRACE] is enabled for this logger.
@@ -430,7 +430,7 @@ internal constructor(
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   public val isTraceEnabled: Boolean
-    get() = underlyingLogger.isTraceEnabled()
+    inline get() = underlyingLogger.isTraceEnabled()
 
   /**
    * Returns true if the given log level is enabled for this logger.
@@ -441,11 +441,11 @@ internal constructor(
    */
   public fun isEnabledFor(level: LogLevel): Boolean {
     return level.match(
-        ERROR = { isErrorEnabled },
-        WARN = { isWarnEnabled },
-        INFO = { isInfoEnabled },
-        DEBUG = { isDebugEnabled },
-        TRACE = { isTraceEnabled },
+        ERROR = { underlyingLogger.isErrorEnabled() },
+        WARN = { underlyingLogger.isWarnEnabled() },
+        INFO = { underlyingLogger.isInfoEnabled() },
+        DEBUG = { underlyingLogger.isDebugEnabled() },
+        TRACE = { underlyingLogger.isTraceEnabled() },
     )
   }
 }
@@ -543,6 +543,7 @@ public expect fun getLogger(name: String): Logger
  *
  * On the JVM, we use SLF4J as the underlying logger.
  */
+@PublishedApi
 internal expect interface PlatformLogger {
   fun getName(): String
 

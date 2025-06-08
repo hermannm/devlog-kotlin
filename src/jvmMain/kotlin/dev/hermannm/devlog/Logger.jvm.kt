@@ -1,5 +1,13 @@
-// We want `getLogger()` to be inline, so that `lookupClass()` is called in the scope of the caller
-@file:Suppress("NOTHING_TO_INLINE")
+@file:Suppress(
+    // We want `getLogger()` to be inline, so that `lookupClass()` is called in the caller's scope
+    "NOTHING_TO_INLINE",
+    // The `expect` declaration of the `PlatformLogger` interface is annotated with `@PublishedApi`,
+    // so we can use it in inline methods. Kotlin warns us that the `actual` definition should have
+    // the same annotations, but here we use a `typealias`, which doesn't work with `@PublishedApi`.
+    // But this is fine here, because we typealias `PlatformLogger` to the public SLF4J Logger,
+    // which works like `@PublishedApi`.
+    "ACTUAL_ANNOTATIONS_NOT_MATCH_EXPECT",
+)
 
 package dev.hermannm.devlog
 
