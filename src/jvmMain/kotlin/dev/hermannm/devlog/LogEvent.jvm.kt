@@ -2,13 +2,13 @@ package dev.hermannm.devlog
 
 import ch.qos.logback.classic.Level as LogbackLevel
 import ch.qos.logback.classic.Logger as LogbackLogger
-import ch.qos.logback.classic.spi.LoggingEvent
+import ch.qos.logback.classic.spi.LoggingEvent as BaseLogbackEvent
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializable
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer
 import org.slf4j.Logger as Slf4jLogger
-import org.slf4j.event.DefaultLoggingEvent
+import org.slf4j.event.DefaultLoggingEvent as BaseSlf4jEvent
 import org.slf4j.event.KeyValuePair
 import org.slf4j.event.Level as Slf4jLevel
 import org.slf4j.spi.LocationAwareLogger
@@ -48,7 +48,7 @@ internal val LOGBACK_IS_ON_CLASSPATH =
 /** Extends Logback's custom log event class to implement [LogEvent]. */
 internal class LogbackLogEvent(level: LogLevel, cause: Throwable?, logger: LogbackLogger) :
     LogEvent,
-    LoggingEvent(
+    BaseLogbackEvent(
         FULLY_QUALIFIED_CLASS_NAME,
         logger,
         level.toLogback(),
@@ -108,7 +108,7 @@ internal fun LogLevel.toLogback(): LogbackLevel {
 
 /** Extends SLF4J's log event class to implement [LogEvent]. */
 internal class Slf4jLogEvent(level: LogLevel, cause: Throwable?, logger: Slf4jLogger) :
-    LogEvent, DefaultLoggingEvent(level.toSlf4j(), logger) {
+    LogEvent, BaseSlf4jEvent(level.toSlf4j(), logger) {
   init {
     super.setThrowable(cause)
     super.setCallerBoundary(FULLY_QUALIFIED_CLASS_NAME)
