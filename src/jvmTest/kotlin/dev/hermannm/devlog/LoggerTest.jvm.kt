@@ -97,7 +97,10 @@ internal actual fun getTestLogger(level: LogLevel?): Logger {
   return Logger(LoggerJvmTest.logbackLogger)
 }
 
-internal actual fun resetLoggerTest() = LoggerJvmTest.reset()
+internal actual fun resetLoggerTest() {
+  LoggerJvmTest.logAppender.list.clear()
+  LoggerJvmTest.logbackLogger.level = LogbackLevel.TRACE
+}
 
 internal class LoggerJvmTest {
   companion object {
@@ -111,13 +114,9 @@ internal class LoggerJvmTest {
       logbackLogger.addAppender(logAppender)
       logbackLogger.level = LogbackLevel.TRACE
     }
-
-    @AfterTest
-    fun reset() {
-      logAppender.list.clear()
-      logbackLogger.level = LogbackLevel.TRACE
-    }
   }
+
+  @AfterTest fun reset() = resetLoggerTest()
 
   @Test
   fun `log has expected file location`() {
