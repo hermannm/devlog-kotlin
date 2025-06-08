@@ -18,9 +18,8 @@ public abstract interface class dev/hermannm/devlog/HasLogFields {
 
 public class dev/hermannm/devlog/JsonLogField : dev/hermannm/devlog/LogField {
 	public static final field Companion Ldev/hermannm/devlog/JsonLogField$Companion;
-	public static final field NULL_VALUE Ljava/lang/String;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 }
 
 public final class dev/hermannm/devlog/JsonLogField$Companion {
@@ -61,13 +60,13 @@ public final class dev/hermannm/devlog/LogEvent_jvmKt {
 }
 
 public abstract class dev/hermannm/devlog/LogField {
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class dev/hermannm/devlog/LogFieldKt {
+	public static final field JSON_NULL_VALUE Ljava/lang/String;
 	public static final field jsonEncoder Lkotlinx/serialization/json/Json;
 	public static final fun field (Ljava/lang/String;Ljava/lang/Object;Lkotlinx/serialization/SerializationStrategy;)Ldev/hermannm/devlog/LogField;
 	public static final fun rawJson (Ljava/lang/String;Z)Lkotlinx/serialization/json/JsonElement;

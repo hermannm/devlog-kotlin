@@ -259,11 +259,8 @@ internal constructor(
    */
   public fun addField(field: LogField) {
     // Don't add fields with keys that have already been added
-    if (!logEvent.isFieldKeyAdded(field.key) && field.includeInLog()) {
-      when (field) {
-        is JsonLogField -> logEvent.addJsonField(field.key, field.value)
-        is StringLogField -> logEvent.addStringField(field.key, field.value)
-      }
+    if (!logEvent.isFieldKeyAdded(field.key)) {
+      field.addToLogEvent(logEvent)
     }
   }
 

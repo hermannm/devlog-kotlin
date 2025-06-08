@@ -54,7 +54,6 @@ internal class LoggerTest {
   private val loggerInsideClass = getLogger()
 
   companion object {
-    private val log = getLogger()
     private val loggerOnCompanionObject = getLogger()
   }
 

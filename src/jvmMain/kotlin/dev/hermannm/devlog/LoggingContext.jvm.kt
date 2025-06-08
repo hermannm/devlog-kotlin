@@ -9,7 +9,6 @@ import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
-import org.slf4j.LoggerFactory as Slf4jLoggerFactory
 import org.slf4j.MDC
 
 /**
@@ -127,9 +126,9 @@ internal actual object LoggingContext {
   }
 
   @kotlin.jvm.JvmStatic
-  internal actual fun hasKey(key: String): Boolean {
-    val existingValue: String? = MDC.get(key)
-    return existingValue != null
+  internal actual fun contains(field: LogField): Boolean {
+    val existingValue: String? = MDC.get(field.getKeyForLoggingContext())
+    return existingValue == field.value
   }
 
   @kotlin.jvm.JvmStatic
@@ -182,11 +181,6 @@ internal actual object LoggingContext {
   private fun getNonNullFieldCount(fieldMap: Map<String, String?>): Int {
     return fieldMap.count { field -> field.value != null }
   }
-}
-
-internal actual fun ensureLoggerImplementationIsLoaded() {
-  // This will initialize the SLF4J logger implementation, if not already initialized
-  Slf4jLoggerFactory.getILoggerFactory()
 }
 
 /** Adds the given map of log fields to the logging context for the scope of the given [block]. */

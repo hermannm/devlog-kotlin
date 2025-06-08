@@ -81,6 +81,10 @@ internal actual fun LoggerTestCase.verifyLogOutput(expectedLogLevel: LogLevel, b
               when (field) {
                 is StringLogField -> field.value
                 is JsonLogField -> RawJson(field.value)
+                else ->
+                    throw IllegalStateException(
+                        "Unrecognized log field type '${field::class.qualifiedName}'",
+                    )
               }
           KeyValuePair(field.key, expectedValue)
         },

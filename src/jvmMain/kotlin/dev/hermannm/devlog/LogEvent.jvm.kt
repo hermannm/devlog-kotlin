@@ -89,8 +89,8 @@ internal class LogbackLogEvent(level: LogLevel, cause: Throwable?, logger: Logba
      *
      * In our case, the caller boundary is in fact not [dev.hermannm.devlog.Logger], but our
      * [LogEvent] implementations. This is because all the methods on `Logger` are `inline` - so the
-     * logger method actually called by user code at runtime is
-     * [LogbackLogEvent.log]/[Slf4jLogEvent.log].
+     * logger method actually called by user code at runtime is [LogbackLogEvent.log] /
+     * [Slf4jLogEvent.log].
      */
     internal val FULLY_QUALIFIED_CLASS_NAME = LogbackLogEvent::class.java.name
   }

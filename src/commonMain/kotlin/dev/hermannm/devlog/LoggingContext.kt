@@ -3,8 +3,6 @@
 
 package dev.hermannm.devlog
 
-import kotlin.concurrent.Volatile
-
 /**
  * Adds the given [log fields][LogField] to every log made by a [Logger] in the context of the given
  * [block]. Use the [field]/[rawJsonField] functions to construct log fields.
@@ -171,7 +169,6 @@ internal inline fun <ReturnT> withLoggingContextInternal(
     block: () -> ReturnT
 ): ReturnT {
   val overwrittenFields = LoggingContext.addFields(logFields)
-
   try {
     return block()
   } finally {
@@ -263,15 +260,13 @@ internal expect object LoggingContext {
       overwrittenFields: OverwrittenContextFields
   )
 
-  @kotlin.jvm.JvmStatic internal fun hasKey(@Suppress("unused") key: String): Boolean
+  @kotlin.jvm.JvmStatic internal fun contains(field: LogField): Boolean
 
   @kotlin.jvm.JvmStatic internal fun getFieldList(): List<LogField>
 
   /** Combines the given log fields with any fields from [withLoggingContext]. */
   @kotlin.jvm.JvmStatic
-  internal fun combineFieldListWithContextFields(
-      @Suppress("unused") fields: List<LogField>
-  ): List<LogField>
+  internal fun combineFieldListWithContextFields(fields: List<LogField>): List<LogField>
 }
 
 /**
@@ -325,91 +320,3 @@ internal value class OverwrittenContextFields(private val fields: Array<String?>
     return fields?.get(index * 2 + 1)
   }
 }
-
-internal fun createLogFieldFromContext(key: String, value: String): LogField {
-  return if (ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS &&
-      key.endsWith(LOGGING_CONTEXT_JSON_KEY_SUFFIX)) {
-    JsonLogFieldFromContext(key, value)
-  } else {
-    StringLogFieldFromContext(key, value)
-  }
-}
-
-@PublishedApi
-internal class StringLogFieldFromContext(key: String, value: String) : StringLogField(key, value) {
-  /**
-   * We only want to include fields from the logging context if it's not already in the context (in
-   * which case the logger implementation will add the fields from SLF4J's MDC).
-   */
-  override fun includeInLog(): Boolean = !LoggingContext.hasKey(key)
-}
-
-@PublishedApi
-internal class JsonLogFieldFromContext(
-    /**
-     * We construct this log field with keys that already have the JSON key suffix (see
-     * [createLogFieldFromContext]). So we set [keyForLoggingContext] to the key with the suffix,
-     * and remove the suffix for [key] below.
-     */
-    keyWithJsonSuffix: String,
-    value: String,
-) :
-    JsonLogField(
-        key = keyWithJsonSuffix.removeSuffix(LOGGING_CONTEXT_JSON_KEY_SUFFIX),
-        value = value,
-        keyForLoggingContext = keyWithJsonSuffix,
-    ) {
-  /**
-   * We only want to include fields from the logging context if it's not already in the context (in
-   * which case the logger implementation will add the fields from SLF4J's MDC).
-   */
-  override fun includeInLog(): Boolean = !LoggingContext.hasKey(key)
-}
-
-/**
- * SLF4J's MDC only supports String values. This works fine for our [StringLogField] - but we also
- * want the ability to include JSON-serialized objects in our logging context. This is useful when
- * for example processing an event, and you want that event to be included on all logs in the scope
- * of processing it. If we were to just include it as a string, the JSON would be escaped, which
- * prevents log analysis platforms from parsing fields from the event and letting us query on them.
- * What we want is for the [JsonLogField] to be included as actual JSON on the log output,
- * unescaped, to get the benefits of structured logging.
- *
- * To achieve this, we add the raw JSON string from [JsonLogField] to the MDC, but with this suffix
- * added to the key. Then, users can configure our
- * `dev.hermannm.devlog.LoggingContextJsonFieldWriter` to strip this suffix from the key and write
- * the field value as raw JSON in the log output. This only works when using Logback with
- * `logstash-logback-encoder`, but that's what this library is primarily designed for anyway.
- *
- * We add a suffix to the field key instead of the field value, since the field value may be
- * external input, which would open us up to malicious actors breaking our logs by passing invalid
- * JSON strings with the appropriate prefix/suffix.
- *
- * This specific suffix was chosen to reduce the chance of clashing with other keys - MDC keys
- * typically don't have spaces/parentheses.
- */
-internal const val LOGGING_CONTEXT_JSON_KEY_SUFFIX = " (json)"
-
-/**
- * We only want to add [LOGGING_CONTEXT_JSON_KEY_SUFFIX] to context field keys if the user has
- * configured `dev.hermannm.devlog.LoggingContextJsonFieldWriter` with `logstash-logback-encoder`.
- * If this is not the case, we don't want to add the key suffix, as that will show up in the log
- * output.
- *
- * So to check this, we use this global boolean (volatile for thread-safety), defaulting to false.
- * If `LoggingContextJsonFieldWriter` is configured, its constructor will run when Logback is
- * initialized, and set this to true. Then we can check this value in [JsonLogField], to decide
- * whether or not to add the JSON key suffix.
- *
- * One obstacle with this approach is that we need Logback to be loaded before checking this field.
- * The user may construct a [JsonLogField] before loading Logback, in which case
- * `LoggingContextJsonFieldWriter`'s constructor will not have run yet, and we will omit the key
- * suffix when it should have been added. So to ensure that Logback is loaded before checking this
- * field, we call [ensureLoggerImplementationIsLoaded] from an `init` block on
- * [JsonLogField.Companion], which will run when the class is loaded. We test that this works in the
- * `LogbackLoggerTest` under `integration-tests/logback`.
- */
-@Volatile internal var ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS = false
-
-/** See [ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS]. */
-internal expect fun ensureLoggerImplementationIsLoaded()

@@ -27,6 +27,54 @@ import kotlinx.serialization.json.JsonPrimitive
 private val log = getLogger()
 
 internal class LoggingContextJvmTest {
+  @Test
+  fun `nested logging context restores previous context fields on exit`() {
+    val event1 = Event(id = 1001, type = EventType.ORDER_PLACED)
+    val event2 = Event(id = 1002, type = EventType.ORDER_UPDATED)
+
+    withLoggingContext(
+        field("event", event1),
+        field("stringField", "parentValue"),
+        field("parentOnlyField", "value1"),
+        field("fieldThatIsStringInParentButJsonInChild", "stringValue"),
+    ) {
+      val parentContext =
+          mapOf(
+              "event${LOGGING_CONTEXT_JSON_KEY_SUFFIX}" to """{"id":1001,"type":"ORDER_PLACED"}""",
+              "stringField" to "parentValue",
+              "parentOnlyField" to "value1",
+              "fieldThatIsStringInParentButJsonInChild" to "stringValue",
+          )
+      LoggingContext shouldContainExactly parentContext
+
+      withLoggingContext(
+          field("event", event2),
+          field("stringField", "childValue"),
+          field("childOnlyField", "value2"),
+          rawJsonField("fieldThatIsStringInParentButJsonInChild", """{"test":true}"""),
+      ) {
+        LoggingContext shouldContainExactly
+            mapOf(
+                "event${LOGGING_CONTEXT_JSON_KEY_SUFFIX}" to
+                    """{"id":1002,"type":"ORDER_UPDATED"}""",
+                "stringField" to "childValue",
+                "parentOnlyField" to "value1",
+                "childOnlyField" to "value2",
+                "fieldThatIsStringInParentButJsonInChild${LOGGING_CONTEXT_JSON_KEY_SUFFIX}" to
+                    """{"test":true}""",
+            )
+      }
+
+      LoggingContext shouldContainExactly parentContext
+    }
+  }
+
+  @Test
+  fun `ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS has expected value`() {
+    // Since we use LoggingContextJsonFieldWriter in tests, we expect this to be set
+    ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS.shouldBeTrue()
+  }
+
   /** We use JVM synchronization primitives here, hence we place it under jvmTest. */
   @Test
   fun `getLoggingContext allows passing logging context between threads`() {
