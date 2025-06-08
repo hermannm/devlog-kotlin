@@ -220,7 +220,6 @@ internal fun LogLevel.toSlf4j(): Slf4jLevel {
  * Since we use this to wrap a value that has already been serialized with `kotlinx.serialization`,
  * we simply call [JsonGenerator.writeRawValue] in [serialize] to write the JSON string as-is.
  */
-@PublishedApi
 internal class RawJson(private val json: String) : JsonSerializable {
   override fun toString() = json
 

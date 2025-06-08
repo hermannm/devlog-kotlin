@@ -33,7 +33,6 @@ internal actual open class JsonLogField(
 
   actual final override fun getKeyForLoggingContext(): String = keyForLoggingContext
 
-  @PublishedApi
   internal companion object {
     init {
       try {
@@ -57,7 +56,6 @@ internal fun createLogFieldFromContext(key: String, value: String): LogField {
   }
 }
 
-@PublishedApi
 internal class StringLogFieldFromContext(key: String, value: String) : StringLogField(key, value) {
   override fun addToLogEvent(logEvent: LogEvent) {
     // We only want to include fields from the logging context if it's not already in the context
@@ -68,7 +66,6 @@ internal class StringLogFieldFromContext(key: String, value: String) : StringLog
   }
 }
 
-@PublishedApi
 internal class JsonLogFieldFromContext(
     /**
      * We construct this log field with keys that already have the JSON key suffix (see

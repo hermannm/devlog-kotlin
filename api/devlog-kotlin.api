@@ -17,16 +17,8 @@ public abstract interface class dev/hermannm/devlog/HasLogFields {
 }
 
 public class dev/hermannm/devlog/JsonLogField : dev/hermannm/devlog/LogField {
-	public static final field Companion Ldev/hermannm/devlog/JsonLogField$Companion;
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
-}
-
-public final class dev/hermannm/devlog/JsonLogField$Companion {
-}
-
-public final class dev/hermannm/devlog/JsonLogFieldFromContext : dev/hermannm/devlog/JsonLogField {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 }
 
 public final class dev/hermannm/devlog/LogBuilder {
@@ -152,20 +144,7 @@ public final class dev/hermannm/devlog/LoggingContext_jvmKt {
 	public static final fun inheritLoggingContext (Ljava/util/concurrent/ExecutorService;)Ljava/util/concurrent/ExecutorService;
 }
 
-public final class dev/hermannm/devlog/RawJson : com/fasterxml/jackson/databind/JsonSerializable {
-	public fun <init> (Ljava/lang/String;)V
-	public fun equals (Ljava/lang/Object;)Z
-	public fun hashCode ()I
-	public fun serialize (Lcom/fasterxml/jackson/core/JsonGenerator;Lcom/fasterxml/jackson/databind/SerializerProvider;)V
-	public fun serializeWithType (Lcom/fasterxml/jackson/core/JsonGenerator;Lcom/fasterxml/jackson/databind/SerializerProvider;Lcom/fasterxml/jackson/databind/jsontype/TypeSerializer;)V
-	public fun toString ()Ljava/lang/String;
-}
-
 public class dev/hermannm/devlog/StringLogField : dev/hermannm/devlog/LogField {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
-}
-
-public final class dev/hermannm/devlog/StringLogFieldFromContext : dev/hermannm/devlog/StringLogField {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 }
 
