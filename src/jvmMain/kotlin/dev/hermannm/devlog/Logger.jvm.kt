@@ -1,4 +1,4 @@
-// We want getLogger() to be inline, so that lookupClass() is called in the scope of the caller
+// We want `getLogger()` to be inline, so that `lookupClass()` is called in the scope of the caller
 @file:Suppress("NOTHING_TO_INLINE")
 
 package dev.hermannm.devlog
