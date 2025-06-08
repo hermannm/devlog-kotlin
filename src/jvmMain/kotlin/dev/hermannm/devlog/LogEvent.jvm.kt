@@ -159,12 +159,12 @@ internal class Slf4jLogEvent(level: LogLevel, cause: Throwable?, logger: Slf4jLo
     when (level!!) {
       // We don't assume that the SLF4J implementation accepts a `null` cause exception in the
       // overload that takes a throwable. So we only call that overload if `throwable != null`.
-      Slf4jLevel.INFO ->
-          if (throwable == null) logger.info(message) else logger.info(message, throwable)
-      Slf4jLevel.WARN ->
-          if (throwable == null) logger.warn(message) else logger.warn(message, throwable)
       Slf4jLevel.ERROR ->
           if (throwable == null) logger.error(message) else logger.error(message, throwable)
+      Slf4jLevel.WARN ->
+          if (throwable == null) logger.warn(message) else logger.warn(message, throwable)
+      Slf4jLevel.INFO ->
+          if (throwable == null) logger.info(message) else logger.info(message, throwable)
       Slf4jLevel.DEBUG ->
           if (throwable == null) logger.debug(message) else logger.debug(message, throwable)
       Slf4jLevel.TRACE ->
