@@ -265,18 +265,6 @@ internal inline fun <ValueT : Any, ReturnT> encodeFieldValueWithSerializer(
 }
 
 /**
- * Some types, namely classes in the Java standard library, are not supported by
- * `kotlinx.serialization` by default, and so will always fail to serialize. In these cases, we want
- * to call `toString` on the value before even trying to serialize, as we don't want to pay the cost
- * of creating an exception just to discard it right after. So we use this function to check if the
- * field value type should eagerly use `toString`.
- *
- * We make this an expect-actual function, so that implementations can use platform-specific types
- * (such as Java standard library classes on the JVM).
- */
-@PublishedApi internal expect fun fieldValueShouldUseToString(value: Any): Boolean
-
-/**
  * Constructs a [LogField], a key-value pair for adding structured data to logs, with the given
  * pre-serialized JSON value.
  *
@@ -469,6 +457,18 @@ internal fun isValidJson(jsonElement: JsonElement): Boolean {
     }
   }
 }
+
+/**
+ * Some types, namely classes in the Java standard library, are not supported by
+ * `kotlinx.serialization` by default, and so will always fail to serialize. In these cases, we want
+ * to call `toString` on the value before even trying to serialize, as we don't want to pay the cost
+ * of creating an exception just to discard it right after. So we use this function to check if the
+ * field value type should eagerly use `toString`.
+ *
+ * We make this an expect-actual function, so that implementations can use platform-specific types
+ * (such as Java standard library classes on the JVM).
+ */
+@PublishedApi internal expect fun fieldValueShouldUseToString(value: Any): Boolean
 
 /**
  * SLF4J supports null values in `KeyValuePair`s, and it's up to the logger implementation for how
