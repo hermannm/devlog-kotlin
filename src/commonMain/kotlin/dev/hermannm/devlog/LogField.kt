@@ -272,7 +272,7 @@ internal inline fun <ValueT : Any, ReturnT> encodeFieldValueWithSerializer(
  * field value type should eagerly use `toString`.
  *
  * We make this an expect-actual function, so that implementations can use platform-specific types
- * (such as Java standard libary classes on the JVM).
+ * (such as Java standard library classes on the JVM).
  */
 @PublishedApi internal expect fun fieldValueShouldUseToString(value: Any): Boolean
 
