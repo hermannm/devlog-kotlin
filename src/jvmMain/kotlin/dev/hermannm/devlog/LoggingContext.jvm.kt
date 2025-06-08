@@ -3,8 +3,6 @@
 
 package dev.hermannm.devlog
 
-import dev.hermannm.devlog.LoggingContext.addFields
-import dev.hermannm.devlog.LoggingContext.removeFields
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
@@ -48,8 +46,8 @@ internal actual object LoggingContext {
            * want to overwrite "key" with "key (json)" (adding [LOGGING_CONTEXT_JSON_KEY_SUFFIX] to
            * identify the JSON value). But since "key (json)" does not match "key", calling
            * `MDC.put` below will not overwrite the previous field, so we have to manually remove it
-           * here. The previous field will then be restored by [removeFields] after the context
-           * exits.
+           * here. The previous field will then be restored by [LoggingContext.removeFields] after
+           * the context exits.
            */
           if (field.key != keyForLoggingContext) {
             MDC.remove(field.key)
@@ -81,8 +79,8 @@ internal actual object LoggingContext {
   }
 
   /**
-   * Takes the array of overwritten field values returned by [addFields], to restore the previous
-   * context values after the current context exits.
+   * Takes the array of overwritten field values returned by [LoggingContext.addFields], to restore
+   * the previous context values after the current context exits.
    */
   @PublishedApi
   @kotlin.jvm.JvmStatic
@@ -105,7 +103,7 @@ internal actual object LoggingContext {
         /**
          * If the overwritten key matched the current key in the logging context, then we don't want
          * to call `MDC.remove` below (these may not always match for [JsonLogField] - see docstring
-         * over `MDC.remove` in [addFields]).
+         * over `MDC.remove` in [LoggingContext.addFields]).
          */
         if (overwrittenKey == keyForLoggingContext) {
           continue
