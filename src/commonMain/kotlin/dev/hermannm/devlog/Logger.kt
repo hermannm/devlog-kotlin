@@ -52,7 +52,6 @@ import kotlin.reflect.KClass
  */
 @kotlin.jvm.JvmInline // Inline value class, to wrap the underlying platform logger without overhead
 public value class Logger
-@PublishedApi
 internal constructor(
     @PublishedApi internal val underlyingLogger: PlatformLogger,
 ) {
