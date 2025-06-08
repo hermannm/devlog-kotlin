@@ -36,6 +36,6 @@ internal inline fun <TestCaseT> parameterizedTest(
  * When passed to [parameterizedTest], [name] will be used instead of `toString` to print failing
  * test cases.
  */
-interface TestCase {
+internal interface TestCase {
   val name: String
 }
