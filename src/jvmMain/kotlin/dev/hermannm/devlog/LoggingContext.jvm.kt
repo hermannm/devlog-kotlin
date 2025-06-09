@@ -114,6 +114,7 @@ internal actual object LoggingContext {
     }
   }
 
+  @kotlin.jvm.JvmStatic
   private fun isDuplicateField(field: LogField, index: Int, fields: Array<out LogField>): Boolean {
     for (previousFieldIndex in 0 until index) {
       if (fields[previousFieldIndex].key == field.key) {
