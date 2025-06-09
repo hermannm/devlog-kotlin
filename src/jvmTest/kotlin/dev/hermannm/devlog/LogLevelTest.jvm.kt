@@ -11,7 +11,7 @@ import kotlin.reflect.jvm.javaField
 import kotlin.test.Test
 import org.slf4j.event.Level as Slf4jLevel
 
-class LogLevelJvmTest {
+internal class LogLevelJvmTest {
   /**
    * We need [kotlin.reflect.full] to use [memberProperties], so we place this test here under
    * jvmTest.
