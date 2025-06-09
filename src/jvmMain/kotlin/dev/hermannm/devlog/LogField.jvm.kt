@@ -8,7 +8,8 @@ import java.util.UUID
 import org.slf4j.LoggerFactory as Slf4jLoggerFactory
 
 @PublishedApi
-internal actual open class JsonLogField(
+internal actual open class JsonLogField
+internal constructor(
     key: String,
     value: String,
     private val keyForLoggingContext: String,
