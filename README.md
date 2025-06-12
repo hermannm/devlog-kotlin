@@ -1,7 +1,7 @@
 # devlog-kotlin
 
 Structured logging library for Kotlin, that aims to provide a developer-friendly API with near-zero
-runtime overhead. Currently only supports the JVM platform, wrapping SLF4J and Logback.
+runtime overhead. Currently only supports the JVM platform, wrapping SLF4J.
 
 - Docs: https://devlog-kotlin.hermannm.dev
 - Published on:
