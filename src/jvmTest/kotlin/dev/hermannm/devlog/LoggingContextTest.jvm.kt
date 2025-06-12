@@ -71,7 +71,7 @@ internal class LoggingContextJvmTest {
 
   @Test
   fun `ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS has expected value`() {
-    // Since we use LoggingContextJsonFieldWriter in tests, we expect this to be set
+    // Since we use JsonContextFieldWriter in tests, we expect this to be set
     ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS.shouldBeTrue()
   }
 

@@ -183,7 +183,7 @@ Then, configure Logback with a `logback.xml` file under `src/main/resources`:
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder class="net.logstash.logback.encoder.LogstashEncoder">
       <!-- Writes object values from logging context as actual JSON (not escaped) -->
-      <mdcEntryWriter class="dev.hermannm.devlog.LoggingContextJsonFieldWriter"/>
+      <mdcEntryWriter class="dev.hermannm.devlog.output.logback.JsonContextFieldWriter"/>
     </encoder>
   </appender>
 
@@ -327,7 +327,7 @@ improve with this library:
     the logging context, so that we can filter and query on its fields.
   - `devlog-kotlin` solves this limitation by instead taking a `LogField` type, which can have an
     arbitrary serializable value, as the parameter to our `withLoggingContext` function. We then
-    provide `LoggingContextJsonFieldWriter` for interoperability with `MDC` when using Logback +
+    provide `JsonContextFieldWriter` for interoperability with `MDC` when using Logback +
     `logstash-logback-encoder`.
 
 ## Credits

@@ -86,7 +86,7 @@ internal constructor(
   /**
    * In the JVM implementation, [JsonLogField] adds a suffix to the key in the logging context to
    * identify the value as raw JSON (so we can write the JSON unescaped in
-   * `LoggingContextJsonFieldWriter`).
+   * `JsonContextFieldWriter`).
    */
   internal abstract fun getKeyForLoggingContext(): String
 

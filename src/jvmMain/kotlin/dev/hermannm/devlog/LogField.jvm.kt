@@ -101,8 +101,8 @@ internal class JsonLogFieldFromContext(
  *
  * To achieve this, we add the raw JSON string from [JsonLogField] to the MDC, but with this suffix
  * added to the key. Then, users can configure our
- * `dev.hermannm.devlog.LoggingContextJsonFieldWriter` to strip this suffix from the key and write
- * the field value as raw JSON in the log output. This only works when using Logback with
+ * `dev.hermannm.devlog.output.logback.JsonContextFieldWriter` to strip this suffix from the key and
+ * write the field value as raw JSON in the log output. This only works when using Logback with
  * `logstash-logback-encoder`, but that's what this library is primarily designed for anyway.
  *
  * We add a suffix to the field key instead of the field value, since the field value may be
@@ -116,22 +116,22 @@ internal const val LOGGING_CONTEXT_JSON_KEY_SUFFIX = " (json)"
 
 /**
  * We only want to add [LOGGING_CONTEXT_JSON_KEY_SUFFIX] to context field keys if the user has
- * configured `dev.hermannm.devlog.LoggingContextJsonFieldWriter` with `logstash-logback-encoder`.
- * If this is not the case, we don't want to add the key suffix, as that will show up in the log
- * output.
+ * configured `dev.hermannm.devlog.output.logback.JsonContextFieldWriter` with
+ * `logstash-logback-encoder`. If this is not the case, we don't want to add the key suffix, as that
+ * will show up in the log output.
  *
  * So to check this, we use this global boolean (volatile for thread-safety), defaulting to false.
- * If `LoggingContextJsonFieldWriter` is configured, its constructor will run when Logback is
- * initialized, and set this to true. Then we can check this value in [JsonLogField], to decide
- * whether or not to add the JSON key suffix.
+ * If `JsonContextFieldWriter` is configured, its constructor will run when Logback is initialized,
+ * and set this to true. Then we can check this value in [JsonLogField], to decide whether or not to
+ * add the JSON key suffix.
  *
  * One obstacle with this approach is that we need Logback to be loaded before checking this field.
  * The user may construct a [JsonLogField] before loading Logback, in which case
- * `LoggingContextJsonFieldWriter`'s constructor will not have run yet, and we will omit the key
- * suffix when it should have been added. So to ensure that Logback is loaded before checking this
- * field, we call [ensureLoggerImplementationIsLoaded] from an `init` block on
- * [JsonLogField.Companion], which will run when the class is loaded. We test that this works in the
- * `LogbackLoggerTest` under `integration-tests/logback`.
+ * `JsonContextFieldWriter`'s constructor will not have run yet, and we will omit the key suffix
+ * when it should have been added. So to ensure that Logback is loaded before checking this field,
+ * we call [ensureLoggerImplementationIsLoaded] from an `init` block on [JsonLogField.Companion],
+ * which will run when the class is loaded. We test that this works in the `LogbackLoggerTest` under
+ * `integration-tests/logback`.
  */
 @kotlin.concurrent.Volatile internal var ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS = false
 

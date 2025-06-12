@@ -127,11 +127,6 @@ public final class dev/hermannm/devlog/LoggingContext {
 	public static final fun removeFields-vNTxQKI ([Ldev/hermannm/devlog/LogField;[Ljava/lang/String;)V
 }
 
-public final class dev/hermannm/devlog/LoggingContextJsonFieldWriter : net/logstash/logback/composite/loggingevent/mdc/MdcEntryWriter {
-	public fun <init> ()V
-	public fun writeMdcEntry (Lcom/fasterxml/jackson/core/JsonGenerator;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
-}
-
 public final class dev/hermannm/devlog/LoggingContextKt {
 	public static final fun getLoggingContext ()Ljava/util/List;
 	public static final fun withLoggingContext (Ljava/util/List;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
@@ -145,5 +140,10 @@ public final class dev/hermannm/devlog/LoggingContext_jvmKt {
 
 public class dev/hermannm/devlog/StringLogField : dev/hermannm/devlog/LogField {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+}
+
+public final class dev/hermannm/devlog/output/logback/JsonContextFieldWriter : net/logstash/logback/composite/loggingevent/mdc/MdcEntryWriter {
+	public fun <init> ()V
+	public fun writeMdcEntry (Lcom/fasterxml/jackson/core/JsonGenerator;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
 }
 

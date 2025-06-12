@@ -16,7 +16,7 @@ package dev.hermannm.devlog
  *
  * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. To
  * encode object values as actual JSON (not escaped strings), you can add
- * `dev.hermannm.devlog.LoggingContextJsonFieldWriter` as an `mdcEntryWriter` for
+ * `dev.hermannm.devlog.output.logback.JsonContextFieldWriter` as an `mdcEntryWriter` for
  * [`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder), like this:
  * ```xml
  * <!-- Example Logback config (in src/main/resources/logback.xml) -->
@@ -25,7 +25,7 @@ package dev.hermannm.devlog
  *   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
  *     <encoder class="net.logstash.logback.encoder.LogstashEncoder">
  *       <!-- Writes object values from logging context as actual JSON (not escaped) -->
- *       <mdcEntryWriter class="dev.hermannm.devlog.LoggingContextJsonFieldWriter"/>
+ *       <mdcEntryWriter class="dev.hermannm.devlog.output.logback.JsonContextFieldWriter"/>
  *     </encoder>
  *   </appender>
  *
@@ -62,8 +62,8 @@ package dev.hermannm.devlog
  * }
  * ```
  *
- * If you have configured `dev.hermannm.devlog.LoggingContextJsonFieldWriter`, the field from
- * `withLoggingContext` will then be attached to every log as follows:
+ * If you have configured `dev.hermannm.devlog.output.logback.JsonContextFieldWriter`, the field
+ * from `withLoggingContext` will then be attached to every log as follows:
  * ```json
  * { "message": "Started processing event", "event": { ... } }
  * { "message": "Finished processing event", "event": { ... } }
@@ -89,7 +89,7 @@ public inline fun <ReturnT> withLoggingContext(
  *
  * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. To
  * encode object values as actual JSON (not escaped strings), you can add
- * `dev.hermannm.devlog.LoggingContextJsonFieldWriter` as an `mdcEntryWriter` for
+ * `dev.hermannm.devlog.output.logback.JsonContextFieldWriter` as an `mdcEntryWriter` for
  * [`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder), like this:
  * ```xml
  * <!-- Example Logback config (in src/main/resources/logback.xml) -->
@@ -98,7 +98,7 @@ public inline fun <ReturnT> withLoggingContext(
  *   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
  *     <encoder class="net.logstash.logback.encoder.LogstashEncoder">
  *       <!-- Writes object values from logging context as actual JSON (not escaped) -->
- *       <mdcEntryWriter class="dev.hermannm.devlog.LoggingContextJsonFieldWriter"/>
+ *       <mdcEntryWriter class="dev.hermannm.devlog.output.logback.JsonContextFieldWriter"/>
  *     </encoder>
  *   </appender>
  *
@@ -135,8 +135,8 @@ public inline fun <ReturnT> withLoggingContext(
  * }
  * ```
  *
- * If you have configured `dev.hermannm.devlog.LoggingContextJsonFieldWriter`, the field from
- * `withLoggingContext` will then be attached to every log as follows:
+ * If you have configured `dev.hermannm.devlog.output.logback.JsonContextFieldWriter`, the field
+ * from `withLoggingContext` will then be attached to every log as follows:
  * ```json
  * { "message": "Started processing event", "event": { ... } }
  * { "message": "Finished processing event", "event": { ... } }
