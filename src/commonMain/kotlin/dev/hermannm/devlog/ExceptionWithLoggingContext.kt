@@ -264,8 +264,8 @@ internal inline fun traverseExceptionChain(
 
       // If there's no cause exception, look for suppressed exceptions. If we have suppressed
       // exceptions, set the first suppressed exception as the next to traverse
-      val suppressedExceptions = currentException.suppressedExceptions
-      if (suppressedExceptions.isNotEmpty()) {
+      val suppressedExceptions = getSuppressedExceptions(currentException)
+      if (!suppressedExceptions.isNullOrEmpty()) {
         exceptions[++depth] = suppressedExceptions.first()
         continue@exceptionLoop
       }
@@ -275,8 +275,8 @@ internal inline fun traverseExceptionChain(
       val parent: Throwable = exceptions[depth - 1]!!
       val child: Throwable = exceptions[depth]!!
 
-      val parentSuppressedExceptions = parent.suppressedExceptions
-      if (parentSuppressedExceptions.isNotEmpty()) {
+      val parentSuppressedExceptions = getSuppressedExceptions(parent)
+      if (!parentSuppressedExceptions.isNullOrEmpty()) {
         if (child === parent.cause) {
           exceptions[depth] = parentSuppressedExceptions.first()
           continue@exceptionLoop
@@ -299,3 +299,5 @@ internal inline fun traverseExceptionChain(
     return
   }
 }
+
+internal expect fun getSuppressedExceptions(exception: Throwable): List<Throwable>?

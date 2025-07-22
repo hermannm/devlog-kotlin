@@ -42,3 +42,12 @@ actual constructor(
     private val EMPTY_STACK_TRACE: Array<out StackTraceElement> = emptyArray()
   }
 }
+
+internal actual fun getSuppressedExceptions(exception: Throwable): List<Throwable>? {
+  val suppressedExceptions: Array<Throwable> = exception.suppressed
+  if (suppressedExceptions.isEmpty()) {
+    return null
+  } else {
+    return suppressedExceptions.asList()
+  }
+}
