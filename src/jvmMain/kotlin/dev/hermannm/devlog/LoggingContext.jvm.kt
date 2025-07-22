@@ -193,7 +193,7 @@ internal actual object LoggingContext {
     return contextMap.count { field -> field.value != null }
   }
 
-  val exceptionContext = ConcurrentHashMap<WeakExceptionReference, Collection<LogField>>()
+  private val exceptionContext = ConcurrentHashMap<WeakExceptionReference, Collection<LogField>>()
 
   /** See [ExceptionLookupKey]. */
   private val exceptionContextLookup: ConcurrentHashMap<*, Collection<LogField>>
@@ -267,7 +267,7 @@ internal actual object LoggingContext {
     return false
   }
 
-  class WeakExceptionReference(
+  private class WeakExceptionReference(
       exception: Throwable,
       queue: ReferenceQueue<Throwable>?,
   ) : WeakReference<Throwable>(exception, queue) {
