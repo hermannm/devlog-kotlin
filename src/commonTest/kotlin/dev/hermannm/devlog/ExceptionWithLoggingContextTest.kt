@@ -11,11 +11,11 @@ import kotlinx.serialization.json.JsonPrimitive
 
 private val log = getLogger()
 
-internal class ExceptionWithLogFieldsTest {
+internal class ExceptionWithLoggingContextTest {
   @Test
   fun `exception implementing HasLogFields has field included in log`() {
     val output = captureLogOutput {
-      log.error(exceptionWithLogField("exceptionField", "value")) { "Test" }
+      log.error(exceptionWithLoggingContext("exceptionField", "value")) { "Test" }
     }
 
     output.logFields shouldBe
@@ -26,11 +26,11 @@ internal class ExceptionWithLogFieldsTest {
   }
 
   @Test
-  fun `ExceptionWithLogFields includes fields from logging context`() {
+  fun `ExceptionWithLoggingContext includes fields from logging context`() {
     val output = captureLogOutput {
       try {
         withLoggingContext(field("contextField", "value")) {
-          throw exceptionWithLogField("exceptionField", "value")
+          throw exceptionWithLoggingContext("exceptionField", "value")
         }
       } catch (e: Exception) {
         log.error(e) { "Test" }
@@ -51,11 +51,11 @@ internal class ExceptionWithLogFieldsTest {
    * caught inside the context, and that this doesn't duplicate the fields from the context.
    */
   @Test
-  fun `ExceptionWithLogFields still includes fields from logging context when caught within that context`() {
+  fun `ExceptionWithLoggingContext still includes fields from logging context when caught within that context`() {
     val output = captureLogOutput {
       withLoggingContext(field("contextField", "value")) {
         try {
-          throw exceptionWithLogField("exceptionField", "value")
+          throw exceptionWithLoggingContext("exceptionField", "value")
         } catch (e: Exception) {
           log.error(e) { "Test" }
         }
@@ -76,7 +76,7 @@ internal class ExceptionWithLogFieldsTest {
       val exception =
           Exception(
               "Parent exception",
-              exceptionWithLogField("childException", "value"),
+              exceptionWithLoggingContext("childException", "value"),
           )
       log.error(exception) { "Test" }
     }
@@ -92,10 +92,10 @@ internal class ExceptionWithLogFieldsTest {
   fun `parent and child exceptions that both implement HasLogFields have their fields merged`() {
     val output = captureLogOutput {
       val exception =
-          ExceptionWithLogFields(
+          ExceptionWithLoggingContext(
               message = "Parent exception",
               logFields = listOf(field("parentField1", "value"), field("parentField2", "value")),
-              cause = exceptionWithLogField("childField", "value"),
+              cause = exceptionWithLoggingContext("childField", "value"),
           )
       log.error(exception) { "Test" }
     }
@@ -112,7 +112,7 @@ internal class ExceptionWithLogFieldsTest {
     val output = captureLogOutput {
       try {
         withLoggingContext(field("contextField", "value")) {
-          throw exceptionWithLogField("exceptionField", "value")
+          throw exceptionWithLoggingContext("exceptionField", "value")
         }
       } catch (e: Exception) {
         log.error(e) {
@@ -133,10 +133,10 @@ internal class ExceptionWithLogFieldsTest {
   fun `exception with duplicate log fields only includes first field`() {
     val output = captureLogOutput {
       val exception =
-          ExceptionWithLogFields(
+          ExceptionWithLoggingContext(
               "Test",
               listOf(field("duplicateKey", "value1"), field("duplicateKey", "value2")),
-              cause = exceptionWithLogField("duplicateKey", "value3"),
+              cause = exceptionWithLoggingContext("duplicateKey", "value3"),
           )
       log.error(exception) { "Test" }
     }
@@ -155,7 +155,7 @@ internal class ExceptionWithLogFieldsTest {
   @Test
   fun `exception log field does not override duplicate log event field`() {
     val output = captureLogOutput {
-      log.error(exceptionWithLogField("duplicateKey", "from exception")) {
+      log.error(exceptionWithLoggingContext("duplicateKey", "from exception")) {
         field("duplicateKey", "from log event")
         "Test"
       }
@@ -176,7 +176,7 @@ internal class ExceptionWithLogFieldsTest {
   fun `exception log field overrides duplicate context field`() {
     val output = captureLogOutput {
       withLoggingContext(field("duplicateKey", "from context")) {
-        log.error(exceptionWithLogField("duplicateKey", "from exception")) { "Test" }
+        log.error(exceptionWithLoggingContext("duplicateKey", "from exception")) { "Test" }
       }
     }
 
@@ -188,11 +188,11 @@ internal class ExceptionWithLogFieldsTest {
   }
 
   @Test
-  fun `serializable object field works on ExceptionWithLogFields`() {
+  fun `serializable object field works on ExceptionWithLoggingContext`() {
     val event = Event(id = 1001, type = EventType.ORDER_PLACED)
 
     val exception =
-        ExceptionWithLogFields(
+        ExceptionWithLoggingContext(
             message = null,
             logFields = listOf(field("event", event)),
         )
@@ -226,9 +226,9 @@ internal class ExceptionWithLogFieldsTest {
   }
 
   @Test
-  fun `inheriting from ExceptionWithLogFields works`() {
+  fun `inheriting from ExceptionWithLoggingContext works`() {
     class CustomException :
-        ExceptionWithLogFields(
+        ExceptionWithLoggingContext(
             message = "Test",
             logFields = listOf(field("key", "value")),
         )
@@ -246,7 +246,7 @@ internal class ExceptionWithLogFieldsTest {
   fun `vararg overload works`() {
     val cause = Exception("Cause")
     val exception =
-        ExceptionWithLogFields(
+        ExceptionWithLoggingContext(
             "Test",
             field("key1", "value1"),
             field("key2", "value2"),
@@ -262,7 +262,7 @@ internal class ExceptionWithLogFieldsTest {
   fun `overload without message works`() {
     val cause = Exception("Cause message")
     val exception =
-        ExceptionWithLogFields(
+        ExceptionWithLoggingContext(
             listOf(field("key", "value")),
             cause,
         )
@@ -276,7 +276,7 @@ internal class ExceptionWithLogFieldsTest {
   fun `vararg overload without message works`() {
     val cause = Exception("Cause message")
     val exception =
-        ExceptionWithLogFields(
+        ExceptionWithLoggingContext(
             field("key1", "value1"),
             field("key2", "value2"),
             cause = cause,
@@ -288,8 +288,8 @@ internal class ExceptionWithLogFieldsTest {
   }
 
   @Test
-  fun `extending ExceptionWithLogFields and overriding message works`() {
-    class CustomException : ExceptionWithLogFields(listOf(field("key", "value"))) {
+  fun `extending ExceptionWithLoggingContext and overriding message works`() {
+    class CustomException : ExceptionWithLoggingContext(listOf(field("key", "value"))) {
       override val message = "Custom message"
     }
 
@@ -299,9 +299,9 @@ internal class ExceptionWithLogFieldsTest {
   }
 
   @Test
-  fun `extending ExceptionWithLogFields with varargs and overriding message works`() {
+  fun `extending ExceptionWithLoggingContext with varargs and overriding message works`() {
     class CustomException :
-        ExceptionWithLogFields(
+        ExceptionWithLoggingContext(
             field("key1", "value1"),
             field("key2", "value2"),
         ) {
@@ -336,8 +336,8 @@ internal class ExceptionWithLogFieldsTest {
   }
 }
 
-private fun exceptionWithLogField(key: String, value: String) =
-    ExceptionWithLogFields(
+private fun exceptionWithLoggingContext(key: String, value: String) =
+    ExceptionWithLoggingContext(
         message = "Test exception",
         logFields = listOf(field(key, value)),
     )

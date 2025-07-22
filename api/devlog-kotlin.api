@@ -1,4 +1,4 @@
-public class dev/hermannm/devlog/ExceptionWithLogFields : java/lang/RuntimeException, dev/hermannm/devlog/HasLogFields {
+public class dev/hermannm/devlog/ExceptionWithLoggingContext : java/lang/RuntimeException, dev/hermannm/devlog/HasLogFields {
 	public fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/lang/Throwable;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;[Ldev/hermannm/devlog/LogField;Ljava/lang/Throwable;)V

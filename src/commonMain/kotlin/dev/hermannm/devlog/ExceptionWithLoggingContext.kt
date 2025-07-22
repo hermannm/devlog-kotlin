@@ -20,7 +20,7 @@ package dev.hermannm.devlog
  * ### Example
  *
  * ```
- * import dev.hermannm.devlog.ExceptionWithLogFields
+ * import dev.hermannm.devlog.ExceptionWithLoggingContext
  * import dev.hermannm.devlog.field
  * import dev.hermannm.devlog.getLogger
  *
@@ -39,7 +39,7 @@ package dev.hermannm.devlog
  *     val order = getOrder(event.orderId)
  *
  *     if (!order.canBeUpdated()) {
- *       throw ExceptionWithLogFields(
+ *       throw ExceptionWithLoggingContext(
  *           "Received update event for finalized order",
  *           field("order", order),
  *       )
@@ -53,7 +53,7 @@ package dev.hermannm.devlog
  * ```
  * {
  *   "message": "Failed to process order update event",
- *   "stack_trace": "...ExceptionWithLogFields: Received update event for finalized order...",
+ *   "stack_trace": "...ExceptionWithLoggingContext: Received update event for finalized order...",
  *   "order": { ... },
  *   "event": { ... },
  *   // ...timestamp etc.
@@ -62,7 +62,7 @@ package dev.hermannm.devlog
  *
  * ### Constructors
  *
- * `ExceptionWithLogFields` provides 4 constructor overloads:
+ * `ExceptionWithLoggingContext` provides 4 constructor overloads:
  * - `(message: String?, logFields: List<LogField>, cause: Throwable?)`
  *     - Primary constructor taking an exception message, a list of log fields and an optional cause
  *       exception
@@ -72,13 +72,13 @@ package dev.hermannm.devlog
  * - `(logFields: List<LogField>, cause: Throwable?)`
  *     - Defaults `message` to `cause.message`. This lets you:
  *         - Wrap a cause exception with log fields, and use the cause exception's message
- *         - Extend `ExceptionWithLogFields` and override `message`, without having to pass it
+ *         - Extend `ExceptionWithLoggingContext` and override `message`, without having to pass it
  *           through the constructor
  * - `(vararg logFields: LogField, cause: Throwable?)`
- *     - Combines the two previous constructors, to let you extend `ExceptionWithLogFields` and
+ *     - Combines the two previous constructors, to let you extend `ExceptionWithLoggingContext` and
  *       override `message` while also passing log fields as varargs
  */
-public open class ExceptionWithLogFields(
+public open class ExceptionWithLoggingContext(
     /** The exception message. */
     override val message: String?,
     logFields: List<LogField> = emptyList(),
@@ -122,7 +122,7 @@ public open class ExceptionWithLogFields(
  * allows you to have the benefits of structured logging for exceptions as well.
  *
  * If you want to include log fields from [withLoggingContext] on the exception, you should instead
- * throw or extend the [ExceptionWithLogFields] base class.
+ * throw or extend the [ExceptionWithLoggingContext] base class.
  *
  * ### Example
  *

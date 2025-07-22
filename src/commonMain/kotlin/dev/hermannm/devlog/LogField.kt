@@ -32,7 +32,7 @@ import kotlinx.serialization.json.longOrNull
  * If you want to attach fields to all logs within a scope, you can use [withLoggingContext] and
  * pass fields to it with the [field]/[rawJsonField] functions.
  *
- * Finally, you can throw or extend [ExceptionWithLogFields] to attach structured data to an
+ * Finally, you can throw or extend [ExceptionWithLoggingContext] to attach structured data to an
  * exception when it's logged.
  *
  * ### Example
