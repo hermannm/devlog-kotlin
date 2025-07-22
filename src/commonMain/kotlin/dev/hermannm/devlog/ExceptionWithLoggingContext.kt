@@ -109,6 +109,48 @@ public open class ExceptionWithLoggingContext(
   ) : this(message = cause?.message, logFields.asList(), cause)
 }
 
+public fun Throwable.withLoggingContext(message: String, vararg logFields: LogField): Throwable {
+  return ExceptionWithLoggingContext(
+      message = message,
+      logFields = logFields.asList(),
+      cause = this,
+  )
+}
+
+public fun Throwable.withLoggingContext(message: String, logFields: List<LogField>): Throwable {
+  return ExceptionWithLoggingContext(
+      message = message,
+      logFields = logFields,
+      cause = this,
+  )
+}
+
+public fun Throwable.withLoggingContext(vararg logFields: LogField): Throwable {
+  return this.withLoggingContext(logFields.asList())
+}
+
+public fun Throwable.withLoggingContext(logFields: List<LogField>): Throwable {
+  val logFields = LoggingContext.combineFieldListWithContextFields(logFields)
+  if (logFields.isEmpty()) {
+    return this
+  }
+
+  return WrappedException(this, logFields)
+}
+
+public fun Throwable.withLoggingContext(): Throwable {
+  if (this is ExceptionWithLoggingContext) {
+    return this
+  }
+
+  val loggingContext = LoggingContext.getFieldList()
+  if (loggingContext.isEmpty()) {
+    return this
+  }
+
+  return WrappedException(this, loggingContext)
+}
+
 /**
  * Interface to allow you to attach [log fields][LogField] to exceptions. When passing a `cause`
  * exception to one of the methods on [Logger], it will check if the given exception implements this
@@ -169,4 +211,11 @@ public open class ExceptionWithLoggingContext(
 public interface HasLogFields {
   /** Will be attached to the log when passed through `cause` to one of [Logger]'s methods. */
   public val logFields: List<LogField>
+}
+
+internal expect class WrappedException : RuntimeException, HasLogFields {
+  constructor(wrapped: Throwable, logFields: List<LogField>)
+
+  internal val wrapped: Throwable
+  override val message: String
 }
