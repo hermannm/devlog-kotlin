@@ -149,25 +149,27 @@ public inline fun <ReturnT> withLoggingContext(
  * ```
  */
 public inline fun <ReturnT> withLoggingContext(
-    logFields: List<LogField>,
+    logFields: Collection<LogField>,
     block: () -> ReturnT
 ): ReturnT {
   return withLoggingContextInternal(logFields.toTypedArray(), block)
 }
 
 /**
- * Shared implementation for the `vararg` and `List` versions of [withLoggingContext].
+ * Shared implementation for the `vararg` and `Collection` versions of [withLoggingContext].
  *
  * This function must be kept internal, since [LoggingContext] assumes that the given array is not
  * modified from the outside. We uphold this invariant in both versions of [withLoggingContext]:
  * - For the `vararg` version: Varargs always give a new array to the called function, even when
  *   called with an existing array:
  *   https://discuss.kotlinlang.org/t/hidden-allocations-when-using-vararg-and-spread-operator/1640/2
- * - For the `List` version: Here we call [Collection.toTypedArray], which creates a new array.
+ * - For the `Collection` version: Here we call [Collection.toTypedArray], which creates a new
+ *   array.
  *
- * We could just call the `vararg` version of [withLoggingContext] from the `List` overload, since
- * you can pass an array to a function taking varargs. But this actually copies the array twice:
- * once in [Collection.toTypedArray], and again in the defensive copy that varargs make in Kotlin.
+ * We could just call the `vararg` version of [withLoggingContext] from the `Collection` overload,
+ * since you can pass an array to a function taking varargs. But this actually copies the array
+ * twice: once in [Collection.toTypedArray], and again in the defensive copy that varargs make in
+ * Kotlin.
  */
 @PublishedApi
 internal inline fun <ReturnT> withLoggingContextInternal(
@@ -241,8 +243,8 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  * }
  * ```
  */
-public fun getLoggingContext(): List<LogField> {
-  return LoggingContext.getFieldList()
+public fun getLoggingContext(): Collection<LogField> {
+  return LoggingContext.getFields()
 }
 
 /**
@@ -270,11 +272,11 @@ internal expect object LoggingContext {
 
   @kotlin.jvm.JvmStatic internal fun contains(field: LogField): Boolean
 
-  @kotlin.jvm.JvmStatic internal fun getFieldList(): List<LogField>
+  @kotlin.jvm.JvmStatic internal fun getFields(): Collection<LogField>
 
   /** Combines the given log fields with any fields from [withLoggingContext]. */
   @kotlin.jvm.JvmStatic
-  internal fun combineFieldListWithContextFields(fields: List<LogField>): List<LogField>
+  internal fun combineFieldsWithContext(fields: Collection<LogField>): Collection<LogField>
 }
 
 /**

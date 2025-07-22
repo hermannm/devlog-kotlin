@@ -63,13 +63,13 @@ package dev.hermannm.devlog
  * ### Constructors
  *
  * `ExceptionWithLoggingContext` provides 4 constructor overloads:
- * - `(message: String?, logFields: List<LogField>, cause: Throwable?)`
- *     - Primary constructor taking an exception message, a list of log fields and an optional cause
- *       exception
+ * - `(message: String?, logFields: Collection<LogField>, cause: Throwable?)`
+ *     - Primary constructor taking an exception message, a collection of log fields and an optional
+ *       cause exception
  * - `(message: String?, vararg logFields: LogField, cause: Throwable?)`
  *     - Takes log fields as varargs, so you don't have to wrap them in a list
  *     - To pass `cause`, use a named argument
- * - `(logFields: List<LogField>, cause: Throwable?)`
+ * - `(logFields: Collection<LogField>, cause: Throwable?)`
  *     - Defaults `message` to `cause.message`. This lets you:
  *         - Wrap a cause exception with log fields, and use the cause exception's message
  *         - Extend `ExceptionWithLoggingContext` and override `message`, without having to pass it
@@ -81,7 +81,7 @@ package dev.hermannm.devlog
 public open class ExceptionWithLoggingContext(
     /** The exception message. */
     override val message: String?,
-    logFields: List<LogField> = emptyList(),
+    logFields: Collection<LogField> = emptyList(),
     /**
      * The cause of the exception. If you're throwing this exception after catching another, you
      * should include the original exception here.
@@ -89,8 +89,8 @@ public open class ExceptionWithLoggingContext(
     override val cause: Throwable? = null,
 ) : RuntimeException(), HasLogFields {
   // Final, since we want to ensure that fields from logging context are included
-  final override val logFields: List<LogField> =
-      LoggingContext.combineFieldListWithContextFields(logFields)
+  final override val logFields: Collection<LogField> =
+      LoggingContext.combineFieldsWithContext(logFields)
 
   public constructor(
       message: String?,
@@ -99,7 +99,7 @@ public open class ExceptionWithLoggingContext(
   ) : this(message, logFields.asList(), cause)
 
   public constructor(
-      logFields: List<LogField> = emptyList(),
+      logFields: Collection<LogField> = emptyList(),
       cause: Throwable? = null,
   ) : this(message = cause?.message, logFields, cause)
 
@@ -117,7 +117,10 @@ public fun Throwable.withLoggingContext(message: String, vararg logFields: LogFi
   )
 }
 
-public fun Throwable.withLoggingContext(message: String, logFields: List<LogField>): Throwable {
+public fun Throwable.withLoggingContext(
+    message: String,
+    logFields: Collection<LogField>
+): Throwable {
   return ExceptionWithLoggingContext(
       message = message,
       logFields = logFields,
@@ -129,7 +132,7 @@ public fun Throwable.withLoggingContext(vararg logFields: LogField): Throwable {
   return this.withLoggingContext(logFields.asList())
 }
 
-public fun Throwable.withLoggingContext(logFields: List<LogField>): Throwable {
+public fun Throwable.withLoggingContext(logFields: Collection<LogField>): Throwable {
   var contextAlreadyIncluded = false
 
   traverseExceptionChain(root = this) { exception ->
@@ -148,7 +151,7 @@ public fun Throwable.withLoggingContext(logFields: List<LogField>): Throwable {
       if (contextAlreadyIncluded) {
         logFields
       } else {
-        LoggingContext.combineFieldListWithContextFields(logFields)
+        LoggingContext.combineFieldsWithContext(logFields)
       }
 
   this.addSuppressed(LoggingContextProvider(allLogFields))
@@ -163,7 +166,7 @@ public fun Throwable.withLoggingContext(): Throwable {
     }
   }
 
-  val loggingContext = LoggingContext.getFieldList()
+  val loggingContext = LoggingContext.getFields()
   if (loggingContext.isEmpty()) {
     return this
   }
@@ -231,13 +234,13 @@ public fun Throwable.withLoggingContext(): Throwable {
  */
 public interface HasLogFields {
   /** Will be attached to the log when passed through `cause` to one of [Logger]'s methods. */
-  public val logFields: List<LogField>
+  public val logFields: Collection<LogField>
 }
 
 internal expect class LoggingContextProvider : Throwable, HasLogFields {
-  constructor(logFields: List<LogField>)
+  constructor(logFields: Collection<LogField>)
 
-  override var logFields: List<LogField>
+  override var logFields: Collection<LogField>
 }
 
 internal inline fun traverseExceptionChain(

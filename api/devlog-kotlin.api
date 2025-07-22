@@ -1,27 +1,27 @@
 public class dev/hermannm/devlog/ExceptionWithLoggingContext : java/lang/RuntimeException, dev/hermannm/devlog/HasLogFields {
-	public fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/lang/Throwable;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/util/Collection;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Collection;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;[Ldev/hermannm/devlog/LogField;Ljava/lang/Throwable;)V
 	public synthetic fun <init> (Ljava/lang/String;[Ldev/hermannm/devlog/LogField;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public fun <init> (Ljava/util/List;Ljava/lang/Throwable;)V
-	public synthetic fun <init> (Ljava/util/List;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/util/Collection;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/util/Collection;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> ([Ldev/hermannm/devlog/LogField;Ljava/lang/Throwable;)V
 	public synthetic fun <init> ([Ldev/hermannm/devlog/LogField;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun getCause ()Ljava/lang/Throwable;
-	public final fun getLogFields ()Ljava/util/List;
+	public final fun getLogFields ()Ljava/util/Collection;
 	public fun getMessage ()Ljava/lang/String;
 }
 
 public final class dev/hermannm/devlog/ExceptionWithLoggingContextKt {
 	public static final fun withLoggingContext (Ljava/lang/Throwable;)Ljava/lang/Throwable;
-	public static final fun withLoggingContext (Ljava/lang/Throwable;Ljava/lang/String;Ljava/util/List;)Ljava/lang/Throwable;
+	public static final fun withLoggingContext (Ljava/lang/Throwable;Ljava/lang/String;Ljava/util/Collection;)Ljava/lang/Throwable;
 	public static final fun withLoggingContext (Ljava/lang/Throwable;Ljava/lang/String;[Ldev/hermannm/devlog/LogField;)Ljava/lang/Throwable;
-	public static final fun withLoggingContext (Ljava/lang/Throwable;Ljava/util/List;)Ljava/lang/Throwable;
+	public static final fun withLoggingContext (Ljava/lang/Throwable;Ljava/util/Collection;)Ljava/lang/Throwable;
 	public static final fun withLoggingContext (Ljava/lang/Throwable;[Ldev/hermannm/devlog/LogField;)Ljava/lang/Throwable;
 }
 
 public abstract interface class dev/hermannm/devlog/HasLogFields {
-	public abstract fun getLogFields ()Ljava/util/List;
+	public abstract fun getLogFields ()Ljava/util/Collection;
 }
 
 public class dev/hermannm/devlog/JsonLogField : dev/hermannm/devlog/LogField {
@@ -30,7 +30,7 @@ public class dev/hermannm/devlog/JsonLogField : dev/hermannm/devlog/LogField {
 
 public final class dev/hermannm/devlog/LogBuilder {
 	public static final fun addField-impl (Ldev/hermannm/devlog/LogEvent;Ldev/hermannm/devlog/LogField;)V
-	public static final fun addFields-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/Iterable;)V
+	public static final fun addFields-impl (Ldev/hermannm/devlog/LogEvent;Ljava/util/Collection;)V
 	public static final fun addFieldsFromCauseException-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/Throwable;)V
 	public static final synthetic fun box-impl (Ldev/hermannm/devlog/LogEvent;)Ldev/hermannm/devlog/LogBuilder;
 	public static fun constructor-impl (Ldev/hermannm/devlog/LogEvent;)Ldev/hermannm/devlog/LogEvent;
@@ -136,8 +136,8 @@ public final class dev/hermannm/devlog/LoggingContext {
 }
 
 public final class dev/hermannm/devlog/LoggingContextKt {
-	public static final fun getLoggingContext ()Ljava/util/List;
-	public static final fun withLoggingContext (Ljava/util/List;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+	public static final fun getLoggingContext ()Ljava/util/Collection;
+	public static final fun withLoggingContext (Ljava/util/Collection;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
 	public static final fun withLoggingContext ([Ldev/hermannm/devlog/LogField;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
 	public static final fun withLoggingContextInternal ([Ldev/hermannm/devlog/LogField;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
 }

@@ -131,43 +131,52 @@ internal actual object LoggingContext {
   }
 
   @kotlin.jvm.JvmStatic
-  internal actual fun getFieldList(): List<LogField> {
-    val fieldMap = getFieldMap()
-    if (fieldMap.isNullOrEmpty()) {
+  internal actual fun getFields(): Collection<LogField> {
+    val contextMap = getContextMap()
+    // `emptyList()` uses a singleton, so we can use it to avoid allocations if context is empty
+    if (contextMap == null) {
       return emptyList()
     }
 
-    val fieldList = ArrayList<LogField>(getNonNullFieldCount(fieldMap))
-    mapFieldMapToList(fieldMap, fieldList)
+    val fieldCount = getNonNullFieldCount(contextMap)
+    if (fieldCount == 0) {
+      return emptyList()
+    }
+
+    val fieldList = ArrayList<LogField>(fieldCount)
+    addContextMapToList(contextMap, target = fieldList)
     return fieldList
   }
 
   @kotlin.jvm.JvmStatic
-  internal actual fun combineFieldListWithContextFields(fields: List<LogField>): List<LogField> {
-    val contextFields = getFieldMap()
-
-    // If logging context is empty, we just use the given field list, to avoid allocating an
+  internal actual fun combineFieldsWithContext(fields: Collection<LogField>): Collection<LogField> {
+    val contextMap = getContextMap()
+    // If logging context is empty, we just return the given fields, to avoid allocating an
     // additional list
-    if (contextFields.isNullOrEmpty()) {
+    if (contextMap == null) {
       return fields
     }
 
-    val combinedFields = ArrayList<LogField>(fields.size + getNonNullFieldCount(contextFields))
+    val contextFieldCount = getNonNullFieldCount(contextMap)
+    if (contextFieldCount == 0) {
+      return fields
+    }
 
+    val combinedFields = ArrayList<LogField>(fields.size + contextFieldCount)
     // Add exception log fields first, so they show first in the log output
     combinedFields.addAll(fields)
-    mapFieldMapToList(contextFields, target = combinedFields)
+    addContextMapToList(contextMap, target = combinedFields)
     return combinedFields
   }
 
   @kotlin.jvm.JvmStatic
-  internal fun getFieldMap(): Map<String, String?>? {
+  internal fun getContextMap(): Map<String, String?>? {
     return MDC.getCopyOfContextMap()
   }
 
   @kotlin.jvm.JvmStatic
-  private fun mapFieldMapToList(fieldMap: Map<String, String?>, target: ArrayList<LogField>) {
-    for ((key, value) in fieldMap) {
+  private fun addContextMapToList(contextMap: Map<String, String?>, target: ArrayList<LogField>) {
+    for ((key, value) in contextMap) {
       if (value == null) {
         continue
       }
@@ -177,28 +186,28 @@ internal actual object LoggingContext {
   }
 
   @kotlin.jvm.JvmStatic
-  private fun getNonNullFieldCount(fieldMap: Map<String, String?>): Int {
-    return fieldMap.count { field -> field.value != null }
+  private fun getNonNullFieldCount(contextMap: Map<String, String?>): Int {
+    return contextMap.count { field -> field.value != null }
   }
 }
 
 /** Adds the given map of log fields to the logging context for the scope of the given [block]. */
 internal inline fun <ReturnT> withLoggingContextMap(
-    fieldMap: Map<String, String?>,
+    contextMap: Map<String, String?>,
     block: () -> ReturnT
 ): ReturnT {
-  val previousFieldMap = LoggingContext.getFieldMap()
-  if (previousFieldMap != null) {
-    MDC.setContextMap(previousFieldMap + fieldMap)
+  val previousContextMap = LoggingContext.getContextMap()
+  if (previousContextMap != null) {
+    MDC.setContextMap(previousContextMap + contextMap)
   } else {
-    MDC.setContextMap(fieldMap)
+    MDC.setContextMap(contextMap)
   }
 
   try {
     return block()
   } finally {
-    if (previousFieldMap != null) {
-      MDC.setContextMap(previousFieldMap)
+    if (previousContextMap != null) {
+      MDC.setContextMap(previousContextMap)
     } else {
       MDC.clear()
     }
@@ -277,7 +286,7 @@ internal value class ExecutorServiceWithInheritedLoggingContext(
     // Copy context fields here, to get the logging context of the parent thread.
     // We then pass this to withLoggingContext in the returned Callable below, which will be invoked
     // in the child thread, thus inheriting the parent's context fields.
-    val contextFields = LoggingContext.getFieldMap()
+    val contextFields = LoggingContext.getContextMap()
 
     if (contextFields.isNullOrEmpty()) {
       return callable
@@ -290,7 +299,7 @@ internal value class ExecutorServiceWithInheritedLoggingContext(
     // Copy context fields here, to get the logging context of the parent thread.
     // We then pass this to withLoggingContext in the returned Runnable below, which will be invoked
     // in the child thread, thus inheriting the parent's context fields.
-    val contextFields = LoggingContext.getFieldMap()
+    val contextFields = LoggingContext.getContextMap()
 
     if (contextFields.isNullOrEmpty()) {
       return runnable

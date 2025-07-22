@@ -209,7 +209,7 @@ internal class ExceptionWithLoggingContextTest {
   @Test
   fun `custom implementation of HasLogFields works`() {
     class CustomException : Exception(), HasLogFields {
-      override val logFields =
+      override val logFields: Collection<LogField> =
           listOf(
               field("key1", "value1"),
               field("key2", "value2"),

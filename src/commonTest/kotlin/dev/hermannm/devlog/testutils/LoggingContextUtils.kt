@@ -7,7 +7,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 
 internal infix fun LoggingContext.shouldContainExactly(map: Map<String, String>) {
-  val contextFields = this.getFieldList()
+  val contextFields = this.getFields()
 
   contextFields.size shouldBe map.size
   for ((key, value) in map) {
@@ -20,5 +20,5 @@ internal infix fun LoggingContext.shouldContainExactly(map: Map<String, String>)
 }
 
 internal fun LoggingContext.shouldBeEmpty() {
-  this.getFieldList().shouldBeEmpty()
+  this.getFields().shouldBeEmpty()
 }

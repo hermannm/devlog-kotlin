@@ -265,7 +265,7 @@ internal constructor(
   }
 
   /**
-   * Adds the given [log fields][LogField] to the log. This is useful when you have a list of
+   * Adds the given [log fields][LogField] to the log. This is useful when you have a collection of
    * previously constructed fields from the
    * [field][dev.hermannm.devlog.field]/[rawJsonField][dev.hermannm.devlog.rawJsonField] top-level
    * functions, that you want to add to a single log.
@@ -274,7 +274,7 @@ internal constructor(
    * - If you want to add the fields to all logs within a scope, you should instead use
    *   [withLoggingContext]
    */
-  public fun addFields(fields: Iterable<LogField>) {
+  public fun addFields(fields: Collection<LogField>) {
     for (field in fields) {
       addField(field)
     }

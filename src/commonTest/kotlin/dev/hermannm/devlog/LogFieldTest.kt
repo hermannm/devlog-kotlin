@@ -433,8 +433,8 @@ internal class LogFieldTest {
   }
 
   @Test
-  fun `addFields allows adding a list of previously constructed fields to the log`() {
-    val existingFields =
+  fun `addFields allows adding a collection of previously constructed fields to the log`() {
+    val existingFields: Collection<LogField> =
         listOf(
             field("key1", "value1"),
             field("key2", "value2"),

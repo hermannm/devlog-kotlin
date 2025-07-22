@@ -5,7 +5,7 @@ import java.io.PrintWriter
 
 internal actual class LoggingContextProvider
 actual constructor(
-    @kotlin.concurrent.Volatile actual override var logFields: List<LogField>,
+    @kotlin.concurrent.Volatile actual override var logFields: Collection<LogField>,
 ) : Throwable(), HasLogFields {
   override val message: String?
     get() = "Added log fields from exception"
