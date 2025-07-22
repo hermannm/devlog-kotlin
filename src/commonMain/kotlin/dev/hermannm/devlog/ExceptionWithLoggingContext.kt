@@ -245,59 +245,67 @@ internal inline fun traverseExceptionChain(
     maxDepth: Int = 8,
     action: (Throwable) -> Unit
 ) {
-  val exceptions: Array<Throwable?> = arrayOfNulls(size = maxDepth)
-  exceptions[0] = root
+  var currentException: Throwable = root
+  var parent: ExceptionParent? = null
   var depth = 0
 
   exceptionLoop@ while (true) {
-    val currentException: Throwable = exceptions[depth]!!
     action(currentException)
 
     // If we are not at the max depth, traverse child exceptions (cause or suppressed exceptions)
     if (depth < maxDepth - 1) {
+      val suppressedExceptions = getSuppressedExceptions(currentException)
+      val hasSuppressedExceptions = !suppressedExceptions.isNullOrEmpty()
+
       // First, check if we have a cause exception - if so, set that as the next exception
       val causeException = currentException.cause
       if (causeException != null) {
-        exceptions[++depth] = causeException
+        if (hasSuppressedExceptions || parent != null) {
+          parent = ExceptionParent(currentException, parent)
+        }
+        currentException = causeException
+        depth++
         continue@exceptionLoop
       }
 
       // If there's no cause exception, look for suppressed exceptions. If we have suppressed
       // exceptions, set the first suppressed exception as the next to traverse
-      val suppressedExceptions = getSuppressedExceptions(currentException)
-      if (!suppressedExceptions.isNullOrEmpty()) {
-        exceptions[++depth] = suppressedExceptions.first()
+      if (hasSuppressedExceptions) {
+        if (suppressedExceptions.size > 1 || parent != null) {
+          parent = ExceptionParent(currentException, parent)
+        }
+        currentException = suppressedExceptions.first()
+        depth++
         continue@exceptionLoop
       }
     }
 
-    parentSearch@ while (depth > 0) {
-      val parent: Throwable = exceptions[depth - 1]!!
-      val child: Throwable = exceptions[depth]!!
-
-      val parentSuppressedExceptions = getSuppressedExceptions(parent)
+    while (parent != null) {
+      val parentSuppressedExceptions = getSuppressedExceptions(parent.exception)
       if (!parentSuppressedExceptions.isNullOrEmpty()) {
-        if (child === parent.cause) {
-          exceptions[depth] = parentSuppressedExceptions.first()
+        if (currentException === parent.exception.cause) {
+          currentException = parentSuppressedExceptions.first()
           continue@exceptionLoop
         }
 
-        val indexOfSuppressed = parentSuppressedExceptions.indexOfFirst { it === child }
+        val indexOfSuppressed = parentSuppressedExceptions.indexOfFirst { it === currentException }
         if (indexOfSuppressed != -1 && indexOfSuppressed < parentSuppressedExceptions.size - 1) {
-          exceptions[depth] = parentSuppressedExceptions[indexOfSuppressed + 1]
+          currentException = parentSuppressedExceptions[indexOfSuppressed + 1]
           continue@exceptionLoop
         }
       }
 
       // If we get here, there were no siblings, so we move up the tree
-      exceptions[depth] = null
+      currentException = parent.exception
+      parent = parent.parent
       depth--
-      continue@parentSearch
     }
 
     // If we get here, then we have traversed all cause and suppressed exceptions
     return
   }
 }
+
+internal class ExceptionParent(val exception: Throwable, val parent: ExceptionParent?)
 
 internal expect fun getSuppressedExceptions(exception: Throwable): List<Throwable>?
