@@ -30,28 +30,14 @@ internal interface LogEvent {
   fun log(message: String, logger: PlatformLogger)
 }
 
-@PublishedApi
-internal fun createLogEvent(
-    level: LogLevel,
-    cause: Throwable?,
-    logger: PlatformLogger,
-): LogEvent {
-  val unwrappedCause =
-      when (cause) {
-        is WrappedException -> cause.wrapped
-        else -> cause
-      }
-
-  return createPlatformLogEvent(level, unwrappedCause, logger)
-}
-
 /**
  * Returns a platform-specific implementation of [LogEvent].
  *
  * On the JVM, this returns an SLF4J `LoggingEvent`, or a specialized optimized version for Logback
  * if Logback is used as the logging backend.
  */
-internal expect fun createPlatformLogEvent(
+@PublishedApi
+internal expect fun createLogEvent(
     level: LogLevel,
     cause: Throwable?,
     logger: PlatformLogger

@@ -71,10 +71,9 @@ package dev.hermannm.devlog
  */
 public inline fun <ReturnT> withLoggingContext(
     vararg logFields: LogField,
-    wrapExceptions: Boolean = false,
     block: () -> ReturnT,
 ): ReturnT {
-  return withLoggingContextInternal(logFields, wrapExceptions, block)
+  return withLoggingContextInternal(logFields, block)
 }
 
 /**
@@ -145,10 +144,9 @@ public inline fun <ReturnT> withLoggingContext(
  */
 public inline fun <ReturnT> withLoggingContext(
     logFields: List<LogField>,
-    wrapExceptions: Boolean = false,
     block: () -> ReturnT
 ): ReturnT {
-  return withLoggingContextInternal(logFields.toTypedArray(), wrapExceptions, block)
+  return withLoggingContextInternal(logFields.toTypedArray(), block)
 }
 
 /**
@@ -168,24 +166,15 @@ public inline fun <ReturnT> withLoggingContext(
 @PublishedApi
 internal inline fun <ReturnT> withLoggingContextInternal(
     logFields: Array<out LogField>,
-    wrapExceptions: Boolean,
     block: () -> ReturnT,
 ): ReturnT {
   val overwrittenFields = LoggingContext.addFields(logFields)
-  if (wrapExceptions) {
-    try {
-      return block()
-    } catch (e: Exception) {
-      throw e.withLoggingContext()
-    } finally {
-      LoggingContext.removeFields(logFields, overwrittenFields)
-    }
-  } else {
-    try {
-      return block()
-    } finally {
-      LoggingContext.removeFields(logFields, overwrittenFields)
-    }
+  try {
+    return block()
+  } catch (e: Exception) {
+    throw e.withLoggingContext()
+  } finally {
+    LoggingContext.removeFields(logFields, overwrittenFields)
   }
 }
 

@@ -54,7 +54,7 @@ public abstract interface class dev/hermannm/devlog/LogEvent {
 	public abstract fun log (Ljava/lang/String;Lorg/slf4j/Logger;)V
 }
 
-public final class dev/hermannm/devlog/LogEventKt {
+public final class dev/hermannm/devlog/LogEvent_jvmKt {
 	public static final fun createLogEvent (Ldev/hermannm/devlog/LogLevel;Ljava/lang/Throwable;Lorg/slf4j/Logger;)Ldev/hermannm/devlog/LogEvent;
 }
 
@@ -137,11 +137,9 @@ public final class dev/hermannm/devlog/LoggingContext {
 
 public final class dev/hermannm/devlog/LoggingContextKt {
 	public static final fun getLoggingContext ()Ljava/util/List;
-	public static final fun withLoggingContext (Ljava/util/List;ZLkotlin/jvm/functions/Function0;)Ljava/lang/Object;
-	public static final fun withLoggingContext ([Ldev/hermannm/devlog/LogField;ZLkotlin/jvm/functions/Function0;)Ljava/lang/Object;
-	public static synthetic fun withLoggingContext$default (Ljava/util/List;ZLkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/lang/Object;
-	public static synthetic fun withLoggingContext$default ([Ldev/hermannm/devlog/LogField;ZLkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ljava/lang/Object;
-	public static final fun withLoggingContextInternal ([Ldev/hermannm/devlog/LogField;ZLkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+	public static final fun withLoggingContext (Ljava/util/List;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+	public static final fun withLoggingContext ([Ldev/hermannm/devlog/LogField;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+	public static final fun withLoggingContextInternal ([Ldev/hermannm/devlog/LogField;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
 }
 
 public final class dev/hermannm/devlog/LoggingContext_jvmKt {

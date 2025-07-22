@@ -130,17 +130,37 @@ public fun Throwable.withLoggingContext(vararg logFields: LogField): Throwable {
 }
 
 public fun Throwable.withLoggingContext(logFields: List<LogField>): Throwable {
-  val logFields = LoggingContext.combineFieldListWithContextFields(logFields)
-  if (logFields.isEmpty()) {
-    return this
+  var contextAlreadyIncluded = false
+
+  traverseExceptionChain(root = this) { exception ->
+    when (exception) {
+      is LoggingContextProvider -> {
+        exception.logFields += logFields
+        return this
+      }
+      is ExceptionWithLoggingContext -> {
+        contextAlreadyIncluded = true
+      }
+    }
   }
 
-  return WrappedException(this, logFields)
+  val allLogFields =
+      if (contextAlreadyIncluded) {
+        logFields
+      } else {
+        LoggingContext.combineFieldListWithContextFields(logFields)
+      }
+
+  this.addSuppressed(LoggingContextProvider(allLogFields))
+  return this
 }
 
 public fun Throwable.withLoggingContext(): Throwable {
-  if (this is ExceptionWithLoggingContext) {
-    return this
+  traverseExceptionChain(root = this) { exception ->
+    when (exception) {
+      is ExceptionWithLoggingContext,
+      is LoggingContextProvider -> return this
+    }
   }
 
   val loggingContext = LoggingContext.getFieldList()
@@ -148,7 +168,8 @@ public fun Throwable.withLoggingContext(): Throwable {
     return this
   }
 
-  return WrappedException(this, loggingContext)
+  this.addSuppressed(LoggingContextProvider(loggingContext))
+  return this
 }
 
 /**
@@ -213,9 +234,68 @@ public interface HasLogFields {
   public val logFields: List<LogField>
 }
 
-internal expect class WrappedException : RuntimeException, HasLogFields {
-  constructor(wrapped: Throwable, logFields: List<LogField>)
+internal expect class LoggingContextProvider : Throwable, HasLogFields {
+  constructor(logFields: List<LogField>)
 
-  internal val wrapped: Throwable
-  override val message: String
+  override var logFields: List<LogField>
+}
+
+internal inline fun traverseExceptionChain(
+    root: Throwable,
+    maxDepth: Int = 8,
+    action: (Throwable) -> Unit
+) {
+  val exceptions: Array<Throwable?> = arrayOfNulls(size = maxDepth)
+  exceptions[0] = root
+  var depth = 0
+
+  exceptionLoop@ while (true) {
+    val currentException: Throwable = exceptions[depth]!!
+    action(currentException)
+
+    // If we are not at the max depth, traverse child exceptions (cause or suppressed exceptions)
+    if (depth < maxDepth - 1) {
+      // First, check if we have a cause exception - if so, set that as the next exception
+      val causeException = currentException.cause
+      if (causeException != null) {
+        exceptions[++depth] = causeException
+        continue@exceptionLoop
+      }
+
+      // If there's no cause exception, look for suppressed exceptions. If we have suppressed
+      // exceptions, set the first suppressed exception as the next to traverse
+      val suppressedExceptions = currentException.suppressedExceptions
+      if (suppressedExceptions.isNotEmpty()) {
+        exceptions[++depth] = suppressedExceptions.first()
+        continue@exceptionLoop
+      }
+    }
+
+    parentSearch@ while (depth > 0) {
+      val parent: Throwable = exceptions[depth - 1]!!
+      val child: Throwable = exceptions[depth]!!
+
+      val parentSuppressedExceptions = parent.suppressedExceptions
+      if (parentSuppressedExceptions.isNotEmpty()) {
+        if (child === parent.cause) {
+          exceptions[depth] = parentSuppressedExceptions.first()
+          continue@exceptionLoop
+        }
+
+        val indexOfSuppressed = parentSuppressedExceptions.indexOfFirst { it === child }
+        if (indexOfSuppressed != -1 && indexOfSuppressed < parentSuppressedExceptions.size - 1) {
+          exceptions[depth] = parentSuppressedExceptions[indexOfSuppressed + 1]
+          continue@exceptionLoop
+        }
+      }
+
+      // If we get here, there were no siblings, so we move up the tree
+      exceptions[depth] = null
+      depth--
+      continue@parentSearch
+    }
+
+    // If we get here, then we have traversed all cause and suppressed exceptions
+    return
+  }
 }

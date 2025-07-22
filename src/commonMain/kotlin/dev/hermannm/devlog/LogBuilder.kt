@@ -281,29 +281,15 @@ internal constructor(
   }
 
   /**
-   * Checks if the log [cause] exception (or any of its own cause exceptions) implements the
+   * Checks if the log cause exception (or any of its own cause exceptions) implements the
    * [HasLogFields] interface, and if so, adds those fields to the log.
    */
   @PublishedApi
   internal fun addFieldsFromCauseException(cause: Throwable) {
-    // The `cause` here is the log event cause exception. But this exception may itself have a
-    // `cause` exception, and that may have another one, and so on. We want to go through all these
-    // exceptions to look for log fields, so we re-assign this local variable as we iterate through.
-    var exception: Throwable? = cause
-    // Limit the depth of cause exceptions, so we don't expose ourselves to infinite loops.
-    // This can happen if:
-    // - exception1.cause -> exception2
-    // - exception2.cause -> exception3
-    // - exception3.cause -> exception1
-    // We set max depth to 10, which should be high enough to not affect real users.
-    var depth = 0
-    while (exception != null && depth < 10) {
+    traverseExceptionChain(root = cause) { exception ->
       if (exception is HasLogFields) {
         addFields(exception.logFields)
       }
-
-      exception = exception.cause
-      depth++
     }
   }
 }

@@ -14,7 +14,8 @@ import org.slf4j.event.Level as Slf4jLevel
 import org.slf4j.spi.LocationAwareLogger
 import org.slf4j.spi.LoggingEventAware
 
-internal actual fun createPlatformLogEvent(
+@PublishedApi
+internal actual fun createLogEvent(
     level: LogLevel,
     cause: Throwable?,
     logger: Slf4jLogger
@@ -33,8 +34,8 @@ internal actual fun createPlatformLogEvent(
  *
  * If the user has not added Logback as a dependency, the below class loading will fail, and we'll
  * stick to only using SLF4J. We cache the result in this field instead of doing the try/catch every
- * time in [createPlatformLogEvent], as that would pay the cost of the exception every time for
- * non-Logback implementations.
+ * time in [createLogEvent], as that would pay the cost of the exception every time for non-Logback
+ * implementations.
  */
 internal val LOGBACK_IS_ON_CLASSPATH =
     try {
