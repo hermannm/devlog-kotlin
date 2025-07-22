@@ -47,7 +47,8 @@ fun example() {
 ```
 
 You can also add _fields_ (structured key-value data) to your logs, by calling the `field` method in
-the scope of a log lambda. It uses `kotlinx.serialization` to serialize the value.
+the scope of a log lambda. It uses
+[`kotlinx.serialization`](https://github.com/Kotlin/kotlinx.serialization) to serialize the value.
 
 ```kotlin
 import kotlinx.serialization.Serializable
@@ -82,14 +83,16 @@ a more structured manner than if you were to just use string concatenation.
 }
 ```
 
-If you want to add fields to all logs within a scope, you can use `withLoggingContext`:
+Sometimes, you may want to add fields to all logs within a scope. For example, you can add an event
+ID to the logs when processing an event, so you can trace all the logs made in the context of that
+event. To do this, you can use `withLoggingContext`:
 
 ```kotlin
 import dev.hermannm.devlog.field
 import dev.hermannm.devlog.withLoggingContext
 
 fun processEvent(event: Event) {
-  withLoggingContext(field("event", event)) {
+  withLoggingContext(field("eventId", event.id)) {
     log.debug { "Started processing event" }
     // ...
     log.debug { "Finished processing event" }
@@ -100,8 +103,8 @@ fun processEvent(event: Event) {
 ...giving the following output:
 
 ```jsonc
-{ "message": "Started processing event", "event": { /* ... */ } }
-{ "message": "Finished processing event", "event": { /* ... */ } }
+{ "message": "Started processing event", "eventId": "..." }
+{ "message": "Finished processing event", "eventId": "..." }
 ```
 
 Note that `withLoggingContext` uses a thread-local

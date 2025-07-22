@@ -7,17 +7,20 @@ package dev.hermannm.devlog
  * Adds the given [log fields][LogField] to every log made by a [Logger] in the context of the given
  * [block]. Use the [field]/[rawJsonField] functions to construct log fields.
  *
- * An example of when this is useful is when processing an event, and you want the event to be
- * attached to every log while processing it. Instead of manually attaching the event to each log,
- * you can wrap the event processing in `withLoggingContext` with the event as a log field, and then
- * all logs inside that context will include the event.
+ * An example of when this is useful is when processing an event, and you want to trace all the logs
+ * made in the context of the event. Instead of manually attaching the event ID to each log, you can
+ * wrap the event processing in `withLoggingContext`, with the event ID as a log field. All the logs
+ * inside that context will then include the event ID as a structured log field, that you can filter
+ * on in your log analysis tool.
  *
  * ### Field value encoding with SLF4J
  *
- * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. To
- * encode object values as actual JSON (not escaped strings), you can add
- * `dev.hermannm.devlog.output.logback.JsonContextFieldWriter` as an `mdcEntryWriter` for
- * [`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder), like this:
+ * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. We
+ * want to encode object values in the logging context as actual JSON (not escaped strings), so that
+ * log analysis tools can parse the fields. If you're using Logback and
+ * [`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder) for JSON
+ * output, you can add support for this by configuring
+ * `dev.hermannm.devlog.output.logback.JsonContextFieldWriter` as an `mdcEntryWriter`:
  * ```xml
  * <!-- Example Logback config (in src/main/resources/logback.xml) -->
  * <?xml version="1.0" encoding="UTF-8"?>
@@ -54,7 +57,7 @@ package dev.hermannm.devlog
  * private val log = getLogger()
  *
  * fun example(event: Event) {
- *   withLoggingContext(field("event", event)) {
+ *   withLoggingContext(field("eventId", event.id)) {
  *     log.debug { "Started processing event" }
  *     // ...
  *     log.debug { "Finished processing event" }
@@ -65,8 +68,8 @@ package dev.hermannm.devlog
  * If you have configured `dev.hermannm.devlog.output.logback.JsonContextFieldWriter`, the field
  * from `withLoggingContext` will then be attached to every log as follows:
  * ```json
- * { "message": "Started processing event", "event": { ... } }
- * { "message": "Finished processing event", "event": { ... } }
+ * { "message": "Started processing event", "eventId": "..." }
+ * { "message": "Finished processing event", "eventId": "..." }
  * ```
  */
 public inline fun <ReturnT> withLoggingContext(
@@ -80,17 +83,20 @@ public inline fun <ReturnT> withLoggingContext(
  * Adds the given [log fields][LogField] to every log made by a [Logger] in the context of the given
  * [block]. Use the [field]/[rawJsonField] functions to construct log fields.
  *
- * An example of when this is useful is when processing an event, and you want the event to be
- * attached to every log while processing it. Instead of manually attaching the event to each log,
- * you can wrap the event processing in `withLoggingContext` with the event as a log field, and then
- * all logs inside that context will include the event.
+ * An example of when this is useful is when processing an event, and you want to trace all the logs
+ * made in the context of the event. Instead of manually attaching the event ID to each log, you can
+ * wrap the event processing in `withLoggingContext`, with the event ID as a log field. All the logs
+ * inside that context will then include the event ID as a structured log field, that you can filter
+ * on in your log analysis tool.
  *
  * ### Field value encoding with SLF4J
  *
- * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. To
- * encode object values as actual JSON (not escaped strings), you can add
- * `dev.hermannm.devlog.output.logback.JsonContextFieldWriter` as an `mdcEntryWriter` for
- * [`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder), like this:
+ * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. We
+ * want to encode object values in the logging context as actual JSON (not escaped strings), so that
+ * log analysis tools can parse the fields. If you're using Logback and
+ * [`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder) for JSON
+ * output, you can add support for this by configuring
+ * `dev.hermannm.devlog.output.logback.JsonContextFieldWriter` as an `mdcEntryWriter`:
  * ```xml
  * <!-- Example Logback config (in src/main/resources/logback.xml) -->
  * <?xml version="1.0" encoding="UTF-8"?>
@@ -127,7 +133,7 @@ public inline fun <ReturnT> withLoggingContext(
  * private val log = getLogger()
  *
  * fun example(event: Event) {
- *   withLoggingContext(field("event", event)) {
+ *   withLoggingContext(field("eventId", event.id)) {
  *     log.debug { "Started processing event" }
  *     // ...
  *     log.debug { "Finished processing event" }
@@ -138,8 +144,8 @@ public inline fun <ReturnT> withLoggingContext(
  * If you have configured `dev.hermannm.devlog.output.logback.JsonContextFieldWriter`, the field
  * from `withLoggingContext` will then be attached to every log as follows:
  * ```json
- * { "message": "Started processing event", "event": { ... } }
- * { "message": "Finished processing event", "event": { ... } }
+ * { "message": "Started processing event", "eventId": "..." }
+ * { "message": "Finished processing event", "eventId": "..." }
  * ```
  */
 public inline fun <ReturnT> withLoggingContext(
