@@ -3,7 +3,11 @@
 
 package dev.hermannm.devlog
 
+import java.lang.ref.Reference
+import java.lang.ref.ReferenceQueue
+import java.lang.ref.WeakReference
 import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
@@ -131,16 +135,15 @@ internal actual object LoggingContext {
   }
 
   @kotlin.jvm.JvmStatic
-  internal actual fun getFields(): Collection<LogField> {
+  internal actual fun getFields(): Collection<LogField>? {
     val contextMap = getContextMap()
-    // `emptyList()` uses a singleton, so we can use it to avoid allocations if context is empty
     if (contextMap == null) {
-      return emptyList()
+      return null
     }
 
     val fieldCount = getNonNullFieldCount(contextMap)
     if (fieldCount == 0) {
-      return emptyList()
+      return null
     }
 
     val fieldList = ArrayList<LogField>(fieldCount)
@@ -188,6 +191,112 @@ internal actual object LoggingContext {
   @kotlin.jvm.JvmStatic
   private fun getNonNullFieldCount(contextMap: Map<String, String?>): Int {
     return contextMap.count { field -> field.value != null }
+  }
+
+  val exceptionContext = ConcurrentHashMap<WeakExceptionReference, Collection<LogField>>()
+
+  /** See [ExceptionLookupKey]. */
+  private val exceptionContextLookup: ConcurrentHashMap<*, Collection<LogField>>
+    inline get() = exceptionContext
+
+  private val exceptionReferenceQueue = ReferenceQueue<Throwable>()
+
+  @kotlin.jvm.JvmStatic
+  internal actual fun addContextToException(exception: Throwable) {
+    cleanupExceptionContext()
+
+    if (hasContextForException(exception)) {
+      return
+    }
+
+    val loggingContext = LoggingContext.getFields()
+    if (loggingContext == null) {
+      return
+    }
+
+    val exceptionRef = WeakExceptionReference(exception, exceptionReferenceQueue)
+    exceptionContext.put(exceptionRef, loggingContext)
+  }
+
+  @kotlin.jvm.JvmStatic
+  internal actual fun addContextToException(
+      exception: Throwable,
+      extraFields: Collection<LogField>
+  ) {
+    cleanupExceptionContext()
+
+    val exceptionRef = WeakExceptionReference(exception, exceptionReferenceQueue)
+
+    val added = exceptionContext.computeIfPresent(exceptionRef) { _, value -> value + extraFields }
+    if (added != null) {
+      return
+    }
+
+    val allLogFields =
+        if (hasContextForException(exception)) {
+          extraFields
+        } else {
+          combineFieldsWithContext(extraFields)
+        }
+
+    exceptionContext.put(exceptionRef, allLogFields)
+  }
+
+  @kotlin.jvm.JvmStatic
+  internal actual fun getExceptionContext(exception: Throwable): Collection<LogField>? {
+    return exceptionContextLookup[ExceptionLookupKey(exception)]
+  }
+
+  @kotlin.jvm.JvmStatic
+  internal actual fun cleanupExceptionContext() {
+    var exceptionReference: Reference<out Throwable>? = exceptionReferenceQueue.poll()
+    while (exceptionReference != null) {
+      exceptionContext.remove(exceptionReference)
+
+      exceptionReference = exceptionReferenceQueue.poll()
+    }
+  }
+
+  private fun hasContextForException(exception: Throwable): Boolean {
+    traverseExceptionChain(exception) { exception ->
+      if (exception is ExceptionWithLoggingContext ||
+          exceptionContextLookup.containsKey(ExceptionLookupKey(exception))) {
+        return true
+      }
+    }
+    return false
+  }
+
+  class WeakExceptionReference(
+      exception: Throwable,
+      queue: ReferenceQueue<Throwable>?,
+  ) : WeakReference<Throwable>(exception, queue) {
+    val exceptionHashCode = System.identityHashCode(exception)
+
+    override fun equals(other: Any?): Boolean {
+      if (this === other) return true
+      return when (other) {
+        is WeakExceptionReference -> this.exceptionHashCode == other.exceptionHashCode
+        is ExceptionLookupKey -> this.exceptionHashCode == other.exceptionHashCode
+        else -> return false
+      }
+    }
+
+    override fun hashCode(): Int = exceptionHashCode
+  }
+
+  private class ExceptionLookupKey(exception: Throwable) {
+    val exceptionHashCode = System.identityHashCode(exception)
+
+    override fun equals(other: Any?): Boolean {
+      if (other is WeakExceptionReference) {
+        return this.exceptionHashCode == other.exceptionHashCode
+      } else {
+        return false
+      }
+    }
+
+    override fun hashCode(): Int = exceptionHashCode
   }
 }
 

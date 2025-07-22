@@ -244,7 +244,7 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  * ```
  */
 public fun getLoggingContext(): Collection<LogField> {
-  return LoggingContext.getFields()
+  return LoggingContext.getFields() ?: emptyList()
 }
 
 /**
@@ -272,11 +272,22 @@ internal expect object LoggingContext {
 
   @kotlin.jvm.JvmStatic internal fun contains(field: LogField): Boolean
 
-  @kotlin.jvm.JvmStatic internal fun getFields(): Collection<LogField>
+  /** Returns `null` if context is empty. */
+  @kotlin.jvm.JvmStatic internal fun getFields(): Collection<LogField>?
 
   /** Combines the given log fields with any fields from [withLoggingContext]. */
   @kotlin.jvm.JvmStatic
   internal fun combineFieldsWithContext(fields: Collection<LogField>): Collection<LogField>
+
+  @kotlin.jvm.JvmStatic internal fun addContextToException(exception: Throwable)
+
+  @kotlin.jvm.JvmStatic
+  internal fun addContextToException(exception: Throwable, extraFields: Collection<LogField>)
+
+  @kotlin.jvm.JvmStatic
+  internal fun getExceptionContext(exception: Throwable): Collection<LogField>?
+
+  @kotlin.jvm.JvmStatic internal fun cleanupExceptionContext()
 }
 
 /**
