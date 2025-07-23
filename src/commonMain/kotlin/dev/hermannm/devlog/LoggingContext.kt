@@ -158,8 +158,9 @@ public inline fun <ReturnT> withLoggingContext(
 /**
  * Shared implementation for the `vararg` and `Collection` versions of [withLoggingContext].
  *
- * This function must be kept internal, since [LoggingContext] assumes that the given array is not
- * modified from the outside. We uphold this invariant in both versions of [withLoggingContext]:
+ * This function must be kept internal, since our logging context functions assumes that the given
+ * array is not modified from the outside. We uphold this invariant in both versions of
+ * [withLoggingContext]:
  * - For the `vararg` version: Varargs always give a new array to the called function, even when
  *   called with an existing array:
  *   https://discuss.kotlinlang.org/t/hidden-allocations-when-using-vararg-and-spread-operator/1640/2
@@ -176,13 +177,13 @@ internal inline fun <ReturnT> withLoggingContextInternal(
     logFields: Array<out LogField>,
     block: () -> ReturnT,
 ): ReturnT {
-  val overwrittenFields = LoggingContext.addFields(logFields)
+  val overwrittenFields = addFieldsToLoggingContext(logFields)
   try {
     return block()
   } catch (e: Exception) {
     throw e.withLoggingContext()
   } finally {
-    LoggingContext.removeFields(logFields, overwrittenFields)
+    removeFieldsFromLoggingContext(logFields, overwrittenFields)
   }
 }
 
@@ -244,55 +245,46 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  * ```
  */
 public fun getLoggingContext(): Collection<LogField> {
-  return LoggingContext.getFields() ?: emptyList()
+  return getLoggingContextFields() ?: emptyList()
 }
 
+@PublishedApi
+internal expect fun addFieldsToLoggingContext(fields: Array<out LogField>): OverwrittenContextFields
+
 /**
- * Thread-local log fields that will be included on every log within a given context.
- *
- * On the JVM, this object encapsulates SLF4J's `MDC` (Mapped Diagnostic Context), allowing the rest
- * of our code to not concern itself with SLF4J-specific APIs.
+ * Takes the array of overwritten field values returned by [addFieldsToLoggingContext], to restore
+ * the previous context values after the current context exits.
  */
 @PublishedApi
-internal expect object LoggingContext {
-  @PublishedApi
-  @kotlin.jvm.JvmStatic
-  internal fun addFields(fields: Array<out LogField>): OverwrittenContextFields
+internal expect fun removeFieldsFromLoggingContext(
+    fields: Array<out LogField>,
+    overwrittenFields: OverwrittenContextFields
+)
 
-  /**
-   * Takes the array of overwritten field values returned by [LoggingContext.addFields], to restore
-   * the previous context values after the current context exits.
-   */
-  @PublishedApi
-  @kotlin.jvm.JvmStatic
-  internal fun removeFields(
-      fields: Array<out LogField>,
-      overwrittenFields: OverwrittenContextFields
-  )
+internal expect fun isFieldInLoggingContext(field: LogField): Boolean
 
-  @kotlin.jvm.JvmStatic internal fun contains(field: LogField): Boolean
+/** Returns `null` if context is empty. */
+internal expect fun getLoggingContextFields(): Collection<LogField>?
 
-  /** Returns `null` if context is empty. */
-  @kotlin.jvm.JvmStatic internal fun getFields(): Collection<LogField>?
+/** Combines the given log fields with any fields from [withLoggingContext]. */
+internal expect fun combineFieldsWithLoggingContext(
+    fields: Collection<LogField>
+): Collection<LogField>
 
-  /** Combines the given log fields with any fields from [withLoggingContext]. */
-  @kotlin.jvm.JvmStatic
-  internal fun combineFieldsWithContext(fields: Collection<LogField>): Collection<LogField>
+internal expect fun addLoggingContextToException(exception: Throwable)
 
-  @kotlin.jvm.JvmStatic internal fun addContextToException(exception: Throwable)
+internal expect fun addLoggingContextToException(
+    exception: Throwable,
+    extraFields: Collection<LogField>
+)
 
-  @kotlin.jvm.JvmStatic
-  internal fun addContextToException(exception: Throwable, extraFields: Collection<LogField>)
+internal expect fun getExceptionLoggingContext(exception: Throwable): Collection<LogField>?
 
-  @kotlin.jvm.JvmStatic
-  internal fun getExceptionContext(exception: Throwable): Collection<LogField>?
-
-  @kotlin.jvm.JvmStatic internal fun cleanupExceptionContext()
-}
+internal expect fun cleanupExceptionLoggingContext()
 
 /**
- * Fields (key/value pairs) that were overwritten by [LoggingContext.addFields], passed to
- * [LoggingContext.removeFields] so we can restore the previous field values after the current
+ * Fields (key/value pairs) that were overwritten by [addFieldsToLoggingContext], passed to
+ * [removeFieldsFromLoggingContext] so we can restore the previous field values after the current
  * logging context exits.
  *
  * We want this object to be as efficient as possible, since it will be kept around for the whole

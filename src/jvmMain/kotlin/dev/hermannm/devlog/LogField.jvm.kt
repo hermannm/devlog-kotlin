@@ -63,7 +63,7 @@ internal class StringLogFieldFromContext(key: String, value: String) : StringLog
   override fun addToLogEvent(logEvent: LogEvent) {
     // We only want to include fields from the logging context if it's not already in the context
     // (in which case the logger implementation will add the fields from SLF4J's MDC).
-    if (!LoggingContext.contains(this)) {
+    if (!isFieldInLoggingContext(this)) {
       logEvent.addStringField(key, value)
     }
   }
@@ -86,7 +86,7 @@ internal class JsonLogFieldFromContext(
   override fun addToLogEvent(logEvent: LogEvent) {
     // We only want to include fields from the logging context if it's not already in the context
     // (in which case the logger implementation will add the fields from SLF4J's MDC).
-    if (!LoggingContext.contains(this)) {
+    if (!isFieldInLoggingContext(this)) {
       logEvent.addJsonField(key, value)
     }
   }

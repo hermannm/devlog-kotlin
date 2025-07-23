@@ -129,14 +129,10 @@ public final class dev/hermannm/devlog/LoggerJvm {
 	public static final fun getLogger (Lkotlin/reflect/KClass;)Lorg/slf4j/Logger;
 }
 
-public final class dev/hermannm/devlog/LoggingContext {
-	public static final field INSTANCE Ldev/hermannm/devlog/LoggingContext;
-	public static final fun addFields-jza-tHc ([Ldev/hermannm/devlog/LogField;)[Ljava/lang/String;
-	public static final fun removeFields-vNTxQKI ([Ldev/hermannm/devlog/LogField;[Ljava/lang/String;)V
-}
-
 public final class dev/hermannm/devlog/LoggingContextJvm {
+	public static final fun addFieldsToLoggingContext ([Ldev/hermannm/devlog/LogField;)[Ljava/lang/String;
 	public static final fun inheritLoggingContext (Ljava/util/concurrent/ExecutorService;)Ljava/util/concurrent/ExecutorService;
+	public static final fun removeFieldsFromLoggingContext-vNTxQKI ([Ldev/hermannm/devlog/LogField;[Ljava/lang/String;)V
 }
 
 public final class dev/hermannm/devlog/LoggingContextKt {

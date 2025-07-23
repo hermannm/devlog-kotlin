@@ -4,9 +4,9 @@ import dev.hermannm.devlog.testutils.Event
 import dev.hermannm.devlog.testutils.EventType
 import dev.hermannm.devlog.testutils.TestCase
 import dev.hermannm.devlog.testutils.captureLogOutput
+import dev.hermannm.devlog.testutils.loggingContextShouldBeEmpty
+import dev.hermannm.devlog.testutils.loggingContextShouldContainExactly
 import dev.hermannm.devlog.testutils.parameterizedTest
-import dev.hermannm.devlog.testutils.shouldBeEmpty
-import dev.hermannm.devlog.testutils.shouldContainExactly
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.maps.shouldContainExactly
 import java.util.concurrent.Callable
@@ -45,7 +45,7 @@ internal class LoggingContextJvmTest {
               "parentOnlyField" to "value1",
               "fieldThatIsStringInParentButJsonInChild" to "stringValue",
           )
-      LoggingContext shouldContainExactly parentContext
+      loggingContextShouldContainExactly(parentContext)
 
       withLoggingContext(
           field("event", event2),
@@ -53,7 +53,7 @@ internal class LoggingContextJvmTest {
           field("childOnlyField", "value2"),
           rawJsonField("fieldThatIsStringInParentButJsonInChild", """{"test":true}"""),
       ) {
-        LoggingContext shouldContainExactly
+        loggingContextShouldContainExactly(
             mapOf(
                 "event${LOGGING_CONTEXT_JSON_KEY_SUFFIX}" to
                     """{"id":1002,"type":"ORDER_UPDATED"}""",
@@ -62,10 +62,11 @@ internal class LoggingContextJvmTest {
                 "childOnlyField" to "value2",
                 "fieldThatIsStringInParentButJsonInChild${LOGGING_CONTEXT_JSON_KEY_SUFFIX}" to
                     """{"test":true}""",
-            )
+            ),
+        )
       }
 
-      LoggingContext shouldContainExactly parentContext
+      loggingContextShouldContainExactly(parentContext)
     }
   }
 
@@ -122,21 +123,22 @@ internal class LoggingContextJvmTest {
   @Test
   fun `withLoggingContextMap merges given map with existing fields`() {
     withLoggingContext(field("existingField", "value")) {
-      LoggingContext shouldContainExactly mapOf("existingField" to "value")
+      loggingContextShouldContainExactly(mapOf("existingField" to "value"))
 
       withLoggingContextMap(
           mapOf("fieldMap1" to "value", "fieldMap2" to "value"),
       ) {
-        LoggingContext shouldContainExactly
+        loggingContextShouldContainExactly(
             mapOf(
                 "existingField" to "value",
                 "fieldMap1" to "value",
                 "fieldMap2" to "value",
-            )
+            ),
+        )
       }
 
       // Previous fields should be restored after
-      LoggingContext shouldContainExactly mapOf("existingField" to "value")
+      loggingContextShouldContainExactly(mapOf("existingField" to "value"))
     }
   }
 
@@ -223,14 +225,14 @@ internal class LoggingContextJvmTest {
       val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
 
       // Verify that there are no fields in parent thread context
-      LoggingContext.shouldBeEmpty()
+      loggingContextShouldBeEmpty()
 
       val latch = CountDownLatch(1) // Used to wait for the child thread to complete its log
       val executed = AtomicBoolean(false)
 
       test.runTask(executor) {
         // Verify that there are no fields in child thread context
-        LoggingContext.shouldBeEmpty()
+        loggingContextShouldBeEmpty()
         executed.set(true)
         latch.countDown()
       }
@@ -251,14 +253,15 @@ internal class LoggingContextJvmTest {
     val childField = field("childField", "value")
 
     withLoggingContext(parentField) {
-      LoggingContext shouldContainExactly mapOf("parentField" to "value")
+      loggingContextShouldContainExactly(mapOf("parentField" to "value"))
 
       executor.execute {
-        LoggingContext shouldContainExactly mapOf("parentField" to "value")
+        loggingContextShouldContainExactly(mapOf("parentField" to "value"))
 
         withLoggingContext(childField) {
-          LoggingContext shouldContainExactly
-              mapOf("parentField" to "value", "childField" to "value")
+          loggingContextShouldContainExactly(
+              mapOf("parentField" to "value", "childField" to "value"),
+          )
 
           // 1st synchronization point: The parent thread will reach this after we've added to the
           // logging context here in the child thread, so we can verify that the parent's context is
@@ -271,7 +274,7 @@ internal class LoggingContextJvmTest {
       }
 
       barrier.await() // 1st synchronization point
-      LoggingContext shouldContainExactly mapOf("parentField" to "value")
+      loggingContextShouldContainExactly(mapOf("parentField" to "value"))
       barrier.await() // 2nd synchronization point
     }
   }

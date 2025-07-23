@@ -89,8 +89,7 @@ public open class ExceptionWithLoggingContext(
     override val cause: Throwable? = null,
 ) : RuntimeException(), HasLogFields {
   // Final, since we want to ensure that fields from logging context are included
-  final override val logFields: Collection<LogField> =
-      LoggingContext.combineFieldsWithContext(logFields)
+  final override val logFields: Collection<LogField> = combineFieldsWithLoggingContext(logFields)
 
   public constructor(
       message: String?,
@@ -133,12 +132,12 @@ public fun Throwable.withLoggingContext(vararg logFields: LogField): Throwable {
 }
 
 public fun Throwable.withLoggingContext(logFields: Collection<LogField>): Throwable {
-  LoggingContext.addContextToException(this, extraFields = logFields)
+  addLoggingContextToException(this, extraFields = logFields)
   return this
 }
 
 public fun Throwable.withLoggingContext(): Throwable {
-  LoggingContext.addContextToException(this)
+  addLoggingContextToException(this)
   return this
 }
 

@@ -1,13 +1,13 @@
 package dev.hermannm.devlog.testutils
 
-import dev.hermannm.devlog.LoggingContext
+import dev.hermannm.devlog.getLoggingContextFields
 import io.kotest.assertions.withClue
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 
-internal infix fun LoggingContext.shouldContainExactly(map: Map<String, String>) {
-  val contextFields = this.getFields()
+internal fun loggingContextShouldContainExactly(map: Map<String, String>) {
+  val contextFields = getLoggingContextFields()
   contextFields.shouldNotBeNull()
 
   contextFields.size shouldBe map.size
@@ -20,6 +20,6 @@ internal infix fun LoggingContext.shouldContainExactly(map: Map<String, String>)
   }
 }
 
-internal fun LoggingContext.shouldBeEmpty() {
-  this.getFields().shouldBeNull()
+internal fun loggingContextShouldBeEmpty() {
+  getLoggingContextFields().shouldBeNull()
 }
