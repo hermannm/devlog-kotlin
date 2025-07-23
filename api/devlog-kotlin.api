@@ -13,7 +13,6 @@ public class dev/hermannm/devlog/ExceptionWithLoggingContext : java/lang/Runtime
 }
 
 public final class dev/hermannm/devlog/ExceptionWithLoggingContextKt {
-	public static final fun withLoggingContext (Ljava/lang/Throwable;)Ljava/lang/Throwable;
 	public static final fun withLoggingContext (Ljava/lang/Throwable;Ljava/lang/String;Ljava/util/Collection;)Ljava/lang/Throwable;
 	public static final fun withLoggingContext (Ljava/lang/Throwable;Ljava/lang/String;[Ldev/hermannm/devlog/LogField;)Ljava/lang/Throwable;
 	public static final fun withLoggingContext (Ljava/lang/Throwable;Ljava/util/Collection;)Ljava/lang/Throwable;
@@ -131,6 +130,7 @@ public final class dev/hermannm/devlog/LoggerJvm {
 
 public final class dev/hermannm/devlog/LoggingContextJvm {
 	public static final fun addFieldsToLoggingContext ([Ldev/hermannm/devlog/LogField;)[Ljava/lang/String;
+	public static final fun addLoggingContextToException (Ljava/lang/Throwable;)V
 	public static final fun inheritLoggingContext (Ljava/util/concurrent/ExecutorService;)Ljava/util/concurrent/ExecutorService;
 	public static final fun removeFieldsFromLoggingContext-vNTxQKI ([Ldev/hermannm/devlog/LogField;[Ljava/lang/String;)V
 }

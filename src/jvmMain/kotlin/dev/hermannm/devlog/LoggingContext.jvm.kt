@@ -187,6 +187,7 @@ private val exceptionContextLookup: ConcurrentHashMap<*, Collection<LogField>>
 
 private val exceptionReferenceQueue = ReferenceQueue<Throwable>()
 
+@PublishedApi
 internal actual fun addLoggingContextToException(exception: Throwable) {
   cleanupExceptionLoggingContext()
 

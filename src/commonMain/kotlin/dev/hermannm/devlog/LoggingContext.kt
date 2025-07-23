@@ -181,7 +181,8 @@ internal inline fun <ReturnT> withLoggingContextInternal(
   try {
     return block()
   } catch (e: Exception) {
-    throw e.withLoggingContext()
+    addLoggingContextToException(e)
+    throw e
   } finally {
     removeFieldsFromLoggingContext(logFields, overwrittenFields)
   }
@@ -271,7 +272,7 @@ internal expect fun combineFieldsWithLoggingContext(
     fields: Collection<LogField>
 ): Collection<LogField>
 
-internal expect fun addLoggingContextToException(exception: Throwable)
+@PublishedApi internal expect fun addLoggingContextToException(exception: Throwable)
 
 internal expect fun addLoggingContextToException(
     exception: Throwable,

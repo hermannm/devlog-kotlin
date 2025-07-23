@@ -136,11 +136,6 @@ public fun Throwable.withLoggingContext(logFields: Collection<LogField>): Throwa
   return this
 }
 
-public fun Throwable.withLoggingContext(): Throwable {
-  addLoggingContextToException(this)
-  return this
-}
-
 /**
  * Interface to allow you to attach [log fields][LogField] to exceptions. When passing a `cause`
  * exception to one of the methods on [Logger], it will check if the given exception implements this
