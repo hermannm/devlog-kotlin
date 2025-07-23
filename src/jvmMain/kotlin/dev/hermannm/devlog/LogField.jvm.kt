@@ -1,5 +1,4 @@
-// `kotlin.jvm` is auto-imported on JVM, but for multiplatform we need to use fully-qualified name
-@file:Suppress("RemoveRedundantQualifierName")
+@file:JvmName("LogFieldJvm")
 
 package dev.hermannm.devlog
 
@@ -136,9 +135,7 @@ internal const val LOGGING_CONTEXT_JSON_KEY_SUFFIX = " (json)"
  * which will run when the class is loaded. We test that this works in the `LogbackLoggerTest` under
  * `integration-tests/logback`.
  */
-@kotlin.concurrent.Volatile
-@kotlin.jvm.JvmField
-internal var ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS = false
+@kotlin.concurrent.Volatile @JvmField internal var ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS = false
 
 /** See [ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS]. */
 private fun ensureLoggerImplementationIsLoaded() {

@@ -1,3 +1,5 @@
+@file:JvmName("LogEventJvm")
+
 package dev.hermannm.devlog
 
 import ch.qos.logback.classic.Level as LogbackLevel

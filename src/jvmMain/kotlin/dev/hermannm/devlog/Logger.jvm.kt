@@ -1,3 +1,4 @@
+@file:JvmName("LoggerJvm")
 @file:Suppress(
     // We want `getLogger()` to be inline, so that `lookupClass()` is called in the caller's scope
     "NOTHING_TO_INLINE",

@@ -1,5 +1,4 @@
-// `kotlin.jvm` is auto-imported on JVM, but for multiplatform we need to use fully-qualified name
-@file:Suppress("RemoveRedundantQualifierName")
+@file:JvmName("PrettyLogEncoderJvm")
 
 package dev.hermannm.devlog.output.logback
 

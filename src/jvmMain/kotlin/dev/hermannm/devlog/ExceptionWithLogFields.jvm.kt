@@ -1,3 +1,5 @@
+@file:JvmName("ExceptionWithLogFieldsJvm")
+
 package dev.hermannm.devlog
 
 internal actual fun getSuppressedExceptions(exception: Throwable): List<Throwable>? {

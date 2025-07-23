@@ -1,3 +1,5 @@
+@file:JvmName("JsonContextFieldWriterJvm")
+
 package dev.hermannm.devlog.output.logback
 
 import com.fasterxml.jackson.core.JsonGenerator

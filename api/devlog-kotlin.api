@@ -54,7 +54,7 @@ public abstract interface class dev/hermannm/devlog/LogEvent {
 	public abstract fun log (Ljava/lang/String;Lorg/slf4j/Logger;)V
 }
 
-public final class dev/hermannm/devlog/LogEvent_jvmKt {
+public final class dev/hermannm/devlog/LogEventJvm {
 	public static final fun createLogEvent (Ldev/hermannm/devlog/LogLevel;Ljava/lang/Throwable;Lorg/slf4j/Logger;)Ldev/hermannm/devlog/LogEvent;
 }
 
@@ -62,6 +62,10 @@ public abstract class dev/hermannm/devlog/LogField {
 	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/hermannm/devlog/LogFieldJvm {
+	public static final fun fieldValueShouldUseToString (Ljava/lang/Object;)Z
 }
 
 public final class dev/hermannm/devlog/LogFieldKt {
@@ -72,10 +76,6 @@ public final class dev/hermannm/devlog/LogFieldKt {
 	public static synthetic fun rawJson$default (Ljava/lang/String;ZILjava/lang/Object;)Lkotlinx/serialization/json/JsonElement;
 	public static final fun rawJsonField (Ljava/lang/String;Ljava/lang/String;Z)Ldev/hermannm/devlog/LogField;
 	public static synthetic fun rawJsonField$default (Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)Ldev/hermannm/devlog/LogField;
-}
-
-public final class dev/hermannm/devlog/LogField_jvmKt {
-	public static final fun fieldValueShouldUseToString (Ljava/lang/Object;)Z
 }
 
 public final class dev/hermannm/devlog/LogLevel {
@@ -122,7 +122,7 @@ public final class dev/hermannm/devlog/Logger {
 	public static synthetic fun warn-impl$default (Lorg/slf4j/Logger;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 }
 
-public final class dev/hermannm/devlog/Logger_jvmKt {
+public final class dev/hermannm/devlog/LoggerJvm {
 	public static final fun getLogger ()Lorg/slf4j/Logger;
 	public static final fun getLogger (Ljava/lang/Class;)Lorg/slf4j/Logger;
 	public static final fun getLogger (Ljava/lang/String;)Lorg/slf4j/Logger;
@@ -135,15 +135,15 @@ public final class dev/hermannm/devlog/LoggingContext {
 	public static final fun removeFields-vNTxQKI ([Ldev/hermannm/devlog/LogField;[Ljava/lang/String;)V
 }
 
+public final class dev/hermannm/devlog/LoggingContextJvm {
+	public static final fun inheritLoggingContext (Ljava/util/concurrent/ExecutorService;)Ljava/util/concurrent/ExecutorService;
+}
+
 public final class dev/hermannm/devlog/LoggingContextKt {
 	public static final fun getLoggingContext ()Ljava/util/Collection;
 	public static final fun withLoggingContext (Ljava/util/Collection;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
 	public static final fun withLoggingContext ([Ldev/hermannm/devlog/LogField;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
 	public static final fun withLoggingContextInternal ([Ldev/hermannm/devlog/LogField;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
-}
-
-public final class dev/hermannm/devlog/LoggingContext_jvmKt {
-	public static final fun inheritLoggingContext (Ljava/util/concurrent/ExecutorService;)Ljava/util/concurrent/ExecutorService;
 }
 
 public class dev/hermannm/devlog/StringLogField : dev/hermannm/devlog/LogField {
