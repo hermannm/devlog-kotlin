@@ -1,3 +1,6 @@
+// `kotlin.jvm` is auto-imported on JVM, but for multiplatform we need to use fully-qualified name
+@file:Suppress("RemoveRedundantQualifierName")
+
 package dev.hermannm.devlog
 
 /**
@@ -80,7 +83,7 @@ package dev.hermannm.devlog
  */
 public open class ExceptionWithLoggingContext(
     /** The exception message. */
-    override val message: String?,
+    message: String?,
     logFields: Collection<LogField> = emptyList(),
     /**
      * The cause of the exception. If you're throwing this exception after catching another, you
@@ -91,6 +94,17 @@ public open class ExceptionWithLoggingContext(
   // Final, since we want to ensure that fields from logging context are included
   final override val logFields: Collection<LogField> = combineFieldsWithLoggingContext(logFields)
 
+  private val messageField: String? = message
+  override val message: String?
+    get() {
+      val cause = this.cause
+      return when {
+        messageField != null -> messageField
+        cause != null -> getMessageFromCauseException(cause)
+        else -> null
+      }
+    }
+
   public constructor(
       message: String?,
       vararg logFields: LogField,
@@ -100,12 +114,26 @@ public open class ExceptionWithLoggingContext(
   public constructor(
       logFields: Collection<LogField> = emptyList(),
       cause: Throwable? = null,
-  ) : this(message = cause?.message, logFields, cause)
+  ) : this(message = null, logFields, cause)
 
   public constructor(
       vararg logFields: LogField,
       cause: Throwable? = null,
-  ) : this(message = cause?.message, logFields.asList(), cause)
+  ) : this(message = null, logFields.asList(), cause)
+
+  private companion object {
+    @kotlin.jvm.JvmStatic
+    private fun getMessageFromCauseException(cause: Throwable): String? {
+      val className = cause::class.simpleName
+      val message = cause.message
+      return when {
+        className != null && message != null -> "${className}: ${message}"
+        className == null && message != null -> message
+        className != null && message == null -> className
+        else -> null
+      }
+    }
+  }
 }
 
 public fun Throwable.withLoggingContext(message: String, vararg logFields: LogField): Throwable {

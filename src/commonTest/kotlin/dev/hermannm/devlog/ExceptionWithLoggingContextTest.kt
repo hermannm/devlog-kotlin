@@ -3,8 +3,10 @@ package dev.hermannm.devlog
 import dev.hermannm.devlog.testutils.Event
 import dev.hermannm.devlog.testutils.EventType
 import dev.hermannm.devlog.testutils.captureLogOutput
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.maps.shouldContainExactly
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import kotlin.test.Test
 import kotlinx.serialization.json.JsonPrimitive
@@ -260,21 +262,21 @@ internal class ExceptionWithLoggingContextTest {
 
   @Test
   fun `overload without message works`() {
-    val cause = Exception("Cause message")
+    val cause = IllegalArgumentException("Invalid input")
     val exception =
         ExceptionWithLoggingContext(
             listOf(field("key", "value")),
             cause,
         )
 
-    exception.message shouldBe "Cause message"
+    exception.message shouldBe "IllegalArgumentException: Invalid input"
     exception.logFields shouldBe listOf(field("key", "value"))
     exception.cause shouldBe cause
   }
 
   @Test
   fun `vararg overload without message works`() {
-    val cause = Exception("Cause message")
+    val cause = IllegalArgumentException("Invalid input")
     val exception =
         ExceptionWithLoggingContext(
             field("key1", "value1"),
@@ -282,8 +284,43 @@ internal class ExceptionWithLoggingContextTest {
             cause = cause,
         )
 
-    exception.message shouldBe "Cause message"
+    exception.message shouldBe "IllegalArgumentException: Invalid input"
     exception.logFields shouldBe listOf(field("key1", "value1"), field("key2", "value2"))
+    exception.cause shouldBe cause
+  }
+
+  @Test
+  fun `overload without message, cause or log fields works`() {
+    val exception = ExceptionWithLoggingContext()
+    exception.message.shouldBeNull()
+    exception.cause.shouldBeNull()
+    exception.logFields.shouldBeEmpty()
+  }
+
+  @Test
+  fun `cause exception without message works`() {
+    val cause = IllegalArgumentException()
+    val exception = ExceptionWithLoggingContext(cause = cause)
+
+    exception.message shouldBe "IllegalArgumentException"
+    exception.cause shouldBe cause
+  }
+
+  @Test
+  fun `cause exception without class name works`() {
+    val cause = object : Exception() {}
+    val exception = ExceptionWithLoggingContext(cause = cause)
+
+    exception.message.shouldBeNull()
+    exception.cause shouldBe cause
+  }
+
+  @Test
+  fun `cause exception without class name but with message works`() {
+    val cause = object : Exception("Something went wrong") {}
+    val exception = ExceptionWithLoggingContext(cause = cause)
+
+    exception.message shouldBe "Something went wrong"
     exception.cause shouldBe cause
   }
 
