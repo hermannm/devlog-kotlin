@@ -83,28 +83,14 @@ package dev.hermannm.devlog
  */
 public open class ExceptionWithLoggingContext(
     /** The exception message. */
-    message: String?,
-    logFields: Collection<LogField> = emptyList(),
+    message: String? = null,
+    override val logFields: Collection<LogField> = emptyList(),
     /**
      * The cause of the exception. If you're throwing this exception after catching another, you
      * should include the original exception here.
      */
     override val cause: Throwable? = null,
 ) : RuntimeException(), HasLogFields {
-  // Final, since we want to ensure that fields from logging context are included
-  final override val logFields: Collection<LogField> = combineFieldsWithLoggingContext(logFields)
-
-  private val messageField: String? = message
-  override val message: String?
-    get() {
-      val cause = this.cause
-      return when {
-        messageField != null -> messageField
-        cause != null -> getMessageFromCauseException(cause)
-        else -> null
-      }
-    }
-
   public constructor(
       message: String?,
       vararg logFields: LogField,
@@ -121,7 +107,29 @@ public open class ExceptionWithLoggingContext(
       cause: Throwable? = null,
   ) : this(message = null, logFields.asList(), cause)
 
+  internal val loggingContext: LoggingContext = getLoggingContextForException(cause)
+
+  private val messageField: String? = message
+  override val message: String?
+    get() {
+      val cause = this.cause
+      return when {
+        messageField != null -> messageField
+        cause != null -> getMessageFromCauseException(cause)
+        else -> null
+      }
+    }
+
   private companion object {
+    @kotlin.jvm.JvmStatic
+    private fun getLoggingContextForException(cause: Throwable?): LoggingContext {
+      if (cause != null && hasContextForException(cause)) {
+        return EMPTY_LOGGING_CONTEXT
+      } else {
+        return getLoggingContext()
+      }
+    }
+
     @kotlin.jvm.JvmStatic
     private fun getMessageFromCauseException(cause: Throwable): String? {
       val className = cause::class.simpleName
@@ -136,33 +144,33 @@ public open class ExceptionWithLoggingContext(
   }
 }
 
-public fun Throwable.withLoggingContext(message: String, vararg logFields: LogField): Throwable {
-  return ExceptionWithLoggingContext(
-      message = message,
-      logFields = logFields.asList(),
-      cause = this,
-  )
-}
+public fun Throwable.withLoggingContext(message: String?, vararg logFields: LogField) =
+    ExceptionWithLoggingContext(
+        message = message,
+        logFields = logFields.asList(),
+        cause = this,
+    )
 
-public fun Throwable.withLoggingContext(
-    message: String,
-    logFields: Collection<LogField>
-): Throwable {
-  return ExceptionWithLoggingContext(
-      message = message,
-      logFields = logFields,
-      cause = this,
-  )
-}
+public fun Throwable.withLoggingContext(message: String?, logFields: Collection<LogField>) =
+    ExceptionWithLoggingContext(
+        message = message,
+        logFields = logFields,
+        cause = this,
+    )
 
-public fun Throwable.withLoggingContext(vararg logFields: LogField): Throwable {
-  return this.withLoggingContext(logFields.asList())
-}
+public fun Throwable.withLoggingContext(vararg logFields: LogField) =
+    ExceptionWithLoggingContext(
+        message = null,
+        logFields = logFields.asList(),
+        cause = this,
+    )
 
-public fun Throwable.withLoggingContext(logFields: Collection<LogField>): Throwable {
-  addLoggingContextToException(this, extraFields = logFields)
-  return this
-}
+public fun Throwable.withLoggingContext(logFields: Collection<LogField>) =
+    ExceptionWithLoggingContext(
+        message = null,
+        logFields = logFields,
+        cause = this,
+    )
 
 /**
  * Interface to allow you to attach [log fields][LogField] to exceptions. When passing a `cause`
@@ -226,11 +234,9 @@ public interface HasLogFields {
   public val logFields: Collection<LogField>
 }
 
-internal inline fun traverseExceptionChain(
-    root: Throwable,
-    maxDepth: Int = 8,
-    action: (Throwable) -> Unit
-) {
+private const val MAX_EXCEPTION_TRAVERSAL_DEPTH = 10
+
+internal inline fun traverseExceptionChain(root: Throwable, action: (Throwable) -> Unit) {
   var currentException: Throwable = root
   var parent: ExceptionParent? = null
   var depth = 0
@@ -239,7 +245,7 @@ internal inline fun traverseExceptionChain(
     action(currentException)
 
     // If we are not at the max depth, traverse child exceptions (cause or suppressed exceptions)
-    if (depth < maxDepth - 1) {
+    if (depth < MAX_EXCEPTION_TRAVERSAL_DEPTH - 1) {
       val suppressedExceptions = getSuppressedExceptions(currentException)
       val hasSuppressedExceptions = !suppressedExceptions.isNullOrEmpty()
 

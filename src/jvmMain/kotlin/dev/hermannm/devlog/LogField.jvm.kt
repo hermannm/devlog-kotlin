@@ -10,7 +10,7 @@ import java.util.UUID
 import org.slf4j.LoggerFactory as Slf4jLoggerFactory
 
 @PublishedApi
-internal actual open class JsonLogField
+internal actual class JsonLogField
 internal constructor(
     key: String,
     value: String,
@@ -34,7 +34,7 @@ internal constructor(
     logEvent.addJsonField(key, value)
   }
 
-  actual final override fun getKeyForLoggingContext(): String = keyForLoggingContext
+  actual override fun getKeyForLoggingContext(): String = keyForLoggingContext
 
   internal companion object {
     init {
@@ -47,47 +47,6 @@ internal constructor(
          */
         ensureLoggerImplementationIsLoaded()
       } catch (_: Throwable) {}
-    }
-  }
-}
-
-internal fun createLogFieldFromContext(key: String, value: String): LogField {
-  if (ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS && key.endsWith(LOGGING_CONTEXT_JSON_KEY_SUFFIX)) {
-    return JsonLogFieldFromContext(key, value)
-  } else {
-    return StringLogFieldFromContext(key, value)
-  }
-}
-
-internal class StringLogFieldFromContext(key: String, value: String) : StringLogField(key, value) {
-  override fun addToLogEvent(logEvent: LogEvent) {
-    // We only want to include fields from the logging context if it's not already in the context
-    // (in which case the logger implementation will add the fields from SLF4J's MDC).
-    if (!isFieldInLoggingContext(this)) {
-      logEvent.addStringField(key, value)
-    }
-  }
-}
-
-internal class JsonLogFieldFromContext(
-    /**
-     * We construct this log field with keys that already have the JSON key suffix (see
-     * [createLogFieldFromContext]). So we set [keyForLoggingContext] to the key with the suffix,
-     * and remove the suffix for [key] below.
-     */
-    keyWithJsonSuffix: String,
-    value: String,
-) :
-    JsonLogField(
-        key = keyWithJsonSuffix.removeSuffix(LOGGING_CONTEXT_JSON_KEY_SUFFIX),
-        value = value,
-        keyForLoggingContext = keyWithJsonSuffix,
-    ) {
-  override fun addToLogEvent(logEvent: LogEvent) {
-    // We only want to include fields from the logging context if it's not already in the context
-    // (in which case the logger implementation will add the fields from SLF4J's MDC).
-    if (!isFieldInLoggingContext(this)) {
-      logEvent.addJsonField(key, value)
     }
   }
 }

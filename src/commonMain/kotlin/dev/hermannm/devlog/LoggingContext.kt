@@ -188,6 +188,21 @@ internal inline fun <ReturnT> withLoggingContextInternal(
   }
 }
 
+public inline fun <ReturnT> withLoggingContext(
+    existingContext: LoggingContext,
+    block: () -> ReturnT
+): ReturnT {
+  val overwrittenFields = addExistingContextFieldsToLoggingContext(existingContext)
+  try {
+    return block()
+  } catch (e: Exception) {
+    addLoggingContextToException(e)
+    throw e
+  } finally {
+    removeExistingContextFieldFromLoggingContext(existingContext, overwrittenFields)
+  }
+}
+
 /**
  * Returns a copy of the log fields in the current thread's logging context (from
  * [withLoggingContext]). This can be used to pass logging context between threads (see example
@@ -245,9 +260,12 @@ internal inline fun <ReturnT> withLoggingContextInternal(
  * }
  * ```
  */
-public fun getLoggingContext(): Collection<LogField> {
-  return getLoggingContextFields() ?: emptyList()
-}
+public expect fun getLoggingContext(): LoggingContext
+
+@kotlin.jvm.JvmInline
+public expect value class LoggingContext private constructor(private val platformType: Any?)
+
+internal expect val EMPTY_LOGGING_CONTEXT: LoggingContext
 
 @PublishedApi
 internal expect fun addFieldsToLoggingContext(fields: Array<out LogField>): OverwrittenContextFields
@@ -262,31 +280,32 @@ internal expect fun removeFieldsFromLoggingContext(
     overwrittenFields: OverwrittenContextFields
 )
 
-internal expect fun isFieldInLoggingContext(field: LogField): Boolean
+@PublishedApi
+internal expect fun addExistingContextFieldsToLoggingContext(
+    existingContext: LoggingContext
+): OverwrittenContextFields
 
-/** Returns `null` if context is empty. */
-internal expect fun getLoggingContextFields(): Collection<LogField>?
-
-/** Combines the given log fields with any fields from [withLoggingContext]. */
-internal expect fun combineFieldsWithLoggingContext(
-    fields: Collection<LogField>
-): Collection<LogField>
+/** Like [removeFieldsFromLoggingContext], but for [addExistingContextFieldsToLoggingContext]. */
+@PublishedApi
+internal expect fun removeExistingContextFieldFromLoggingContext(
+    existingContext: LoggingContext,
+    overwrittenFields: OverwrittenContextFields
+)
 
 @PublishedApi internal expect fun addLoggingContextToException(exception: Throwable)
 
-internal expect fun addLoggingContextToException(
-    exception: Throwable,
-    extraFields: Collection<LogField>
-)
+internal expect fun getExceptionLoggingContext(exception: Throwable): LoggingContext
 
-internal expect fun getExceptionLoggingContext(exception: Throwable): Collection<LogField>?
+internal expect fun hasContextForException(exception: Throwable): Boolean
+
+internal expect fun addContextFieldsToLogEvent(loggingContext: LoggingContext, logEvent: LogEvent)
 
 internal expect fun cleanupExceptionLoggingContext()
 
 /**
  * Fields (key/value pairs) that were overwritten by [addFieldsToLoggingContext], passed to
- * [removeFieldsFromLoggingContext] so we can restore the previous field values after the current
- * logging context exits.
+ * [removeExistingContextFieldFromLoggingContext] so we can restore the previous field values after
+ * the current logging context exits.
  *
  * We want this object to be as efficient as possible, since it will be kept around for the whole
  * span of a [withLoggingContext] scope, which may last a while. To support this goal, we:
@@ -317,7 +336,7 @@ internal value class OverwrittenContextFields(private val fields: Array<String?>
   internal fun set(
       index: Int,
       key: String,
-      value: String,
+      value: String?,
       totalFields: Int
   ): OverwrittenContextFields {
     val fields = this.fields ?: arrayOfNulls(totalFields * 2)
@@ -332,5 +351,21 @@ internal value class OverwrittenContextFields(private val fields: Array<String?>
 
   internal fun getValue(index: Int): String? {
     return fields?.get(index * 2 + 1)
+  }
+
+  /** @return -1 if not found. */
+  internal fun indexOfKey(key: String): Int {
+    if (fields != null) {
+      var index = 0
+      while (index < fields.size) {
+        if (fields[index] == key) {
+          return index / 2
+        }
+
+        index += 2
+      }
+    }
+
+    return -1
   }
 }

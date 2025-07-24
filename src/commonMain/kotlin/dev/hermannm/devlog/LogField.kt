@@ -107,12 +107,12 @@ internal constructor(
 }
 
 @PublishedApi
-internal open class StringLogField(key: String, value: String) : LogField(key, value) {
+internal class StringLogField(key: String, value: String) : LogField(key, value) {
   override fun addToLogEvent(logEvent: LogEvent) {
     logEvent.addStringField(key, value)
   }
 
-  final override fun getKeyForLoggingContext(): String = key
+  override fun getKeyForLoggingContext(): String = key
 }
 
 /**
@@ -122,10 +122,10 @@ internal open class StringLogField(key: String, value: String) : LogField(key, v
  * implementation to be platform-specific.
  */
 @PublishedApi
-internal expect open class JsonLogField(key: String, value: String) : LogField {
+internal expect class JsonLogField(key: String, value: String) : LogField {
   override fun addToLogEvent(logEvent: LogEvent)
 
-  final override fun getKeyForLoggingContext(): String
+  override fun getKeyForLoggingContext(): String
 }
 
 /**

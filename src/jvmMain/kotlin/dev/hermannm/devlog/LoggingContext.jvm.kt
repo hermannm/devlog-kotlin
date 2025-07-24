@@ -12,19 +12,36 @@ import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import org.slf4j.MDC
 
+public actual fun getLoggingContext(): LoggingContext {
+  return LoggingContext(MDC.getCopyOfContextMap())
+}
+
+@JvmInline
+public actual value class LoggingContext private constructor(private val platformType: Any?) {
+  internal constructor(contextMap: Map<String, String?>?) : this(platformType = contextMap)
+
+  internal val fields: Map<String, String?>?
+    get() {
+      @Suppress("UNCHECKED_CAST")
+      return platformType as Map<String, String?>?
+    }
+}
+
+internal actual val EMPTY_LOGGING_CONTEXT = LoggingContext(null)
+
 @PublishedApi
 internal actual fun addFieldsToLoggingContext(
     fields: Array<out LogField>
 ): OverwrittenContextFields {
   var overwrittenFields = OverwrittenContextFields(null)
 
-  for (index in fields.indices) {
+  fieldLoop@ for (index in fields.indices) {
     val field = fields[index]
     val keyForLoggingContext = field.getKeyForLoggingContext()
 
     // Skip duplicate keys in the field array
     if (isDuplicateField(field, index, fields)) {
-      continue
+      continue@fieldLoop
     }
 
     var existingValue: String? = MDC.get(field.key)
@@ -32,7 +49,10 @@ internal actual fun addFieldsToLoggingContext(
       // If there is no existing entry for our key, we continue down to MDC.put
       null -> {}
       // If the existing value matches the value we're about to insert, we can skip inserting it
-      field.value -> continue
+      field.value -> {
+        overwrittenFields = overwrittenFields.set(index, field.key, value = null, fields.size)
+        continue@fieldLoop
+      }
       // If there is an existing entry that does not match our new field value, we add it to
       // overwrittenFields so we can restore the previous value after our withLoggingContext scope
       else -> {
@@ -42,8 +62,8 @@ internal actual fun addFieldsToLoggingContext(
          * want to overwrite "key" with "key (json)" (adding [LOGGING_CONTEXT_JSON_KEY_SUFFIX] to
          * identify the JSON value). But since "key (json)" does not match "key", calling `MDC.put`
          * below will not overwrite the previous field, so we have to manually remove it here. The
-         * previous field will then be restored by [removeFieldsFromLoggingContext] after the
-         * context exits.
+         * previous field will then be restored by [removeExistingContextFieldFromLoggingContext]
+         * after the context exits.
          */
         if (field.key != keyForLoggingContext) {
           MDC.remove(field.key)
@@ -60,7 +80,10 @@ internal actual fun addFieldsToLoggingContext(
       existingValue = MDC.get(keyForLoggingContext)
       when (existingValue) {
         null -> {}
-        field.value -> continue
+        field.value -> {
+          overwrittenFields = overwrittenFields.set(index, field.key, value = null, fields.size)
+          continue@fieldLoop
+        }
         else -> {
           overwrittenFields =
               overwrittenFields.set(index, keyForLoggingContext, existingValue, fields.size)
@@ -83,29 +106,100 @@ internal actual fun removeFieldsFromLoggingContext(
     fields: Array<out LogField>,
     overwrittenFields: OverwrittenContextFields
 ) {
-  for (index in fields.indices) {
+  fieldLoop@ for (index in fields.indices) {
     val field = fields[index]
     val keyForLoggingContext = field.getKeyForLoggingContext()
 
     // Skip duplicate keys, like we do in addFields
     if (isDuplicateField(field, index, fields)) {
-      continue
+      continue@fieldLoop
     }
 
     val overwrittenKey = overwrittenFields.getKey(index)
     if (overwrittenKey != null) {
-      MDC.put(overwrittenKey, overwrittenFields.getValue(index))
+      val overwrittenValue = overwrittenFields.getValue(index)
+      if (overwrittenValue == null) {
+        continue@fieldLoop
+      }
+
+      MDC.put(overwrittenKey, overwrittenValue)
       /**
        * If the overwritten key matched the current key in the logging context, then we don't want
        * to call `MDC.remove` below (these may not always match for [JsonLogField] - see docstring
        * over `MDC.remove` in [addFieldsToLoggingContext]).
        */
       if (overwrittenKey == keyForLoggingContext) {
-        continue
+        continue@fieldLoop
       }
     }
 
     MDC.remove(keyForLoggingContext)
+  }
+}
+
+@PublishedApi
+internal actual fun addExistingContextFieldsToLoggingContext(
+    existingContext: LoggingContext
+): OverwrittenContextFields {
+  var overwrittenFields = OverwrittenContextFields(null)
+
+  val contextFields = existingContext.fields
+  if (contextFields == null) {
+    return overwrittenFields
+  }
+
+  val contextSize = contextFields.size
+  if (contextSize == 0) {
+    return overwrittenFields
+  }
+
+  var index = 0
+  for ((key, value) in contextFields) {
+    val previousValue = MDC.get(key)
+    when (previousValue) {
+      null -> {
+        MDC.put(key, value)
+      }
+      // When the previous value is equal to the new value: Do nothing, since MDC already has it
+      value -> {
+        overwrittenFields = overwrittenFields.set(index, key, value = null, contextSize)
+      }
+      else -> {
+        MDC.put(key, value)
+        overwrittenFields = overwrittenFields.set(index, key, previousValue, contextSize)
+      }
+    }
+
+    index++
+  }
+
+  return overwrittenFields
+}
+
+@PublishedApi
+internal actual fun removeExistingContextFieldFromLoggingContext(
+    existingContext: LoggingContext,
+    overwrittenFields: OverwrittenContextFields
+) {
+  val contextFields = existingContext.fields
+  if (contextFields.isNullOrEmpty()) {
+    return
+  }
+
+  for ((key, _) in contextFields) {
+    val overwrittenKeyIndex = overwrittenFields.indexOfKey(key)
+    // `indexOfKey` returns -1 if no match
+    if (overwrittenKeyIndex != -1) {
+      val overwrittenValue = overwrittenFields.getValue(overwrittenKeyIndex)
+      if (overwrittenValue == null) {
+        continue
+      }
+
+      MDC.put(key, overwrittenValue)
+      continue
+    }
+
+    MDC.remove(key)
   }
 }
 
@@ -118,71 +212,14 @@ private fun isDuplicateField(field: LogField, index: Int, fields: Array<out LogF
   return false
 }
 
-internal actual fun isFieldInLoggingContext(field: LogField): Boolean {
-  val existingValue: String? = MDC.get(field.getKeyForLoggingContext())
-  return existingValue == field.value
-}
-
-internal actual fun getLoggingContextFields(): Collection<LogField>? {
-  val contextMap = getLoggingContextMap()
-  if (contextMap == null) {
-    return null
-  }
-
-  val fieldCount = getNonNullFieldCount(contextMap)
-  if (fieldCount == 0) {
-    return null
-  }
-
-  val fieldList = ArrayList<LogField>(fieldCount)
-  addContextMapToList(contextMap, target = fieldList)
-  return fieldList
-}
-
-internal actual fun combineFieldsWithLoggingContext(
-    fields: Collection<LogField>
-): Collection<LogField> {
-  val contextMap = getLoggingContextMap()
-  // If logging context is empty, we just return the given fields, to avoid allocating an
-  // additional list
-  if (contextMap == null) {
-    return fields
-  }
-
-  val contextFieldCount = getNonNullFieldCount(contextMap)
-  if (contextFieldCount == 0) {
-    return fields
-  }
-
-  val combinedFields = ArrayList<LogField>(fields.size + contextFieldCount)
-  // Add exception log fields first, so they show first in the log output
-  combinedFields.addAll(fields)
-  addContextMapToList(contextMap, target = combinedFields)
-  return combinedFields
-}
-
 internal fun getLoggingContextMap(): Map<String, String?>? {
   return MDC.getCopyOfContextMap()
 }
 
-private fun addContextMapToList(contextMap: Map<String, String?>, target: ArrayList<LogField>) {
-  for ((key, value) in contextMap) {
-    if (value == null) {
-      continue
-    }
-
-    target.add(createLogFieldFromContext(key, value))
-  }
-}
-
-private fun getNonNullFieldCount(contextMap: Map<String, String?>): Int {
-  return contextMap.count { field -> field.value != null }
-}
-
-private val exceptionContext = ConcurrentHashMap<WeakExceptionReference, Collection<LogField>>()
+private val exceptionContext = ConcurrentHashMap<WeakExceptionReference, Map<String, String?>>()
 
 /** See [ExceptionLookupKey]. */
-private val exceptionContextLookup: ConcurrentHashMap<*, Collection<LogField>>
+private val exceptionContextLookup: ConcurrentHashMap<*, Map<String, String?>>
   inline get() = exceptionContext
 
 private val exceptionReferenceQueue = ReferenceQueue<Throwable>()
@@ -195,8 +232,8 @@ internal actual fun addLoggingContextToException(exception: Throwable) {
     return
   }
 
-  val loggingContext = getLoggingContextFields()
-  if (loggingContext == null) {
+  val loggingContext = getLoggingContextMap()
+  if (loggingContext.isNullOrEmpty()) {
     return
   }
 
@@ -204,31 +241,18 @@ internal actual fun addLoggingContextToException(exception: Throwable) {
   exceptionContext.put(exceptionRef, loggingContext)
 }
 
-internal actual fun addLoggingContextToException(
-    exception: Throwable,
-    extraFields: Collection<LogField>
-) {
-  cleanupExceptionLoggingContext()
-
-  val exceptionRef = WeakExceptionReference(exception, exceptionReferenceQueue)
-
-  val added = exceptionContext.computeIfPresent(exceptionRef) { _, value -> value + extraFields }
-  if (added != null) {
-    return
-  }
-
-  val allLogFields =
-      if (hasContextForException(exception)) {
-        extraFields
-      } else {
-        combineFieldsWithLoggingContext(extraFields)
-      }
-
-  exceptionContext.put(exceptionRef, allLogFields)
+internal actual fun getExceptionLoggingContext(exception: Throwable): LoggingContext {
+  return LoggingContext(exceptionContextLookup[ExceptionLookupKey(exception)])
 }
 
-internal actual fun getExceptionLoggingContext(exception: Throwable): Collection<LogField>? {
-  return exceptionContextLookup[ExceptionLookupKey(exception)]
+internal actual fun hasContextForException(exception: Throwable): Boolean {
+  traverseExceptionChain(exception) { exception ->
+    if (exception is ExceptionWithLoggingContext ||
+        exceptionContextLookup.containsKey(ExceptionLookupKey(exception))) {
+      return true
+    }
+  }
+  return false
 }
 
 internal actual fun cleanupExceptionLoggingContext() {
@@ -238,16 +262,6 @@ internal actual fun cleanupExceptionLoggingContext() {
 
     exceptionReference = exceptionReferenceQueue.poll()
   }
-}
-
-private fun hasContextForException(exception: Throwable): Boolean {
-  traverseExceptionChain(exception) { exception ->
-    if (exception is ExceptionWithLoggingContext ||
-        exceptionContextLookup.containsKey(ExceptionLookupKey(exception))) {
-      return true
-    }
-  }
-  return false
 }
 
 private class WeakExceptionReference(
@@ -280,6 +294,38 @@ private class ExceptionLookupKey(exception: Throwable) {
   }
 
   override fun hashCode(): Int = exceptionHashCode
+}
+
+internal actual fun addContextFieldsToLogEvent(loggingContext: LoggingContext, logEvent: LogEvent) {
+  if (loggingContext.fields == null) {
+    return
+  }
+
+  for ((key, value) in loggingContext.fields) {
+    if (value == null) {
+      continue
+    }
+    // If we already have an entry in MDC with the same value, then that will be included when the
+    // log event is logged, so we don't need to add it as a field here
+    if (MDC.get(key) == value) {
+      continue
+    }
+
+    if (key.endsWith(LOGGING_CONTEXT_JSON_KEY_SUFFIX)) {
+      val normalizedKey =
+          key.substring(
+              startIndex = 0,
+              endIndex = key.length - LOGGING_CONTEXT_JSON_KEY_SUFFIX.length,
+          )
+      if (!logEvent.isFieldKeyAdded(normalizedKey)) {
+        logEvent.addJsonField(normalizedKey, value)
+      }
+    } else {
+      if (!logEvent.isFieldKeyAdded(key)) {
+        logEvent.addStringField(key, value)
+      }
+    }
+  }
 }
 
 /** Adds the given map of log fields to the logging context for the scope of the given [block]. */

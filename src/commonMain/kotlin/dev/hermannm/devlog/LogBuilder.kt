@@ -291,15 +291,14 @@ internal constructor(
     traverseExceptionChain(root = cause) { exception ->
       if (exception is ExceptionWithLoggingContext) {
         addFields(exception.logFields)
+        addContextFieldsToLogEvent(exception.loggingContext, logEvent)
       } else {
         if (exception is HasLogFields) {
           addFields(exception.logFields)
         }
 
         val loggingContext = getExceptionLoggingContext(exception)
-        if (loggingContext != null) {
-          addFields(loggingContext)
-        }
+        addContextFieldsToLogEvent(loggingContext, logEvent)
       }
     }
   }
