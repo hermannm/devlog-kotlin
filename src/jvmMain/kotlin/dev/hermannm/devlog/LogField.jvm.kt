@@ -96,6 +96,17 @@ internal const val LOGGING_CONTEXT_JSON_KEY_SUFFIX = " (json)"
  */
 @kotlin.concurrent.Volatile @JvmField internal var ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS = false
 
+/**
+ * Assumes that we have already checked that the given key ends with
+ * [LOGGING_CONTEXT_JSON_KEY_SUFFIX].
+ */
+internal fun removeJsonKeySuffix(key: String): String {
+  return key.substring(
+      startIndex = 0,
+      endIndex = key.length - LOGGING_CONTEXT_JSON_KEY_SUFFIX.length,
+  )
+}
+
 /** See [ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS]. */
 private fun ensureLoggerImplementationIsLoaded() {
   // This will initialize the SLF4J logger implementation, if not already initialized

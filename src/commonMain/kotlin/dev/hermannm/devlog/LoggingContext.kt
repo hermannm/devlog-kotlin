@@ -353,19 +353,25 @@ internal value class OverwrittenContextFields(private val fields: Array<String?>
     return fields?.get(index * 2 + 1)
   }
 
-  /** @return -1 if not found. */
-  internal fun indexOfKey(key: String): Int {
-    if (fields != null) {
-      var index = 0
-      while (index < fields.size) {
-        if (fields[index] == key) {
-          return index / 2
-        }
+  internal fun isEmpty(): Boolean {
+    return fields == null
+  }
 
-        index += 2
-      }
+  internal inline fun forEachKey(action: (index: Int, key: String) -> Unit) {
+    if (fields == null) {
+      return
     }
 
-    return -1
+    var index = 0
+    while (index < fields.size) {
+      val key = fields[index]
+      if (key != null) {
+        // Divide the index by 2, since the fact that we store keys and values contiguously here is
+        // an implementation detail
+        action(index / 2, key)
+      }
+
+      index += 2
+    }
   }
 }

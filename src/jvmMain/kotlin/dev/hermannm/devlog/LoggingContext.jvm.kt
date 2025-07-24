@@ -44,38 +44,45 @@ internal actual fun addFieldsToLoggingContext(
       continue
     }
 
-    val existingValue: String? = MDC.get(field.key)
-    // If there is an existing entry for this key, we add it to overwrittenFields so we can restore
-    // the previous value after our withLoggingContext scope
-    if (existingValue != null) {
-      overwrittenFields = overwrittenFields.set(index, field.key, existingValue, fields.size)
-      /**
-       * If we get a [JsonLogField] whose key matches a non-JSON field in the context, then we want
-       * to overwrite "key" with "key (json)" (adding [LOGGING_CONTEXT_JSON_KEY_SUFFIX] to identify
-       * the JSON value). But since "key (json)" does not match "key", calling `MDC.put` below will
-       * not overwrite the previous field, so we have to manually remove it here. The previous field
-       * will then be restored by [removeExistingContextFieldFromLoggingContext] after the context
-       * exits.
-       */
-      if (field.key != keyForLoggingContext) {
-        MDC.remove(field.key)
-      }
-    }
-
-    /**
-     * [JsonLogField] adds a suffix to `keyForLoggingContext`, i.e. it will be different from
-     * [LogField.key]. In this case, we want to check existing context field values for both `key`
-     * _and_ `keyForLoggingContext`.
-     */
-    if (field.key != keyForLoggingContext && existingValue == null) {
-      val existingValue = MDC.get(keyForLoggingContext)
-      if (existingValue != null) {
-        overwrittenFields =
-            overwrittenFields.set(index, keyForLoggingContext, existingValue, fields.size)
-      }
-    }
+    val previousValue: String? = MDC.get(keyForLoggingContext)
 
     MDC.put(keyForLoggingContext, field.value)
+
+    // If there is a previous value for this key, we add it to overwrittenFields so we can restore
+    // the previous value after our withLoggingContext scope
+    if (previousValue != null) {
+      overwrittenFields =
+          overwrittenFields.set(index, keyForLoggingContext, previousValue, fields.size)
+    } else {
+      /**
+       * If there was no previous value for the normal context key, then there may still be an entry
+       * for an alternate variant of the same key. For example, [JsonLogField] adds a suffix
+       * ([LOGGING_CONTEXT_JSON_KEY_SUFFIX]) to identify the value as JSON. But since the suffixed
+       * key does not match the non-suffixed key, `MDC.put` above will not overwrite the previous
+       * entry if the new field is a different field type. So we have to manually remove the entry
+       * for the alternate key in that case.
+       */
+      val alternateKey =
+          // Compare the field key to the logging context key:
+          // - If they're the same, then the logging context key does not have a JSON suffix, and we
+          //   must check if there's a previous value for the suffixed key
+          // - If they differ, then the logging context key has a JSON suffix, and we must check if
+          //   there's a previous value for the non-suffixed key
+          //
+          // We compare by reference here, since `keyForLoggingContext` will return the same String
+          // instance if it matches `field.key`.
+          if (field.key === keyForLoggingContext) {
+            field.key + LOGGING_CONTEXT_JSON_KEY_SUFFIX
+          } else {
+            field.key
+          }
+
+      val previousValue = MDC.get(alternateKey)
+      if (previousValue != null) {
+        MDC.remove(alternateKey)
+        overwrittenFields = overwrittenFields.set(index, alternateKey, previousValue, fields.size)
+      }
+    }
   }
 
   return overwrittenFields
@@ -104,16 +111,28 @@ internal actual fun removeFieldsFromLoggingContext(
       MDC.put(overwrittenKey, overwrittenFields.getValue(index))
       /**
        * If the overwritten key matched the current key in the logging context, then we don't want
-       * to call `MDC.remove` below (these may not always match for [JsonLogField] - see docstring
-       * over `MDC.remove` in [addFieldsToLoggingContext]).
+       * to call `MDC.remove` below (these may not always match - see docstring on `alternateKey` in
+       * [addFieldsToLoggingContext] for more on this).
+       *
+       * We compare by reference here, since `overwrittenKey` will be the same instance as
+       * `keyForLoggingContext` if they match.
        */
-      if (overwrittenKey == keyForLoggingContext) {
+      if (overwrittenKey === keyForLoggingContext) {
         continue@fieldLoop
       }
     }
 
     MDC.remove(keyForLoggingContext)
   }
+}
+
+private fun isDuplicateField(field: LogField, index: Int, fields: Array<out LogField>): Boolean {
+  for (previousFieldIndex in 0 until index) {
+    if (fields[previousFieldIndex].key == field.key) {
+      return true
+    }
+  }
+  return false
 }
 
 @PublishedApi
@@ -140,6 +159,29 @@ internal actual fun addExistingContextFieldsToLoggingContext(
 
     if (previousValue != null) {
       overwrittenFields = overwrittenFields.set(index, key, previousValue, contextSize)
+    } else {
+      /**
+       * If there was no previous value for the normal context key, then there may still be an entry
+       * for an alternate variant of the same key. For example, [JsonLogField] adds a suffix
+       * ([LOGGING_CONTEXT_JSON_KEY_SUFFIX]) to identify the value as JSON. But since the suffixed
+       * key does not match the non-suffixed key, `MDC.put` above will not overwrite the previous
+       * entry if the new field is a different field type. So we have to manually remove the entry
+       * for the alternate key in that case.
+       */
+      val alternateKey =
+          // If key has a JSON suffix, then we must check the non-suffixed key.
+          // If key does not have a JSON suffix, then we must check the suffixed key.
+          if (key.endsWith(LOGGING_CONTEXT_JSON_KEY_SUFFIX)) {
+            removeJsonKeySuffix(key)
+          } else {
+            key + LOGGING_CONTEXT_JSON_KEY_SUFFIX
+          }
+
+      val previousValue = MDC.get(alternateKey)
+      if (previousValue != null) {
+        MDC.remove(alternateKey)
+        overwrittenFields = overwrittenFields.set(index, alternateKey, previousValue, contextSize)
+      }
     }
 
     index++
@@ -159,23 +201,57 @@ internal actual fun removeExistingContextFieldFromLoggingContext(
   }
 
   for ((key, _) in contextFields) {
-    val overwrittenKeyIndex = overwrittenFields.indexOfKey(key)
-    // `indexOfKey` returns -1 if no match
-    if (overwrittenKeyIndex != -1) {
-      MDC.put(key, overwrittenFields.getValue(overwrittenKeyIndex))
+    val overwrittenValue = overwrittenFields.getValueForKey(key)
+    if (overwrittenValue != null) {
+      MDC.put(key, overwrittenValue)
     } else {
       MDC.remove(key)
     }
   }
 }
 
-private fun isDuplicateField(field: LogField, index: Int, fields: Array<out LogField>): Boolean {
-  for (previousFieldIndex in 0 until index) {
-    if (fields[previousFieldIndex].key == field.key) {
-      return true
+/**
+ * Gets the value of the overwritten context field with the given key, if any.
+ *
+ * Matches keys with/without [LOGGING_CONTEXT_JSON_KEY_SUFFIX], to handle the case where a JSON
+ * context field overwrote a non-JSON context field, or vice versa. See the docstring on
+ * `alternateKey` in [addExistingContextFieldsToLoggingContext] for more on this.
+ */
+private fun OverwrittenContextFields.getValueForKey(key: String): String? {
+  if (this.isEmpty()) {
+    return null
+  }
+
+  val lengthWithSuffix: Int
+  val lengthWithoutSuffix: Int
+  if (key.endsWith(LOGGING_CONTEXT_JSON_KEY_SUFFIX)) {
+    lengthWithSuffix = key.length
+    lengthWithoutSuffix = key.length - LOGGING_CONTEXT_JSON_KEY_SUFFIX.length
+  } else {
+    lengthWithSuffix = key.length + LOGGING_CONTEXT_JSON_KEY_SUFFIX.length
+    lengthWithoutSuffix = key.length
+  }
+
+  this.forEachKey { index, otherKey ->
+    // Check if the keys match before the JSON key suffix
+    if (otherKey.regionMatches(
+        thisOffset = 0,
+        other = otherKey,
+        otherOffset = 0,
+        length = lengthWithoutSuffix,
+    )) {
+      // If the keys matched before the JSON key suffix, then we have a full match if either:
+      // - Other key's length is our key's length _without_ suffix (-> other key had no suffix)
+      // - Other key's length is our key's length _with_ suffix, and that suffix is what we expect
+      if (otherKey.length == lengthWithoutSuffix ||
+          (otherKey.length == lengthWithSuffix &&
+              otherKey.endsWith(LOGGING_CONTEXT_JSON_KEY_SUFFIX))) {
+        return this.getValue(index)
+      }
     }
   }
-  return false
+
+  return null
 }
 
 internal fun getLoggingContextMap(): Map<String, String?>? {
@@ -241,7 +317,7 @@ private class WeakExceptionReference(
     return when (other) {
       is WeakExceptionReference -> this.exceptionHashCode == other.exceptionHashCode
       is ExceptionLookupKey -> this.exceptionHashCode == other.exceptionHashCode
-      else -> return false
+      else -> false
     }
   }
 
@@ -278,13 +354,9 @@ internal actual fun addContextFieldsToLogEvent(loggingContext: LoggingContext, l
     }
 
     if (key.endsWith(LOGGING_CONTEXT_JSON_KEY_SUFFIX)) {
-      val normalizedKey =
-          key.substring(
-              startIndex = 0,
-              endIndex = key.length - LOGGING_CONTEXT_JSON_KEY_SUFFIX.length,
-          )
-      if (!logEvent.isFieldKeyAdded(normalizedKey)) {
-        logEvent.addJsonField(normalizedKey, value)
+      val keyWithoutSuffix = removeJsonKeySuffix(key)
+      if (!logEvent.isFieldKeyAdded(keyWithoutSuffix)) {
+        logEvent.addJsonField(keyWithoutSuffix, value)
       }
     } else {
       if (!logEvent.isFieldKeyAdded(key)) {
