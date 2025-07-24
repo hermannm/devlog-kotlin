@@ -35,39 +35,30 @@ internal actual fun addFieldsToLoggingContext(
 ): OverwrittenContextFields {
   var overwrittenFields = OverwrittenContextFields(null)
 
-  fieldLoop@ for (index in fields.indices) {
+  for (index in fields.indices) {
     val field = fields[index]
     val keyForLoggingContext = field.getKeyForLoggingContext()
 
     // Skip duplicate keys in the field array
     if (isDuplicateField(field, index, fields)) {
-      continue@fieldLoop
+      continue
     }
 
-    var existingValue: String? = MDC.get(field.key)
-    when (existingValue) {
-      // If there is no existing entry for our key, we continue down to MDC.put
-      null -> {}
-      // If the existing value matches the value we're about to insert, we can skip inserting it
-      field.value -> {
-        overwrittenFields = overwrittenFields.set(index, field.key, value = null, fields.size)
-        continue@fieldLoop
-      }
-      // If there is an existing entry that does not match our new field value, we add it to
-      // overwrittenFields so we can restore the previous value after our withLoggingContext scope
-      else -> {
-        overwrittenFields = overwrittenFields.set(index, field.key, existingValue, fields.size)
-        /**
-         * If we get a [JsonLogField] whose key matches a non-JSON field in the context, then we
-         * want to overwrite "key" with "key (json)" (adding [LOGGING_CONTEXT_JSON_KEY_SUFFIX] to
-         * identify the JSON value). But since "key (json)" does not match "key", calling `MDC.put`
-         * below will not overwrite the previous field, so we have to manually remove it here. The
-         * previous field will then be restored by [removeExistingContextFieldFromLoggingContext]
-         * after the context exits.
-         */
-        if (field.key != keyForLoggingContext) {
-          MDC.remove(field.key)
-        }
+    val existingValue: String? = MDC.get(field.key)
+    // If there is an existing entry for this key, we add it to overwrittenFields so we can restore
+    // the previous value after our withLoggingContext scope
+    if (existingValue != null) {
+      overwrittenFields = overwrittenFields.set(index, field.key, existingValue, fields.size)
+      /**
+       * If we get a [JsonLogField] whose key matches a non-JSON field in the context, then we want
+       * to overwrite "key" with "key (json)" (adding [LOGGING_CONTEXT_JSON_KEY_SUFFIX] to identify
+       * the JSON value). But since "key (json)" does not match "key", calling `MDC.put` below will
+       * not overwrite the previous field, so we have to manually remove it here. The previous field
+       * will then be restored by [removeExistingContextFieldFromLoggingContext] after the context
+       * exits.
+       */
+      if (field.key != keyForLoggingContext) {
+        MDC.remove(field.key)
       }
     }
 
@@ -77,17 +68,10 @@ internal actual fun addFieldsToLoggingContext(
      * _and_ `keyForLoggingContext`.
      */
     if (field.key != keyForLoggingContext && existingValue == null) {
-      existingValue = MDC.get(keyForLoggingContext)
-      when (existingValue) {
-        null -> {}
-        field.value -> {
-          overwrittenFields = overwrittenFields.set(index, field.key, value = null, fields.size)
-          continue@fieldLoop
-        }
-        else -> {
-          overwrittenFields =
-              overwrittenFields.set(index, keyForLoggingContext, existingValue, fields.size)
-        }
+      val existingValue = MDC.get(keyForLoggingContext)
+      if (existingValue != null) {
+        overwrittenFields =
+            overwrittenFields.set(index, keyForLoggingContext, existingValue, fields.size)
       }
     }
 
@@ -117,12 +101,7 @@ internal actual fun removeFieldsFromLoggingContext(
 
     val overwrittenKey = overwrittenFields.getKey(index)
     if (overwrittenKey != null) {
-      val overwrittenValue = overwrittenFields.getValue(index)
-      if (overwrittenValue == null) {
-        continue@fieldLoop
-      }
-
-      MDC.put(overwrittenKey, overwrittenValue)
+      MDC.put(overwrittenKey, overwrittenFields.getValue(index))
       /**
        * If the overwritten key matched the current key in the logging context, then we don't want
        * to call `MDC.remove` below (these may not always match for [JsonLogField] - see docstring
@@ -156,18 +135,11 @@ internal actual fun addExistingContextFieldsToLoggingContext(
   var index = 0
   for ((key, value) in contextFields) {
     val previousValue = MDC.get(key)
-    when (previousValue) {
-      null -> {
-        MDC.put(key, value)
-      }
-      // When the previous value is equal to the new value: Do nothing, since MDC already has it
-      value -> {
-        overwrittenFields = overwrittenFields.set(index, key, value = null, contextSize)
-      }
-      else -> {
-        MDC.put(key, value)
-        overwrittenFields = overwrittenFields.set(index, key, previousValue, contextSize)
-      }
+
+    MDC.put(key, value)
+
+    if (previousValue != null) {
+      overwrittenFields = overwrittenFields.set(index, key, previousValue, contextSize)
     }
 
     index++
@@ -190,16 +162,10 @@ internal actual fun removeExistingContextFieldFromLoggingContext(
     val overwrittenKeyIndex = overwrittenFields.indexOfKey(key)
     // `indexOfKey` returns -1 if no match
     if (overwrittenKeyIndex != -1) {
-      val overwrittenValue = overwrittenFields.getValue(overwrittenKeyIndex)
-      if (overwrittenValue == null) {
-        continue
-      }
-
-      MDC.put(key, overwrittenValue)
-      continue
+      MDC.put(key, overwrittenFields.getValue(overwrittenKeyIndex))
+    } else {
+      MDC.remove(key)
     }
-
-    MDC.remove(key)
   }
 }
 

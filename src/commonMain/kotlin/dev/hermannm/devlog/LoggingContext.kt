@@ -336,7 +336,7 @@ internal value class OverwrittenContextFields(private val fields: Array<String?>
   internal fun set(
       index: Int,
       key: String,
-      value: String?,
+      value: String,
       totalFields: Int
   ): OverwrittenContextFields {
     val fields = this.fields ?: arrayOfNulls(totalFields * 2)
