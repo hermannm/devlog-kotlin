@@ -225,7 +225,13 @@ internal inline fun traverseExceptionChain(root: Throwable, action: (Throwable) 
       val causeException = currentException.cause
       if (causeException != null) {
         if (hasSuppressedExceptions || parent != null) {
-          parent = ExceptionParent(currentException, parent)
+          parent =
+              ExceptionParent(
+                  currentException,
+                  suppressedExceptions,
+                  nextSuppressedExceptionIndex = 0,
+                  parent,
+              )
         }
         currentException = causeException
         depth++
@@ -236,7 +242,13 @@ internal inline fun traverseExceptionChain(root: Throwable, action: (Throwable) 
       // exceptions, set the first suppressed exception as the next to traverse
       if (hasSuppressedExceptions) {
         if (suppressedExceptions.size > 1 || parent != null) {
-          parent = ExceptionParent(currentException, parent)
+          parent =
+              ExceptionParent(
+                  currentException,
+                  suppressedExceptions,
+                  nextSuppressedExceptionIndex = 1,
+                  parent,
+              )
         }
         currentException = suppressedExceptions.first()
         depth++
@@ -245,22 +257,16 @@ internal inline fun traverseExceptionChain(root: Throwable, action: (Throwable) 
     }
 
     while (parent != null) {
-      val parentSuppressedExceptions = getSuppressedExceptions(parent.exception)
-      if (!parentSuppressedExceptions.isNullOrEmpty()) {
-        if (currentException === parent.exception.cause) {
-          currentException = parentSuppressedExceptions.first()
-          continue@exceptionLoop
-        }
-
-        val indexOfSuppressed = parentSuppressedExceptions.indexOfFirst { it === currentException }
-        if (indexOfSuppressed != -1 && indexOfSuppressed < parentSuppressedExceptions.size - 1) {
-          currentException = parentSuppressedExceptions[indexOfSuppressed + 1]
+      if (!parent.suppressedExceptions.isNullOrEmpty()) {
+        val index = parent.nextSuppressedExceptionIndex
+        if (index < parent.suppressedExceptions.size) {
+          currentException = parent.suppressedExceptions[index]
+          parent.nextSuppressedExceptionIndex++
           continue@exceptionLoop
         }
       }
 
       // If we get here, there were no siblings, so we move up the tree
-      currentException = parent.exception
       parent = parent.parent
       depth--
     }
@@ -270,6 +276,19 @@ internal inline fun traverseExceptionChain(root: Throwable, action: (Throwable) 
   }
 }
 
-internal class ExceptionParent(val exception: Throwable, val parent: ExceptionParent?)
+internal class ExceptionParent(
+    @JvmField val exception: Throwable,
+    @JvmField val suppressedExceptions: List<Throwable>?,
+    @JvmField var nextSuppressedExceptionIndex: Int,
+    @JvmField val parent: ExceptionParent?,
+)
 
+/**
+ * Kotlin provides a platform-independent [Throwable.suppressedExceptions] extension function, which
+ * call's Java's `Throwable.getSuppressed` method, and wraps the returned array in a list. But this
+ * allocates a wrapper object for the normal case of there being no suppressed exceptions! Since we
+ * check suppressed exceptions in [traverseExceptionChain], we want to avoid these redundant
+ * allocations. So we write our own platform-specific function to return `null` when Java's
+ * `Throwable.getSuppressed` returns an empty array.
+ */
 internal expect fun getSuppressedExceptions(exception: Throwable): List<Throwable>?
