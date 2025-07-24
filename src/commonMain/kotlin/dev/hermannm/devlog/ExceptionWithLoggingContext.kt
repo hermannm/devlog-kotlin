@@ -207,16 +207,10 @@ public interface HasLogFields {
 }
 
 /**
- * The maximum depth of child exceptions to traverse in [traverseExceptionTree]. We expect a depth
- * of 10 exceptions to cover most realistic cases of exception wrapping.
- */
-private const val MAX_EXCEPTION_TRAVERSAL_DEPTH = 10
-
-/**
  * Traverses the exception tree from the given root exception: Its cause exceptions and suppressed
  * exceptions, and any of their own cause or suppressed exceptions. The traversal is
  * [pre-order (depth-first)](https://en.wikipedia.org/wiki/Tree_traversal#Depth-first_search),
- * visiting cause exceptions first, then suppressed exceptions in order.
+ * visiting the root exception first, then cause exceptions, then suppressed exceptions in order.
  *
  * The implementation tries to keep allocations to a minimum, prioritizing the happy path (see
  * [ExceptionParent] for how we do this). We also set a [MAX_EXCEPTION_TRAVERSAL_DEPTH], so we don't
@@ -230,7 +224,7 @@ internal inline fun traverseExceptionTree(root: Throwable, action: (Throwable) -
   exceptionLoop@ while (true) {
     action(currentException)
 
-    // If we are not at the max depth, traverse child exceptions (cause or suppressed exceptions)
+    // If we are not at the max depth, traverse child exceptions (cause + suppressed exceptions)
     if (depth < MAX_EXCEPTION_TRAVERSAL_DEPTH - 1) {
       val suppressedExceptions = getSuppressedExceptions(currentException)
       val hasSuppressedExceptions = !suppressedExceptions.isNullOrEmpty()
@@ -238,12 +232,14 @@ internal inline fun traverseExceptionTree(root: Throwable, action: (Throwable) -
       // First, check if we have a cause exception. If so, set that as the next to traverse
       val causeException = currentException.cause
       if (causeException != null) {
-        // We only have to initialize the parent if there are suppressed exceptions to traverse, or
-        // we already have a parent. Otherwise, there's no need to move up the tree again after
-        if (hasSuppressedExceptions || parent != null) {
+        // We only have to set the parent if there are sibling exceptions to traverse. If we already
+        // have a parent but no siblings, we can leave the parent as-is (as a "grandparent"), since
+        // `ExceptionParent.depth` allows us to jump up multiple levels in the tree
+        if (hasSuppressedExceptions) {
           parent =
               ExceptionParent(
                   currentException,
+                  depth = depth,
                   suppressedExceptions,
                   // Since we traverse the cause exception now, the next child exception to traverse
                   // is the first suppressed exception
@@ -260,12 +256,12 @@ internal inline fun traverseExceptionTree(root: Throwable, action: (Throwable) -
       // exceptions, set the first suppressed exception as the next to traverse
       if (hasSuppressedExceptions) {
         // We only have to initialize the parent if there are more suppressed exceptions to
-        // traverse, or we already have a parent. Otherwise, there's no need to move up the tree
-        // again after
-        if (suppressedExceptions.size > 1 || parent != null) {
+        // traverse afterwards
+        if (suppressedExceptions.size > 1) {
           parent =
               ExceptionParent(
                   currentException,
+                  depth = depth,
                   suppressedExceptions,
                   // Since we traverse the first suppressed exception now, the next to traverse is
                   // the second suppressed exception
@@ -282,20 +278,18 @@ internal inline fun traverseExceptionTree(root: Throwable, action: (Throwable) -
     // If there were no child exceptions to traverse, move up to the parent to check if there are
     // sibling exceptions left further up the tree that we need to traverse
     while (parent != null) {
-      if (!parent.suppressedExceptions.isNullOrEmpty()) {
-        val index = parent.nextSuppressedExceptionIndex
-        if (index < parent.suppressedExceptions.size) {
-          currentException = parent.suppressedExceptions[index]
-          // Increment the index for the next suppressed exception to traverse
-          parent.nextSuppressedExceptionIndex = index + 1
-          // We don't increment depth here, since this moves sideways to a sibling exception
-          continue@exceptionLoop
-        }
+      val index = parent.nextSuppressedExceptionIndex
+      if (index < parent.suppressedExceptions.size) {
+        currentException = parent.suppressedExceptions[index]
+        // The tree depth of a child exception is one deeper than its parent
+        depth = parent.depth + 1
+        // Increment the index for the next suppressed exception to traverse
+        parent.nextSuppressedExceptionIndex = index + 1
+        continue@exceptionLoop
       }
 
       // If we get here, there were no siblings left to traverse, so we move further up the tree
       parent = parent.parent
-      depth--
     }
 
     // If we get here, then we have traversed all cause and suppressed exceptions
@@ -315,11 +309,18 @@ internal class ExceptionParent(
     /** The parent exception. */
     @JvmField val exception: Throwable,
     /**
+     * The depth in the exception tree we're currently traversing where this exception is located.
+     */
+    @JvmField val depth: Int,
+    /**
      * The suppressed exceptions of [exception]. We store this here, because getting suppressed
      * exceptions potentially does an array copy, so we can avoid that allocation by keeping the
      * result here.
+     *
+     * This is non-null, since we only need to allocate an `ExceptionParent` if we have suppressed
+     * exceptions to traverse on it.
      */
-    @JvmField val suppressedExceptions: List<Throwable>?,
+    @JvmField val suppressedExceptions: List<Throwable>,
     /**
      * The index of the next exception in [suppressedExceptions] that should be traversed.
      *
@@ -332,6 +333,12 @@ internal class ExceptionParent(
     /** The parent of this parent exception (i.e., the grandparent). */
     @JvmField val parent: ExceptionParent?,
 )
+
+/**
+ * The maximum depth of child exceptions to traverse in [traverseExceptionTree]. We expect a depth
+ * of 10 exceptions to cover most realistic cases of exception wrapping.
+ */
+private const val MAX_EXCEPTION_TRAVERSAL_DEPTH = 10
 
 /**
  * Kotlin provides a platform-independent [Throwable.suppressedExceptions] extension function, which
