@@ -288,7 +288,7 @@ internal constructor(
   internal fun addFieldsFromCauseException(cause: Throwable) {
     cleanupExceptionLoggingContext()
 
-    traverseExceptionChain(root = cause) { exception ->
+    traverseExceptionTree(root = cause) { exception ->
       if (exception is ExceptionWithLoggingContext) {
         addFields(exception.logFields)
         addContextFieldsToLogEvent(exception.loggingContext, logEvent)

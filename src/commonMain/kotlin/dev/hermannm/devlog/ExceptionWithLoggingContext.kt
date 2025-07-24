@@ -206,9 +206,23 @@ public interface HasLogFields {
   public val logFields: Collection<LogField>
 }
 
+/**
+ * The maximum depth of child exceptions to traverse in [traverseExceptionTree]. We expect a depth
+ * of 10 exceptions to cover most realistic cases of exception wrapping.
+ */
 private const val MAX_EXCEPTION_TRAVERSAL_DEPTH = 10
 
-internal inline fun traverseExceptionChain(root: Throwable, action: (Throwable) -> Unit) {
+/**
+ * Traverses the exception tree from the given root exception: Its cause exceptions and suppressed
+ * exceptions, and any of their own cause or suppressed exceptions. The traversal is
+ * [pre-order (depth-first)](https://en.wikipedia.org/wiki/Tree_traversal#Depth-first_search),
+ * visiting cause exceptions first, then suppressed exceptions in order.
+ *
+ * The implementation tries to keep allocations to a minimum, prioritizing the happy path (see
+ * [ExceptionParent] for how we do this). We also set a [MAX_EXCEPTION_TRAVERSAL_DEPTH], so we don't
+ * fall victim to malicious cyclical cause exceptions.
+ */
+internal inline fun traverseExceptionTree(root: Throwable, action: (Throwable) -> Unit) {
   var currentException: Throwable = root
   var parent: ExceptionParent? = null
   var depth = 0
@@ -221,14 +235,18 @@ internal inline fun traverseExceptionChain(root: Throwable, action: (Throwable) 
       val suppressedExceptions = getSuppressedExceptions(currentException)
       val hasSuppressedExceptions = !suppressedExceptions.isNullOrEmpty()
 
-      // First, check if we have a cause exception - if so, set that as the next exception
+      // First, check if we have a cause exception. If so, set that as the next to traverse
       val causeException = currentException.cause
       if (causeException != null) {
+        // We only have to initialize the parent if there are suppressed exceptions to traverse, or
+        // we already have a parent. Otherwise, there's no need to move up the tree again after
         if (hasSuppressedExceptions || parent != null) {
           parent =
               ExceptionParent(
                   currentException,
                   suppressedExceptions,
+                  // Since we traverse the cause exception now, the next child exception to traverse
+                  // is the first suppressed exception
                   nextSuppressedExceptionIndex = 0,
                   parent,
               )
@@ -241,11 +259,16 @@ internal inline fun traverseExceptionChain(root: Throwable, action: (Throwable) 
       // If there's no cause exception, look for suppressed exceptions. If we have suppressed
       // exceptions, set the first suppressed exception as the next to traverse
       if (hasSuppressedExceptions) {
+        // We only have to initialize the parent if there are more suppressed exceptions to
+        // traverse, or we already have a parent. Otherwise, there's no need to move up the tree
+        // again after
         if (suppressedExceptions.size > 1 || parent != null) {
           parent =
               ExceptionParent(
                   currentException,
                   suppressedExceptions,
+                  // Since we traverse the first suppressed exception now, the next to traverse is
+                  // the second suppressed exception
                   nextSuppressedExceptionIndex = 1,
                   parent,
               )
@@ -256,17 +279,21 @@ internal inline fun traverseExceptionChain(root: Throwable, action: (Throwable) 
       }
     }
 
+    // If there were no child exceptions to traverse, move up to the parent to check if there are
+    // sibling exceptions left further up the tree that we need to traverse
     while (parent != null) {
       if (!parent.suppressedExceptions.isNullOrEmpty()) {
         val index = parent.nextSuppressedExceptionIndex
         if (index < parent.suppressedExceptions.size) {
           currentException = parent.suppressedExceptions[index]
-          parent.nextSuppressedExceptionIndex++
+          // Increment the index for the next suppressed exception to traverse
+          parent.nextSuppressedExceptionIndex = index + 1
+          // We don't increment depth here, since this moves sideways to a sibling exception
           continue@exceptionLoop
         }
       }
 
-      // If we get here, there were no siblings, so we move up the tree
+      // If we get here, there were no siblings left to traverse, so we move further up the tree
       parent = parent.parent
       depth--
     }
@@ -276,10 +303,33 @@ internal inline fun traverseExceptionChain(root: Throwable, action: (Throwable) 
   }
 }
 
+/**
+ * State object to allow us to move back up the exception tree in [traverseExceptionTree]. We need
+ * this in order to move between sibling exceptions (cause + suppressed exceptions).
+ *
+ * This is essentially a singly linked list. We use this instead of pre-allocating a collection data
+ * structure, so that the base case of there not being multiple children (i.e. both cause and
+ * suppressed exceptions) remains allocation-free.
+ */
 internal class ExceptionParent(
+    /** The parent exception. */
     @JvmField val exception: Throwable,
+    /**
+     * The suppressed exceptions of [exception]. We store this here, because getting suppressed
+     * exceptions potentially does an array copy, so we can avoid that allocation by keeping the
+     * result here.
+     */
     @JvmField val suppressedExceptions: List<Throwable>?,
+    /**
+     * The index of the next exception in [suppressedExceptions] that should be traversed.
+     *
+     * We include this here in order to avoid exception cycles between sibling exceptions. One can
+     * imagine a malicious actor constructing an exception with both the cause and a suppressed
+     * exception set to the same exception instance, which may cause an infinite loop in a naive
+     * implementation of exception traversal.
+     */
     @JvmField var nextSuppressedExceptionIndex: Int,
+    /** The parent of this parent exception (i.e., the grandparent). */
     @JvmField val parent: ExceptionParent?,
 )
 
@@ -287,7 +337,7 @@ internal class ExceptionParent(
  * Kotlin provides a platform-independent [Throwable.suppressedExceptions] extension function, which
  * call's Java's `Throwable.getSuppressed` method, and wraps the returned array in a list. But this
  * allocates a wrapper object for the normal case of there being no suppressed exceptions! Since we
- * check suppressed exceptions in [traverseExceptionChain], we want to avoid these redundant
+ * check suppressed exceptions in [traverseExceptionTree], we want to avoid these redundant
  * allocations. So we write our own platform-specific function to return `null` when Java's
  * `Throwable.getSuppressed` returns an empty array.
  */

@@ -300,7 +300,7 @@ internal actual fun getExceptionLoggingContext(exception: Throwable): LoggingCon
 }
 
 internal actual fun hasContextForException(exception: Throwable): Boolean {
-  traverseExceptionChain(exception) { exception ->
+  traverseExceptionTree(exception) { exception ->
     if (exception is ExceptionWithLoggingContext ||
         exceptionContextLookup.containsKey(ExceptionLookupKey(exception))) {
       return true
