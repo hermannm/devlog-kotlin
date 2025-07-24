@@ -121,7 +121,7 @@ internal class LoggingContextJvmTest {
   }
 
   @Test
-  fun `withLoggingContext overload that takes LoggingContext merges given context with existing fields`() {
+  fun `withLoggingContext existingContext overload merges given context with existing fields`() {
     val existingContext = LoggingContext(mapOf("fieldMap1" to "value", "fieldMap2" to "value"))
 
     withLoggingContext(field("existingField", "value")) {

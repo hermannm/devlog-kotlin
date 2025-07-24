@@ -1,7 +1,14 @@
 // `kotlin.jvm` is auto-imported on JVM, but for multiplatform we need to use fully-qualified name
 @file:Suppress("RemoveRedundantQualifierName")
+// We use Kotlin Contracts in `withLoggingContext`, for ergonomic use with lambdas. Contracts are
+// an experimental feature, but they guarantee binary compatibility, so we can safely use them here
+@file:OptIn(ExperimentalContracts::class)
 
 package dev.hermannm.devlog
+
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 /**
  * Adds the given [log fields][LogField] to every log made by a [Logger] in the context of the given
@@ -76,6 +83,9 @@ public inline fun <ReturnT> withLoggingContext(
     vararg logFields: LogField,
     block: () -> ReturnT,
 ): ReturnT {
+  // Allows callers to use `block` as if it were in-place
+  contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+
   return withLoggingContextInternal(logFields, block)
 }
 
@@ -152,6 +162,9 @@ public inline fun <ReturnT> withLoggingContext(
     logFields: Collection<LogField>,
     block: () -> ReturnT
 ): ReturnT {
+  // Allows callers to use `block` as if it were in-place
+  contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+
   return withLoggingContextInternal(logFields.toTypedArray(), block)
 }
 
@@ -177,6 +190,9 @@ internal inline fun <ReturnT> withLoggingContextInternal(
     logFields: Array<out LogField>,
     block: () -> ReturnT,
 ): ReturnT {
+  // Allows callers to use `block` as if it were in-place
+  contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+
   val overwrittenFields = addFieldsToLoggingContext(logFields)
   try {
     return block()
@@ -192,6 +208,9 @@ public inline fun <ReturnT> withLoggingContext(
     existingContext: LoggingContext,
     block: () -> ReturnT
 ): ReturnT {
+  // Allows callers to use `block` as if it were in-place
+  contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+
   val overwrittenFields = addExistingContextFieldsToLoggingContext(existingContext)
   try {
     return block()

@@ -189,10 +189,64 @@ internal class LoggingContextTest {
   }
 
   @Test
-  fun `non-local return works in withLoggingContext`() {
+  fun `non-local return works in withLoggingContext vararg overload`() {
     withLoggingContext(field("key", "value")) {
       // This won't compile if withLoggingContext isn't inline, and we want to verify that
       return
     }
+  }
+
+  @Test
+  fun `non-local return works in withLoggingContext collection overload`() {
+    withLoggingContext(listOf(field("key", "value"))) {
+      // This won't compile if withLoggingContext isn't inline, and we want to verify that
+      return
+    }
+  }
+
+  @Test
+  fun `non-local return works in withLoggingContext existingContext overload`() {
+    withLoggingContext(getLoggingContext()) {
+      // This won't compile if withLoggingContext isn't inline, and we want to verify that
+      return
+    }
+  }
+
+  @Test
+  fun `lambda uses EXACTLY_ONCE contract in withLoggingContext vararg overload`() {
+    val uninitialized: String
+
+    withLoggingContext(field("key", "value")) { uninitialized = "Initialized" }
+
+    // This won't compile unless `withLoggingContext` uses `callsInPlace` contract with
+    // `InvocationKind.EXACTLY_ONCE`
+    useString(uninitialized)
+  }
+
+  @Test
+  fun `lambda uses EXACTLY_ONCE contract in withLoggingContext collection overload`() {
+    val uninitialized: String
+
+    withLoggingContext(listOf(field("key", "value"))) { uninitialized = "Initialized" }
+
+    // This won't compile unless `withLoggingContext` uses `callsInPlace` contract with
+    // `InvocationKind.EXACTLY_ONCE`
+    useString(uninitialized)
+  }
+
+  @Test
+  fun `lambda uses EXACTLY_ONCE contract in withLoggingContext existingContext overload`() {
+    val uninitialized: String
+
+    withLoggingContext(getLoggingContext()) { uninitialized = "Initialized" }
+
+    // This won't compile unless `withLoggingContext` uses `callsInPlace` contract with
+    // `InvocationKind.EXACTLY_ONCE`
+    useString(uninitialized)
+  }
+
+  // Dummy method for contract tests
+  private fun useString(string: String): Int {
+    return string.length
   }
 }
