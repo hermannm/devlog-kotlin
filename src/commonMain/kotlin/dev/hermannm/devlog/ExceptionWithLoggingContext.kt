@@ -83,7 +83,7 @@ package dev.hermannm.devlog
  */
 public open class ExceptionWithLoggingContext(
     /** The exception message. */
-    message: String? = null,
+    message: String?,
     override val logFields: Collection<LogField> = emptyList(),
     /**
      * The cause of the exception. If you're throwing this exception after catching another, you
@@ -143,34 +143,6 @@ public open class ExceptionWithLoggingContext(
     }
   }
 }
-
-public fun Throwable.withLoggingContext(message: String?, vararg logFields: LogField) =
-    ExceptionWithLoggingContext(
-        message = message,
-        logFields = logFields.asList(),
-        cause = this,
-    )
-
-public fun Throwable.withLoggingContext(message: String?, logFields: Collection<LogField>) =
-    ExceptionWithLoggingContext(
-        message = message,
-        logFields = logFields,
-        cause = this,
-    )
-
-public fun Throwable.withLoggingContext(vararg logFields: LogField) =
-    ExceptionWithLoggingContext(
-        message = null,
-        logFields = logFields.asList(),
-        cause = this,
-    )
-
-public fun Throwable.withLoggingContext(logFields: Collection<LogField>) =
-    ExceptionWithLoggingContext(
-        message = null,
-        logFields = logFields,
-        cause = this,
-    )
 
 /**
  * Interface to allow you to attach [log fields][LogField] to exceptions. When passing a `cause`
