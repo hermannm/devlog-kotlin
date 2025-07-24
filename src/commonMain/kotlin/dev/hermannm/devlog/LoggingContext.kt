@@ -204,6 +204,69 @@ internal inline fun <ReturnT> withLoggingContextInternal(
   }
 }
 
+/**
+ * Applies the fields from the given logging context to all logs made by a [Logger] in the context
+ * of the given [block].
+ *
+ * This overload of [withLoggingContext][dev.hermannm.devlog.withLoggingContext] is designed to be
+ * used with [getLoggingContext], to pass logging context between threads. If you want to add fields
+ * to the current thread's logging context, you should instead construct log fields with the
+ * [field]/[rawJsonField] functions, and pass them to one of the
+ * [withLoggingContext][dev.hermannm.devlog.withLoggingContext] overloads that take [LogField]s.
+ *
+ * If you spawn threads using a `java.util.concurrent.ExecutorService`, you may instead use the
+ * `dev.hermannm.devlog.inheritLoggingContext` extension function, which passes logging context from
+ * parent to child for you.
+ *
+ * ### Example
+ *
+ * Scenario: We store an updated order in a database, and then want to asynchronously update
+ * statistics for the order.
+ *
+ * ```
+ * import dev.hermannm.devlog.field
+ * import dev.hermannm.devlog.getLogger
+ * import dev.hermannm.devlog.getLoggingContext
+ * import dev.hermannm.devlog.withLoggingContext
+ * import kotlin.concurrent.thread
+ *
+ * private val log = getLogger()
+ *
+ * class OrderService(
+ *     private val orderRepository: OrderRepository,
+ *     private val statisticsService: StatisticsService,
+ * ) {
+ *   fun updateOrder(order: Order) {
+ *     // This is the default withLoggingContext overload, adding context to the current thread
+ *     withLoggingContext(field("order", order)) {
+ *       orderRepository.update(order)
+ *       updateStatistics(order)
+ *     }
+ *   }
+ *
+ *   // In this scenario, we don't want updateStatistics to block updateOrder, so we spawn a thread.
+ *   //
+ *   // But we want to log if it fails, and include the logging context from the parent thread.
+ *   private fun updateStatistics(order: Order) {
+ *     // We call getLoggingContext here, to copy the context fields from the parent thread
+ *     val loggingContext = getLoggingContext()
+ *
+ *     thread {
+ *       // We then pass the parent context to withLoggingContext here in the child thread.
+ *       // This uses the overload that takes an existing logging context
+ *       withLoggingContext(loggingContext) {
+ *         try {
+ *           statisticsService.orderUpdated(order)
+ *         } catch (e: Exception) {
+ *           // This log will get the "order" field from the parent logging context
+ *           log.error(e) { "Failed to update order statistics" }
+ *         }
+ *       }
+ *     }
+ *   }
+ * }
+ * ```
+ */
 public inline fun <ReturnT> withLoggingContext(
     existingContext: LoggingContext,
     block: () -> ReturnT
@@ -282,11 +345,11 @@ public inline fun <ReturnT> withLoggingContext(
 public expect fun getLoggingContext(): LoggingContext
 
 /**
- * Wraps a platform-specific representation of the thread-local logging context. On the JVM, this
- * uses SLF4J's MDC context map.
+ * Wraps a platform-specific representation of the thread-local logging context fields. On the JVM,
+ * this uses SLF4J's MDC context map.
  *
  * This type is returned by [getLoggingContext], and can be passed to one of the
- * `withLoggingContext` overloads in order to copy logging context between threads.
+ * [withLoggingContext] overloads in order to copy logging context between threads.
  */
 @kotlin.jvm.JvmInline
 public expect value class LoggingContext
