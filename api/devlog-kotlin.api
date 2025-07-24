@@ -147,7 +147,7 @@ public final class dev/hermannm/devlog/LoggingContextJvm {
 	public static final fun addLoggingContextToException (Ljava/lang/Throwable;)V
 	public static final fun getLoggingContext ()Ljava/lang/Object;
 	public static final fun inheritLoggingContext (Ljava/util/concurrent/ExecutorService;)Ljava/util/concurrent/ExecutorService;
-	public static final fun removeExistingContextFieldFromLoggingContext-0aYEv-s (Ljava/lang/Object;[Ljava/lang/String;)V
+	public static final fun removeExistingContextFieldsFromLoggingContext-0aYEv-s (Ljava/lang/Object;[Ljava/lang/String;)V
 	public static final fun removeFieldsFromLoggingContext-vNTxQKI ([Ldev/hermannm/devlog/LogField;[Ljava/lang/String;)V
 }
 

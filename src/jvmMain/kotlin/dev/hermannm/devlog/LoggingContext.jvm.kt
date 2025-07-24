@@ -22,9 +22,21 @@ public actual value class LoggingContext private constructor(private val platfor
 
   internal val fields: Map<String, String?>?
     get() {
+      /**
+       * This cast is safe, because:
+       * - The primary constructor taking `Any?` is private, so it can only be called in this class
+       * - The only thing that invokes the primary constructor is our secondary constructor that
+       *   takes `Map<String, String?>?`, so we know that `platformType` is always set to that
+       *
+       * See the [platformType] docs under `commonMain` for why we have to do this.
+       */
       @Suppress("UNCHECKED_CAST")
       return platformType as Map<String, String?>?
     }
+
+  internal fun isEmpty(): Boolean {
+    return fields.isNullOrEmpty()
+  }
 }
 
 internal actual val EMPTY_LOGGING_CONTEXT = LoggingContext(null)
@@ -191,7 +203,7 @@ internal actual fun addExistingContextFieldsToLoggingContext(
 }
 
 @PublishedApi
-internal actual fun removeExistingContextFieldFromLoggingContext(
+internal actual fun removeExistingContextFieldsFromLoggingContext(
     existingContext: LoggingContext,
     overwrittenFields: OverwrittenContextFields
 ) {
@@ -366,29 +378,6 @@ internal actual fun addContextFieldsToLogEvent(loggingContext: LoggingContext, l
   }
 }
 
-/** Adds the given map of log fields to the logging context for the scope of the given [block]. */
-internal inline fun <ReturnT> withLoggingContextMap(
-    contextMap: Map<String, String?>,
-    block: () -> ReturnT
-): ReturnT {
-  val previousContextMap = getLoggingContextMap()
-  if (previousContextMap != null) {
-    MDC.setContextMap(previousContextMap + contextMap)
-  } else {
-    MDC.setContextMap(contextMap)
-  }
-
-  try {
-    return block()
-  } finally {
-    if (previousContextMap != null) {
-      MDC.setContextMap(previousContextMap)
-    } else {
-      MDC.clear()
-    }
-  }
-}
-
 /**
  * Wraps an [ExecutorService] in a new implementation that copies logging context fields (from
  * [withLoggingContext]) from the parent thread to child threads when spawning new tasks. This is
@@ -461,26 +450,26 @@ internal value class ExecutorServiceWithInheritedLoggingContext(
     // Copy context fields here, to get the logging context of the parent thread.
     // We then pass this to withLoggingContext in the returned Callable below, which will be invoked
     // in the child thread, thus inheriting the parent's context fields.
-    val contextFields = getLoggingContextMap()
+    val parentLoggingContext = getLoggingContext()
 
-    if (contextFields.isNullOrEmpty()) {
+    if (parentLoggingContext.isEmpty()) {
       return callable
     }
 
-    return Callable { withLoggingContextMap(contextFields) { callable.call() } }
+    return Callable { withLoggingContext(parentLoggingContext) { callable.call() } }
   }
 
   private fun wrapRunnable(runnable: Runnable): Runnable {
     // Copy context fields here, to get the logging context of the parent thread.
     // We then pass this to withLoggingContext in the returned Runnable below, which will be invoked
     // in the child thread, thus inheriting the parent's context fields.
-    val contextFields = getLoggingContextMap()
+    val parentLoggingContext = getLoggingContext()
 
-    if (contextFields.isNullOrEmpty()) {
+    if (parentLoggingContext.isEmpty()) {
       return runnable
     }
 
-    return Runnable { withLoggingContextMap(contextFields) { runnable.run() } }
+    return Runnable { withLoggingContext(parentLoggingContext) { runnable.run() } }
   }
 
   override fun execute(command: Runnable) {

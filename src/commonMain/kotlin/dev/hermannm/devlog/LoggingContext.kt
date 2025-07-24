@@ -199,7 +199,7 @@ public inline fun <ReturnT> withLoggingContext(
     addLoggingContextToException(e)
     throw e
   } finally {
-    removeExistingContextFieldFromLoggingContext(existingContext, overwrittenFields)
+    removeExistingContextFieldsFromLoggingContext(existingContext, overwrittenFields)
   }
 }
 
@@ -262,9 +262,29 @@ public inline fun <ReturnT> withLoggingContext(
  */
 public expect fun getLoggingContext(): LoggingContext
 
+/**
+ * Wraps a platform-specific representation of the thread-local logging context. On the JVM, this
+ * uses SLF4J's MDC context map.
+ *
+ * This type is returned by [getLoggingContext], and can be passed to one of the
+ * `withLoggingContext` overloads in order to copy logging context between threads.
+ */
 @kotlin.jvm.JvmInline
-public expect value class LoggingContext private constructor(private val platformType: Any?)
+public expect value class LoggingContext
+private constructor(
+    /**
+     * The platform-specific representation of the logging context. On the JVM, this is a
+     * `Map<String, String?>?`, which is the type used by SLF4J's MDC.
+     *
+     * We would prefer to use a per-platform typealias for this, but unfortunately Kotlin doesn't
+     * allow `actual` typealiases for generic types. So we get around this by marking the
+     * constructor `private`, and providing type-safe constructors and accessors in the platform
+     * implementation.
+     */
+    private val platformType: Any?,
+)
 
+/** Static field for the empty logging context, to avoid redundant re-instantiations. */
 internal expect val EMPTY_LOGGING_CONTEXT: LoggingContext
 
 @PublishedApi
@@ -287,7 +307,7 @@ internal expect fun addExistingContextFieldsToLoggingContext(
 
 /** Like [removeFieldsFromLoggingContext], but for [addExistingContextFieldsToLoggingContext]. */
 @PublishedApi
-internal expect fun removeExistingContextFieldFromLoggingContext(
+internal expect fun removeExistingContextFieldsFromLoggingContext(
     existingContext: LoggingContext,
     overwrittenFields: OverwrittenContextFields
 )
@@ -304,8 +324,8 @@ internal expect fun cleanupExceptionLoggingContext()
 
 /**
  * Fields (key/value pairs) that were overwritten by [addFieldsToLoggingContext], passed to
- * [removeExistingContextFieldFromLoggingContext] so we can restore the previous field values after
- * the current logging context exits.
+ * [removeFieldsFromLoggingContext] so we can restore the previous field values after the current
+ * logging context exits.
  *
  * We want this object to be as efficient as possible, since it will be kept around for the whole
  * span of a [withLoggingContext] scope, which may last a while. To support this goal, we:
