@@ -1,4 +1,4 @@
-@file:JvmName("ExceptionWithLogFieldsJvm")
+@file:JvmName("ExceptionWithLoggingContextJvm")
 
 package dev.hermannm.devlog
 
