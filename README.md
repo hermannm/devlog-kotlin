@@ -109,9 +109,8 @@ fun processEvent(event: Event) {
 ```
 
 If an exception is thrown from inside `withLoggingContext`, the logging context is attached to the
-exception. That way, we don't lose context when an exception escapes from the logging context -
-which is when we need this context the most! When the exception is logged, these fields are included
-in the output.
+exception. That way, we don't lose context when an exception escapes from the context scope - which
+is when we need it the most! When the exception is logged, these fields are included in the output.
 
 You can log an exception like this:
 
@@ -125,7 +124,7 @@ fun example() {
 }
 ```
 
-If you want to add structured log fields to an exception when it's thrown, you can use
+If you want to add log fields to an exception when it's thrown, you can use
 `ExceptionWithLoggingContext`:
 
 ```kotlin
@@ -148,7 +147,7 @@ fun callExternalService() {
 ```
 
 This is useful when you are throwing an exception from somewhere down in the stack, but do logging
-further up the stack, and you have structured data at the throw-site that you want to attach to the
+further up the stack, and you have structured data at the throw site that you want to attach to the
 exception log. In this case, one may typically resort to string concatenation, but
 `ExceptionWithLoggingContext` allows you to have the benefits of structured logging for exceptions
 as well.
