@@ -181,11 +181,11 @@ for JSON output, add the following dependencies:
   ```kotlin
   dependencies {
     // Logger API
-    implementation("dev.hermannm:devlog-kotlin:${devlogKotlinVersion}")
+    implementation("dev.hermannm:devlog-kotlin:${devlogVersion}")
     // Logger implementation
     runtimeOnly("ch.qos.logback:logback-classic:${logbackVersion}")
     // JSON encoding of logs
-    runtimeOnly("net.logstash.logback:logstash-logback-encoder:${logstashLogbackEncoderVersion}")
+    runtimeOnly("net.logstash.logback:logstash-logback-encoder:${logstashEncoderVersion}")
   }
   ```
 - **Maven:**
