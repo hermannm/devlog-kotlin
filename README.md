@@ -135,11 +135,11 @@ import dev.hermannm.devlog.field
 fun callExternalService() {
   val response = sendHttpRequest()
   if (!response.status.successful) {
-    // When this exception is caught and logged, "statusCode" and "responseBody" will be included as
-    // structured fields in the log output.
-    // You can also inherit from this exception class for your own custom exceptions.
+    // When this exception is caught and logged, "statusCode" and "responseBody"
+    // will be included as structured fields in the log output.
+    // You can also extend this exception class for your own custom exceptions.
     throw ExceptionWithLoggingContext(
-      "Received non-successful response from external service",
+      "Received error response from external service",
       field("statusCode", response.status.code),
       field("responseBody", response.bodyString()),
     )
@@ -148,9 +148,10 @@ fun callExternalService() {
 ```
 
 This is useful when you are throwing an exception from somewhere down in the stack, but do logging
-further up the stack, and you have structured data that you want to attach to the exception log. In
-this case, one may typically resort to string concatenation, but this class allows you to have the
-benefits of structured logging for exceptions as well.
+further up the stack, and you have structured data at the throw-site that you want to attach to the
+exception log. In this case, one may typically resort to string concatenation, but
+`ExceptionWithLoggingContext` allows you to have the benefits of structured logging for exceptions
+as well.
 
 For more detailed documentation of the classes and functions provided by the library, see
 <https://devlog-kotlin.hermannm.dev>.
