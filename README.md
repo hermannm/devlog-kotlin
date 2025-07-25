@@ -11,6 +11,7 @@ runtime overhead. Currently only supports the JVM platform, wrapping SLF4J.
 **Contents:**
 
 - [Usage](#usage)
+  - [Note on coroutines](#note-on-coroutines)
 - [Adding to your project](#adding-to-your-project)
 - [Implementation](#implementation)
   - [Performance](#performance)
@@ -107,14 +108,12 @@ fun processEvent(event: Event) {
 { "message": "Finished processing event", "eventId": "..." }
 ```
 
-Note that `withLoggingContext` uses a thread-local
-([SLF4J's `MDC`](https://logback.qos.ch/manual/mdc.html)) to provide log fields to the scope, so it
-won't work with Kotlin coroutines and `suspend` functions. If you use coroutines, you can solve this
-with
-[`MDCContext` from
-`kotlinx-coroutines-slf4j`](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-slf4j/kotlinx.coroutines.slf4j/-m-d-c-context/).
+If an exception is thrown from inside `withLoggingContext`, the logging context is attached to the
+exception. That way, we don't lose context when an exception escapes from the logging context -
+which is when we need this context the most! When the exception is logged, these fields are included
+in the output.
 
-Lastly, you can attach a cause exception to the log like this:
+You can log an exception like this:
 
 ```kotlin
 fun example() {
@@ -126,8 +125,44 @@ fun example() {
 }
 ```
 
+If you want to add structured log fields to an exception when it's thrown, you can use
+`ExceptionWithLoggingContext`:
+
+```kotlin
+import dev.hermannm.devlog.ExceptionWithLoggingContext
+import dev.hermannm.devlog.field
+
+fun callExternalService() {
+  val response = sendHttpRequest()
+  if (!response.status.successful) {
+    // When this exception is caught and logged, "statusCode" and "responseBody" will be included as
+    // structured fields in the log output.
+    // You can also inherit from this exception class for your own custom exceptions.
+    throw ExceptionWithLoggingContext(
+      "Received non-successful response from external service",
+      field("statusCode", response.status.code),
+      field("responseBody", response.bodyString()),
+    )
+  }
+}
+```
+
+This is useful when you are throwing an exception from somewhere down in the stack, but do logging
+further up the stack, and you have structured data that you want to attach to the exception log. In
+this case, one may typically resort to string concatenation, but this class allows you to have the
+benefits of structured logging for exceptions as well.
+
 For more detailed documentation of the classes and functions provided by the library, see
 <https://devlog-kotlin.hermannm.dev>.
+
+### Note on coroutines
+
+`withLoggingContext` uses a thread-local
+([SLF4J's `MDC`](https://logback.qos.ch/manual/mdc.html)) to provide log fields to the scope, so it
+won't work with Kotlin coroutines and `suspend` functions. If you use coroutines, you can solve this
+with
+[`MDCContext` from
+`kotlinx-coroutines-slf4j`](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-slf4j/kotlinx.coroutines.slf4j/-m-d-c-context/).
 
 ## Adding to your project
 
@@ -268,7 +303,7 @@ great library, these are just my subjective opinions!). Here are some of the thi
 improve with this library:
 
 - **Structured logging**
-  - In `kotlin-logging`, going from a log _without_ structured log fields to a log _with_  them
+  - In `kotlin-logging`, going from a log _without_ structured log fields to a log _with_ them
     requires you to switch your logger method (`info` -> `atInfo`), use a different syntax
     (`message = ` instead of returning a string), and construct a map for the fields.
   - Having to switch syntax becomes a barrier for developers to do structured logging. In my
