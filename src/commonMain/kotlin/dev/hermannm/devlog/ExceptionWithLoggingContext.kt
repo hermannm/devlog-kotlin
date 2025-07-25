@@ -206,6 +206,12 @@ public interface HasLogFields {
   public val logFields: Collection<LogField>
 }
 
+internal expect class LoggingContextProvider : RuntimeException {
+  constructor(loggingContext: LoggingContext)
+
+  val loggingContext: LoggingContext
+}
+
 /**
  * Traverses the exception tree from the given root exception: Its cause exceptions and suppressed
  * exceptions, and any of their own cause or suppressed exceptions. The traversal is

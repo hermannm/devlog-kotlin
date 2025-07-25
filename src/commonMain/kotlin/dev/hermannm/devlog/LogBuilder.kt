@@ -286,19 +286,18 @@ internal constructor(
    */
   @PublishedApi
   internal fun addFieldsFromCauseException(cause: Throwable) {
-    cleanupExceptionLoggingContext()
-
     traverseExceptionTree(root = cause) { exception ->
-      if (exception is ExceptionWithLoggingContext) {
-        addFields(exception.logFields)
-        addContextFieldsToLogEvent(exception.loggingContext, logEvent)
-      } else {
-        if (exception is HasLogFields) {
+      when (exception) {
+        is ExceptionWithLoggingContext -> {
+          addFields(exception.logFields)
+          addContextFieldsToLogEvent(exception.loggingContext, logEvent)
+        }
+        is LoggingContextProvider -> {
+          addContextFieldsToLogEvent(exception.loggingContext, logEvent)
+        }
+        is HasLogFields -> {
           addFields(exception.logFields)
         }
-
-        val loggingContext = getExceptionLoggingContext(exception)
-        addContextFieldsToLogEvent(loggingContext, logEvent)
       }
     }
   }

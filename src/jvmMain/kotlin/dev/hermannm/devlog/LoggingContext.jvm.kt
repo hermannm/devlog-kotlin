@@ -2,11 +2,7 @@
 
 package dev.hermannm.devlog
 
-import java.lang.ref.Reference
-import java.lang.ref.ReferenceQueue
-import java.lang.ref.WeakReference
 import java.util.concurrent.Callable
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
@@ -266,88 +262,29 @@ private fun OverwrittenContextFields.getValueForKey(key: String): String? {
   return null
 }
 
-internal fun getLoggingContextMap(): Map<String, String?>? {
-  return MDC.getCopyOfContextMap()
-}
-
-private val exceptionContext = ConcurrentHashMap<WeakExceptionReference, Map<String, String?>>()
-
-/** See [ExceptionLookupKey]. */
-private val exceptionContextLookup: ConcurrentHashMap<*, Map<String, String?>>
-  inline get() = exceptionContext
-
-private val exceptionReferenceQueue = ReferenceQueue<Throwable>()
-
 @PublishedApi
 internal actual fun addLoggingContextToException(exception: Throwable) {
-  cleanupExceptionLoggingContext()
-
   if (hasContextForException(exception)) {
     return
   }
 
-  val loggingContext = getLoggingContextMap()
-  if (loggingContext.isNullOrEmpty()) {
+  val loggingContext = getLoggingContext()
+  if (loggingContext.isEmpty()) {
     return
   }
 
-  val exceptionRef = WeakExceptionReference(exception, exceptionReferenceQueue)
-  exceptionContext.put(exceptionRef, loggingContext)
-}
-
-internal actual fun getExceptionLoggingContext(exception: Throwable): LoggingContext {
-  return LoggingContext(exceptionContextLookup[ExceptionLookupKey(exception)])
+  val loggingContextProvider = LoggingContextProvider(loggingContext)
+  exception.addSuppressed(loggingContextProvider)
 }
 
 internal actual fun hasContextForException(exception: Throwable): Boolean {
-  traverseExceptionTree(exception) { exception ->
-    if (exception is ExceptionWithLoggingContext ||
-        exceptionContextLookup.containsKey(ExceptionLookupKey(exception))) {
-      return true
+  traverseExceptionTree(root = exception) { exception ->
+    when (exception) {
+      is ExceptionWithLoggingContext,
+      is LoggingContextProvider -> return true
     }
   }
   return false
-}
-
-internal actual fun cleanupExceptionLoggingContext() {
-  var exceptionReference: Reference<out Throwable>? = exceptionReferenceQueue.poll()
-  while (exceptionReference != null) {
-    exceptionContext.remove(exceptionReference)
-
-    exceptionReference = exceptionReferenceQueue.poll()
-  }
-}
-
-private class WeakExceptionReference(
-    exception: Throwable,
-    queue: ReferenceQueue<Throwable>?,
-) : WeakReference<Throwable>(exception, queue) {
-  val exceptionHashCode = System.identityHashCode(exception)
-
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    return when (other) {
-      is WeakExceptionReference -> this.exceptionHashCode == other.exceptionHashCode
-      is ExceptionLookupKey -> this.exceptionHashCode == other.exceptionHashCode
-      else -> false
-    }
-  }
-
-  override fun hashCode(): Int = exceptionHashCode
-}
-
-private class ExceptionLookupKey(exception: Throwable) {
-  val exceptionHashCode = System.identityHashCode(exception)
-
-  override fun equals(other: Any?): Boolean {
-    if (other is WeakExceptionReference) {
-      return this.exceptionHashCode == other.exceptionHashCode
-    } else {
-      return false
-    }
-  }
-
-  override fun hashCode(): Int = exceptionHashCode
 }
 
 internal actual fun addContextFieldsToLogEvent(loggingContext: LoggingContext, logEvent: LogEvent) {
