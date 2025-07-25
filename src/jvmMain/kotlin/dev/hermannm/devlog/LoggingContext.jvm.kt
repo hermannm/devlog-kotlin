@@ -16,22 +16,21 @@ public actual fun getLoggingContext(): LoggingContext {
 public actual value class LoggingContext private constructor(private val platformType: Any?) {
   internal constructor(contextMap: Map<String, String?>?) : this(platformType = contextMap)
 
-  internal val fields: Map<String, String?>?
-    get() {
-      /**
-       * This cast is safe, because:
-       * - The primary constructor taking `Any?` is private, so it can only be called in this class
-       * - The only thing that invokes the primary constructor is our secondary constructor that
-       *   takes `Map<String, String?>?`, so we know that `platformType` is always set to that
-       *
-       * See the [platformType] docs under `commonMain` for why we have to do this.
-       */
-      @Suppress("UNCHECKED_CAST")
-      return platformType as Map<String, String?>?
-    }
+  internal fun getFields(): Map<String, String?>? {
+    /**
+     * This cast is safe, because:
+     * - The primary constructor taking `Any?` is private, so it can only be called in this class
+     * - The only thing that invokes the primary constructor is our secondary constructor that takes
+     *   `Map<String, String?>?`, so we know that `platformType` is always set to that
+     *
+     * See the [platformType] docs under `commonMain` for why we have to do this.
+     */
+    @Suppress("UNCHECKED_CAST")
+    return platformType as Map<String, String?>?
+  }
 
   internal fun isEmpty(): Boolean {
-    return fields.isNullOrEmpty()
+    return getFields().isNullOrEmpty()
   }
 }
 
@@ -149,7 +148,7 @@ internal actual fun addExistingContextFieldsToLoggingContext(
 ): OverwrittenContextFields {
   var overwrittenFields = OverwrittenContextFields(null)
 
-  val contextFields = existingContext.fields
+  val contextFields = existingContext.getFields()
   if (contextFields == null) {
     return overwrittenFields
   }
@@ -203,7 +202,7 @@ internal actual fun removeExistingContextFieldsFromLoggingContext(
     existingContext: LoggingContext,
     overwrittenFields: OverwrittenContextFields
 ) {
-  val contextFields = existingContext.fields
+  val contextFields = existingContext.getFields()
   if (contextFields.isNullOrEmpty()) {
     return
   }
@@ -288,7 +287,7 @@ internal actual fun hasContextForException(exception: Throwable): Boolean {
 }
 
 internal actual fun addContextFieldsToLogEvent(loggingContext: LoggingContext, logEvent: LogEvent) {
-  val contextFields = loggingContext.fields
+  val contextFields = loggingContext.getFields()
   if (contextFields == null) {
     return
   }

@@ -7,7 +7,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 
 internal fun loggingContextShouldContainExactly(expectedFields: Map<String, String>) {
-  val contextFields = getLoggingContext().fields
+  val contextFields = getLoggingContext().getFields()
   contextFields.shouldNotBeNull()
 
   contextFields.size shouldBe expectedFields.size
@@ -21,6 +21,6 @@ internal fun loggingContextShouldContainExactly(expectedFields: Map<String, Stri
 }
 
 internal fun loggingContextShouldBeEmpty() {
-  val contextFields = getLoggingContext().fields
+  val contextFields = getLoggingContext().getFields()
   contextFields.isNullOrEmpty().shouldBeTrue()
 }
