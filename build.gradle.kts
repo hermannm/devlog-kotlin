@@ -15,7 +15,7 @@ mavenPublishing {
   pom {
     name = "devlog-kotlin"
     description =
-        "Structured logging library for Kotlin, that aims to provide a developer-friendly API with near-zero runtime overhead."
+        "Structured logging library for Kotlin, that aims to provide a developer-friendly API with minimal runtime overhead."
     url = "https://devlog-kotlin.hermannm.dev"
     inceptionYear = "2024"
 
