@@ -372,11 +372,11 @@ internal constructor(
       cause: Throwable?,
       crossinline buildLog: LogBuilder.() -> String,
   ) {
-    val builder = LogBuilder(createLogEvent(level, cause, underlyingLogger))
+    val builder = LogBuilder(createLogEvent(level, underlyingLogger))
     val message = builder.buildLog()
     if (cause != null) {
       // Call this after buildLog(), so cause exception fields don't overwrite LogBuilder fields
-      builder.addFieldsFromCauseException(cause)
+      builder.setCause(cause, underlyingLogger)
     }
 
     builder.logEvent.log(message, underlyingLogger)

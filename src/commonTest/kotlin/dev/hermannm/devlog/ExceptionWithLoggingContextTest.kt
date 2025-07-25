@@ -350,7 +350,7 @@ internal class ExceptionWithLoggingContextTest {
     exception.logFields shouldBe listOf(field("key1", "value1"), field("key2", "value2"))
   }
 
-  /** See comment in [LogBuilder.addFieldsFromCauseException]. */
+  /** See comments in [traverseExceptionTree]. */
   @Test
   fun `exception cause cycle should not cause infinite loop`() {
     class EvilException : Exception() {

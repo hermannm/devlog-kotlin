@@ -4,11 +4,17 @@ package dev.hermannm.devlog
 
 import ch.qos.logback.classic.Level as LogbackLevel
 import ch.qos.logback.classic.Logger as LogbackLogger
+import ch.qos.logback.classic.spi.IThrowableProxy
 import ch.qos.logback.classic.spi.LoggingEvent as BaseLogbackEvent
+import ch.qos.logback.classic.spi.PackagingDataCalculator
+import ch.qos.logback.classic.spi.StackTraceElementProxy
+import ch.qos.logback.classic.spi.ThrowableProxy
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializable
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer
+import java.util.Collections
+import java.util.IdentityHashMap
 import org.slf4j.Logger as Slf4jLogger
 import org.slf4j.event.DefaultLoggingEvent as BaseSlf4jEvent
 import org.slf4j.event.KeyValuePair
@@ -17,16 +23,12 @@ import org.slf4j.spi.LocationAwareLogger
 import org.slf4j.spi.LoggingEventAware
 
 @PublishedApi
-internal actual fun createLogEvent(
-    level: LogLevel,
-    cause: Throwable?,
-    logger: Slf4jLogger
-): LogEvent {
+internal actual fun createLogEvent(level: LogLevel, logger: Slf4jLogger): LogEvent {
   if (LOGBACK_IS_ON_CLASSPATH && logger is LogbackLogger) {
-    return LogbackLogEvent(level, cause, logger)
+    return LogbackLogEvent(level, logger)
   }
 
-  return Slf4jLogEvent(level, cause, logger)
+  return Slf4jLogEvent(level, logger)
 }
 
 /**
@@ -47,74 +49,18 @@ internal val LOGBACK_IS_ON_CLASSPATH =
       false
     }
 
-/** Extends Logback's custom log event class to implement [LogEvent]. */
-internal class LogbackLogEvent(level: LogLevel, cause: Throwable?, logger: LogbackLogger) :
-    LogEvent,
-    BaseLogbackEvent(
-        FULLY_QUALIFIED_CLASS_NAME,
-        logger,
-        level.toLogback(),
-        null, // message (we set this when finalizing the log)
-        cause,
-        null, // argArray (we don't use this)
-    ) {
-  override fun addStringField(key: String, value: String) {
-    super.addKeyValuePair(KeyValuePair(key, value))
-  }
-
-  override fun addJsonField(key: String, json: String) {
-    super.addKeyValuePair(KeyValuePair(key, RawJson(json)))
-  }
-
-  override fun isFieldKeyAdded(key: String): Boolean {
-    // getKeyValuePairs may return null if no fields have been added yet
-    val fields = super.getKeyValuePairs() ?: return false
-    return fields.any { it.key == key }
-  }
-
-  override fun log(message: String, logger: PlatformLogger) {
-    super.setMessage(message)
-
-    // Safe to cast here, since we only construct this event if the logger is a LogbackLogger.
-    // We choose to cast instead of keeping the LogbackLogger as a field on the event, since casting
-    // to a concrete class is fast, and we don't want to increase the allocated size of the event.
-    (logger as LogbackLogger).callAppenders(this)
-  }
-
-  internal companion object {
-    /**
-     * SLF4J has the concept of a "caller boundary": the fully qualified class name of the logger
-     * class that made the log. This is used by logger implementations, such as Logback, when the
-     * user enables "caller info": showing the location in the source code where the log was made.
-     * Logback then knows to exclude stack trace elements up to this caller boundary, since the user
-     * wants to see where in _their_ code the log was made, not the location in the logging library.
-     *
-     * In our case, the caller boundary is in fact not [dev.hermannm.devlog.Logger], but our
-     * [LogEvent] implementations. This is because all the methods on `Logger` are `inline` - so the
-     * logger method actually called by user code at runtime is [LogbackLogEvent.log] /
-     * [Slf4jLogEvent.log].
-     */
-    internal val FULLY_QUALIFIED_CLASS_NAME = LogbackLogEvent::class.java.name
-  }
-}
-
-internal fun LogLevel.toLogback(): LogbackLevel {
-  return this.match(
-      ERROR = { LogbackLevel.ERROR },
-      WARN = { LogbackLevel.WARN },
-      INFO = { LogbackLevel.INFO },
-      DEBUG = { LogbackLevel.DEBUG },
-      TRACE = { LogbackLevel.TRACE },
-  )
-}
-
 /** Extends SLF4J's log event class to implement [LogEvent]. */
-internal class Slf4jLogEvent(level: LogLevel, cause: Throwable?, logger: Slf4jLogger) :
-    LogEvent, BaseSlf4jEvent(level.toSlf4j(), logger) {
+internal class Slf4jLogEvent(
+    level: LogLevel,
+    logger: Slf4jLogger,
+) : LogEvent, BaseSlf4jEvent(level.toSlf4j(), logger) {
   init {
-    super.setThrowable(cause)
     super.setCallerBoundary(FULLY_QUALIFIED_CLASS_NAME)
     super.setTimeStamp(System.currentTimeMillis())
+  }
+
+  override fun setCause(cause: Throwable, logger: Slf4jLogger, logBuilder: LogBuilder) {
+    super.setThrowable(cause)
   }
 
   override fun addStringField(key: String, value: String) = super.addKeyValue(key, value)
@@ -198,9 +144,12 @@ internal class Slf4jLogEvent(level: LogLevel, cause: Throwable?, logger: Slf4jLo
     return builder.toString()
   }
 
+  /** We don't traverse the cause exception tree in this log event implementation. */
+  override fun handlesExceptionTreeTraversal(): Boolean = false
+
   internal companion object {
     /** See [LogbackLogEvent.FULLY_QUALIFIED_CLASS_NAME]. */
-    internal val FULLY_QUALIFIED_CLASS_NAME = Slf4jLogEvent::class.java.name
+    @JvmField internal val FULLY_QUALIFIED_CLASS_NAME = Slf4jLogEvent::class.java.name
   }
 }
 
@@ -212,6 +161,269 @@ internal fun LogLevel.toSlf4j(): Slf4jLevel {
       DEBUG = { Slf4jLevel.DEBUG },
       TRACE = { Slf4jLevel.TRACE },
   )
+}
+
+/** Extends Logback's custom log event class to implement [LogEvent]. */
+internal class LogbackLogEvent(level: LogLevel, logger: LogbackLogger) :
+    LogEvent,
+    BaseLogbackEvent(
+        FULLY_QUALIFIED_CLASS_NAME,
+        logger,
+        level.toLogback(),
+        null, // message (we set this when finalizing the log)
+        null, // cause (we set this in `setCause`)
+        null, // argArray (we don't use this)
+    ) {
+  private var cause: CustomLogbackThrowableProxy? = null
+
+  override fun setCause(cause: Throwable, logger: PlatformLogger, logBuilder: LogBuilder) {
+    val cause = CustomLogbackThrowableProxy(cause, logBuilder)
+    if (logger.asLogbackLogger().loggerContext.isPackagingDataEnabled) {
+      cause.calculatePackageData()
+    }
+    this.cause = cause
+  }
+
+  override fun addStringField(key: String, value: String) {
+    super.addKeyValuePair(KeyValuePair(key, value))
+  }
+
+  override fun addJsonField(key: String, json: String) {
+    super.addKeyValuePair(KeyValuePair(key, RawJson(json)))
+  }
+
+  override fun isFieldKeyAdded(key: String): Boolean {
+    // getKeyValuePairs may return null if no fields have been added yet
+    val fields = super.getKeyValuePairs() ?: return false
+    return fields.any { it.key == key }
+  }
+
+  override fun log(message: String, logger: PlatformLogger) {
+    super.setMessage(message)
+
+    logger.asLogbackLogger().callAppenders(this)
+  }
+
+  override fun getThrowableProxy(): IThrowableProxy? = cause
+
+  /** Override to no-op, since we set our own [CustomLogbackThrowableProxy]. */
+  override fun setThrowableProxy(tp: ThrowableProxy?) {}
+
+  /**
+   * We traverse the cause exception tree when constructing [CustomLogbackThrowableProxy] in
+   * [setCause].
+   */
+  override fun handlesExceptionTreeTraversal(): Boolean = true
+
+  internal companion object {
+    /**
+     * When a [LogbackLogEvent] is constructed, we know the `logger` is a [LogbackLogger]. So when
+     * we receive the logger again in [setCause] and [log], we can safely cast it. It's fast to cast
+     * to a concrete class, so we'd rather do that than increase the allocated size of the event by
+     * adding a field.
+     */
+    @JvmStatic
+    private fun PlatformLogger.asLogbackLogger(): LogbackLogger {
+      return this as LogbackLogger
+    }
+
+    /**
+     * SLF4J has the concept of a "caller boundary": the fully qualified class name of the logger
+     * class that made the log. This is used by logger implementations, such as Logback, when the
+     * user enables "caller info": showing the location in the source code where the log was made.
+     * Logback then knows to exclude stack trace elements up to this caller boundary, since the user
+     * wants to see where in _their_ code the log was made, not the location in the logging library.
+     *
+     * In our case, the caller boundary is in fact not [dev.hermannm.devlog.Logger], but our
+     * [LogEvent] implementations. This is because all the methods on `Logger` are `inline` - so the
+     * logger method actually called by user code at runtime is [LogbackLogEvent.log] /
+     * [Slf4jLogEvent.log].
+     */
+    @JvmField internal val FULLY_QUALIFIED_CLASS_NAME = LogbackLogEvent::class.java.name
+  }
+}
+
+internal fun LogLevel.toLogback(): LogbackLevel {
+  return this.match(
+      ERROR = { LogbackLevel.ERROR },
+      WARN = { LogbackLevel.WARN },
+      INFO = { LogbackLevel.INFO },
+      DEBUG = { LogbackLevel.DEBUG },
+      TRACE = { LogbackLevel.TRACE },
+  )
+}
+
+/**
+ * Implements Logback's [IThrowableProxy] interface to omit [LoggingContextProvider] from suppressed
+ * exceptions (since we only use that exception to carry logging context, and we don't want it to
+ * show up in the logged stack trace).
+ */
+internal class CustomLogbackThrowableProxy : IThrowableProxy {
+  @JvmField internal val throwable: Throwable
+  private val className: String
+  private val message: String?
+  private val stackTrace: Array<StackTraceElementProxy>
+  private var cause: CustomLogbackThrowableProxy? = null
+  private var suppressed: Array<CustomLogbackThrowableProxy> = EMPTY_SUPPRESSED_ARRAY
+  private var commonFrames: Int = 0
+  private var cyclic: Boolean
+  private var packageDataCalculated = false
+
+  constructor(
+      throwable: Throwable,
+      logBuilder: LogBuilder,
+  ) : this(
+      throwable,
+      logBuilder,
+      alreadyProcessed = Collections.newSetFromMap(IdentityHashMap()),
+  )
+
+  private constructor(
+      throwable: Throwable,
+      logBuilder: LogBuilder,
+      alreadyProcessed: MutableSet<Throwable>,
+      alreadyCheckedForLogFields: Boolean = false,
+  ) {
+    if (!alreadyCheckedForLogFields) {
+      logBuilder.addFieldsFromException(throwable)
+    }
+
+    this.throwable = throwable
+    this.className = throwable.javaClass.name
+    this.message = throwable.message
+    this.stackTrace = stackTraceToProxy(throwable.stackTrace)
+    this.cyclic = false
+
+    alreadyProcessed.add(throwable)
+
+    val cause = throwable.cause
+    if (cause != null) {
+      if (alreadyProcessed.contains(cause)) {
+        this.cause = CustomLogbackThrowableProxy(cause, isCyclic = true)
+      } else {
+        val causeProxy = CustomLogbackThrowableProxy(cause, logBuilder, alreadyProcessed)
+        causeProxy.commonFrames = countCommonFrames(cause.stackTrace, this.stackTrace)
+        this.cause = causeProxy
+      }
+    }
+
+    val suppressed: Array<Throwable> = throwable.suppressed
+    if (suppressed.isNotEmpty()) {
+      var indexOfLoggingContextProvider = -1
+      suppressed.forEachIndexed { index, suppressedThrowable ->
+        when (suppressedThrowable) {
+          is LoggingContextProvider -> {
+            indexOfLoggingContextProvider = index
+            addContextFieldsToLogEvent(suppressedThrowable.loggingContext, logBuilder.logEvent)
+          }
+          is ExceptionWithLoggingContext -> {
+            logBuilder.addFields(suppressedThrowable.logFields)
+            addContextFieldsToLogEvent(suppressedThrowable.loggingContext, logBuilder.logEvent)
+          }
+          is HasLogFields -> {
+            logBuilder.addFields(suppressedThrowable.logFields)
+          }
+        }
+      }
+
+      val hasLoggingContextProvider = indexOfLoggingContextProvider != -1
+      val newArraySize = if (hasLoggingContextProvider) suppressed.size - 1 else suppressed.size
+
+      this.suppressed =
+          Array(newArraySize) { index ->
+            val indexInOriginal =
+                if (hasLoggingContextProvider && index >= indexOfLoggingContextProvider) {
+                  index + 1
+                } else {
+                  index
+                }
+            val suppressedThrowable = suppressed[indexInOriginal]
+
+            if (alreadyProcessed.contains(suppressedThrowable)) {
+              return@Array CustomLogbackThrowableProxy(suppressedThrowable, isCyclic = true)
+            }
+
+            val suppressedProxy =
+                CustomLogbackThrowableProxy(
+                    suppressedThrowable,
+                    logBuilder,
+                    alreadyProcessed,
+                    // Since we check when looking for `indexOfLoggingContextProvider` above
+                    alreadyCheckedForLogFields = true,
+                )
+            suppressedProxy.commonFrames =
+                countCommonFrames(suppressedThrowable.stackTrace, this.stackTrace)
+            return@Array suppressedProxy
+          }
+    }
+  }
+
+  private constructor(throwable: Throwable, @Suppress("unused") isCyclic: Boolean) {
+    this.throwable = throwable
+    this.className = throwable.javaClass.name
+    this.message = throwable.message
+    this.stackTrace = EMPTY_STACK_TRACE
+    this.cyclic = true
+  }
+
+  fun calculatePackageData() {
+    if (!packageDataCalculated) {
+      packageDataCalculated = true
+      PackagingDataCalculator().calculate(this)
+    }
+  }
+
+  override fun getMessage(): String? = message
+
+  override fun getClassName(): String = className
+
+  override fun getStackTraceElementProxyArray(): Array<out StackTraceElementProxy> = stackTrace
+
+  override fun getCommonFrames(): Int = commonFrames
+
+  override fun getCause(): IThrowableProxy? = cause
+
+  override fun getSuppressed(): Array<out IThrowableProxy> = suppressed
+
+  override fun isCyclic(): Boolean = cyclic
+
+  private companion object {
+    private val EMPTY_SUPPRESSED_ARRAY: Array<CustomLogbackThrowableProxy> = emptyArray()
+    private val EMPTY_STACK_TRACE: Array<StackTraceElementProxy> = emptyArray()
+
+    @JvmStatic
+    private fun stackTraceToProxy(
+        stackTrace: Array<StackTraceElement>
+    ): Array<StackTraceElementProxy> {
+      if (stackTrace.isEmpty()) {
+        return EMPTY_STACK_TRACE
+      } else {
+        return Array(stackTrace.size) { index -> StackTraceElementProxy(stackTrace[index]) }
+      }
+    }
+
+    @JvmStatic
+    private fun countCommonFrames(
+        childStackTrace: Array<StackTraceElement>,
+        parentStackTrace: Array<StackTraceElementProxy>
+    ): Int {
+      var commonFrames = 0
+      var childIndex = childStackTrace.size - 1
+      var parentIndex = parentStackTrace.size - 1
+      while (childIndex >= 0 && parentIndex >= 0) {
+        val childStackTraceElement = childStackTrace[childIndex]
+        val parentStackTraceElement = parentStackTrace[parentIndex].stackTraceElement
+        if (childStackTraceElement == parentStackTraceElement) {
+          commonFrames++
+        } else {
+          break
+        }
+        childIndex--
+        parentIndex--
+      }
+      return commonFrames
+    }
+  }
 }
 
 /**

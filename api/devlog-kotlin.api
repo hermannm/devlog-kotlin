@@ -23,7 +23,6 @@ public final class dev/hermannm/devlog/JsonLogField : dev/hermannm/devlog/LogFie
 public final class dev/hermannm/devlog/LogBuilder {
 	public static final fun addField-impl (Ldev/hermannm/devlog/LogEvent;Ldev/hermannm/devlog/LogField;)V
 	public static final fun addFields-impl (Ldev/hermannm/devlog/LogEvent;Ljava/util/Collection;)V
-	public static final fun addFieldsFromCauseException-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/Throwable;)V
 	public static final synthetic fun box-impl (Ldev/hermannm/devlog/LogEvent;)Ldev/hermannm/devlog/LogBuilder;
 	public static fun constructor-impl (Ldev/hermannm/devlog/LogEvent;)Ldev/hermannm/devlog/LogEvent;
 	public fun equals (Ljava/lang/Object;)Z
@@ -34,6 +33,7 @@ public final class dev/hermannm/devlog/LogBuilder {
 	public static fun hashCode-impl (Ldev/hermannm/devlog/LogEvent;)I
 	public static final fun rawJsonField-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/String;Ljava/lang/String;Z)V
 	public static synthetic fun rawJsonField-impl$default (Ldev/hermannm/devlog/LogEvent;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)V
+	public static final fun setCause-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/Throwable;Lorg/slf4j/Logger;)V
 	public fun toString ()Ljava/lang/String;
 	public static fun toString-impl (Ldev/hermannm/devlog/LogEvent;)Ljava/lang/String;
 	public final synthetic fun unbox-impl ()Ldev/hermannm/devlog/LogEvent;
@@ -42,12 +42,14 @@ public final class dev/hermannm/devlog/LogBuilder {
 public abstract interface class dev/hermannm/devlog/LogEvent {
 	public abstract fun addJsonField (Ljava/lang/String;Ljava/lang/String;)V
 	public abstract fun addStringField (Ljava/lang/String;Ljava/lang/String;)V
+	public abstract fun handlesExceptionTreeTraversal ()Z
 	public abstract fun isFieldKeyAdded (Ljava/lang/String;)Z
 	public abstract fun log (Ljava/lang/String;Lorg/slf4j/Logger;)V
+	public abstract fun setCause-ARkn0dU (Ljava/lang/Throwable;Lorg/slf4j/Logger;Ldev/hermannm/devlog/LogEvent;)V
 }
 
 public final class dev/hermannm/devlog/LogEventJvm {
-	public static final fun createLogEvent (Ldev/hermannm/devlog/LogLevel;Ljava/lang/Throwable;Lorg/slf4j/Logger;)Ldev/hermannm/devlog/LogEvent;
+	public static final fun createLogEvent (Ldev/hermannm/devlog/LogLevel;Lorg/slf4j/Logger;)Ldev/hermannm/devlog/LogEvent;
 }
 
 public abstract class dev/hermannm/devlog/LogField {

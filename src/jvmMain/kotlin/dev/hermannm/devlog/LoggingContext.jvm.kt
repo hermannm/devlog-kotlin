@@ -288,11 +288,12 @@ internal actual fun hasContextForException(exception: Throwable): Boolean {
 }
 
 internal actual fun addContextFieldsToLogEvent(loggingContext: LoggingContext, logEvent: LogEvent) {
-  if (loggingContext.fields == null) {
+  val contextFields = loggingContext.fields
+  if (contextFields == null) {
     return
   }
 
-  for ((key, value) in loggingContext.fields) {
+  for ((key, value) in contextFields) {
     if (value == null) {
       continue
     }

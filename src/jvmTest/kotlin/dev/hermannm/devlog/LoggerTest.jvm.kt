@@ -15,7 +15,6 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.date.shouldBeBetween
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 import java.lang.invoke.MethodHandles
 import java.time.Instant
 import kotlin.test.AfterTest
@@ -68,8 +67,16 @@ internal actual fun LoggerTestCase.verifyLogOutput(expectedLogLevel: LogLevel, b
   if (this.expectedCause == null) {
     logEvent.throwableProxy.shouldBeNull()
   } else {
-    val throwableProxy = logEvent.throwableProxy.shouldBeInstanceOf<ThrowableProxy>()
-    throwableProxy.throwable shouldBe this.expectedCause
+    val cause: Throwable =
+        when (val throwableProxy = logEvent.throwableProxy) {
+          is CustomLogbackThrowableProxy -> throwableProxy.throwable
+          is ThrowableProxy -> throwableProxy.throwable
+          else ->
+              throw IllegalStateException(
+                  "Unexpected ThrowableProxy type '${throwableProxy::class.qualifiedName}'",
+              )
+        }
+    cause shouldBe this.expectedCause
   }
 
   if (this.expectedFields.isEmpty()) {

@@ -285,19 +285,25 @@ internal constructor(
    * [HasLogFields] interface, and if so, adds those fields to the log.
    */
   @PublishedApi
-  internal fun addFieldsFromCauseException(cause: Throwable) {
-    traverseExceptionTree(root = cause) { exception ->
-      when (exception) {
-        is ExceptionWithLoggingContext -> {
-          addFields(exception.logFields)
-          addContextFieldsToLogEvent(exception.loggingContext, logEvent)
-        }
-        is LoggingContextProvider -> {
-          addContextFieldsToLogEvent(exception.loggingContext, logEvent)
-        }
-        is HasLogFields -> {
-          addFields(exception.logFields)
-        }
+  internal fun setCause(cause: Throwable, logger: PlatformLogger) {
+    logEvent.setCause(cause, logger, this)
+
+    if (!logEvent.handlesExceptionTreeTraversal()) {
+      traverseExceptionTree(root = cause, action = ::addFieldsFromException)
+    }
+  }
+
+  internal fun addFieldsFromException(exception: Throwable) {
+    when (exception) {
+      is ExceptionWithLoggingContext -> {
+        addFields(exception.logFields)
+        addContextFieldsToLogEvent(exception.loggingContext, logEvent)
+      }
+      is LoggingContextProvider -> {
+        addContextFieldsToLogEvent(exception.loggingContext, logEvent)
+      }
+      is HasLogFields -> {
+        addFields(exception.logFields)
       }
     }
   }
