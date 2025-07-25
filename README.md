@@ -110,7 +110,8 @@ fun processEvent(event: Event) {
 
 If an exception is thrown from inside `withLoggingContext`, the logging context is attached to the
 exception. That way, we don't lose context when an exception escapes from the context scope - which
-is when we need it the most! When the exception is logged, these fields are included in the output.
+is when we need it most! When the exception is logged, the fields from the exception's logging
+context are included in the output.
 
 You can log an exception like this:
 
