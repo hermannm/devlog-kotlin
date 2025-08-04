@@ -284,7 +284,7 @@ internal actual fun hasContextForException(exception: Throwable): Boolean {
   return false
 }
 
-internal actual fun addContextFieldsToLogEvent(loggingContext: LoggingContext, logEvent: LogEvent) {
+internal actual fun LogBuilder.addContextFields(loggingContext: LoggingContext) {
   val contextFields = loggingContext.getFields()
   if (contextFields == null) {
     return

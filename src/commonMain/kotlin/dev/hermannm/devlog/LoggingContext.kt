@@ -398,7 +398,7 @@ internal expect fun removeExistingContextFieldsFromLoggingContext(
 
 internal expect fun hasContextForException(exception: Throwable): Boolean
 
-internal expect fun addContextFieldsToLogEvent(loggingContext: LoggingContext, logEvent: LogEvent)
+internal expect fun LogBuilder.addContextFields(loggingContext: LoggingContext)
 
 /**
  * Fields (key/value pairs) that were overwritten by [addFieldsToLoggingContext], passed to

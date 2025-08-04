@@ -331,11 +331,11 @@ internal class CustomLogbackThrowableProxy : IThrowableProxy {
         when (suppressedThrowable) {
           is LoggingContextProvider -> {
             indexOfLoggingContextProvider = index
-            addContextFieldsToLogEvent(suppressedThrowable.loggingContext, logBuilder.logEvent)
+            logBuilder.addContextFields(suppressedThrowable.loggingContext)
           }
           is ExceptionWithLoggingContext -> {
             logBuilder.addFields(suppressedThrowable.logFields)
-            addContextFieldsToLogEvent(suppressedThrowable.loggingContext, logBuilder.logEvent)
+            logBuilder.addContextFields(suppressedThrowable.loggingContext)
           }
           is HasLogFields -> {
             logBuilder.addFields(suppressedThrowable.logFields)

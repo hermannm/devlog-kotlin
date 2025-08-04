@@ -288,10 +288,10 @@ internal constructor(
     when (exception) {
       is ExceptionWithLoggingContext -> {
         addFields(exception.logFields)
-        addContextFieldsToLogEvent(exception.loggingContext, logEvent)
+        addContextFields(exception.loggingContext)
       }
       is LoggingContextProvider -> {
-        addContextFieldsToLogEvent(exception.loggingContext, logEvent)
+        addContextFields(exception.loggingContext)
       }
       is HasLogFields -> {
         addFields(exception.logFields)
