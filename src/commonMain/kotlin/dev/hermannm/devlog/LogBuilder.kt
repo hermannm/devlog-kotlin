@@ -280,8 +280,17 @@ internal constructor(
     logEvent.setCause(cause, logger, this)
 
     if (!logEvent.handlesExceptionTreeTraversal()) {
-      traverseExceptionTree(root = cause, action = ::addFieldsFromException)
+      traverseExceptionTreeForLogFields(root = cause)
     }
+  }
+
+  /**
+   * We keep this in a separate method from [setCause], because [traverseExceptionTree] is a big
+   * inline function, and we don't want it to blow up the code size of `setCause` for the common
+   * case of [LogEvent.handlesExceptionTreeTraversal] returning true.
+   */
+  private fun traverseExceptionTreeForLogFields(root: Throwable) {
+    traverseExceptionTree(root, action = ::addFieldsFromException)
   }
 
   internal fun addFieldsFromException(exception: Throwable) {

@@ -24,7 +24,7 @@ internal interface LogEvent {
   /**
    * @param logger We pass the logger so that the implementation has access to it if necessary (our
    *   `LogbackLogEvent` uses this to check if stack trace package data is configured).
-   * @param logBuilder We the log builder so that the implementation may traverse the cause
+   * @param logBuilder We pass the log builder so that the implementation may traverse the cause
    *   exception tree and add log fields if needed (see [handlesExceptionTreeTraversal]).
    */
   fun setCause(cause: Throwable, logger: PlatformLogger, logBuilder: LogBuilder)
