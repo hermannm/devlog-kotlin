@@ -33,8 +33,6 @@ internal interface LogEvent {
 
   fun addJsonField(key: String, json: String)
 
-  fun isFieldKeyAdded(key: String): Boolean
-
   fun log(message: String, logger: PlatformLogger)
 
   /**

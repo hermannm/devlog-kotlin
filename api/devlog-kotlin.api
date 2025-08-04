@@ -43,7 +43,6 @@ public abstract interface class dev/hermannm/devlog/LogEvent {
 	public abstract fun addJsonField (Ljava/lang/String;Ljava/lang/String;)V
 	public abstract fun addStringField (Ljava/lang/String;Ljava/lang/String;)V
 	public abstract fun handlesExceptionTreeTraversal ()Z
-	public abstract fun isFieldKeyAdded (Ljava/lang/String;)Z
 	public abstract fun log (Ljava/lang/String;Lorg/slf4j/Logger;)V
 	public abstract fun setCause-ARkn0dU (Ljava/lang/Throwable;Lorg/slf4j/Logger;Ldev/hermannm/devlog/LogEvent;)V
 }

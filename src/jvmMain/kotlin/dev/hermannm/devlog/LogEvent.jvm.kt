@@ -55,28 +55,34 @@ internal class Slf4jLogEvent(
     logger: Slf4jLogger,
 ) : LogEvent, BaseSlf4jEvent(level.toSlf4j(), logger) {
   init {
-    super.setCallerBoundary(FULLY_QUALIFIED_CLASS_NAME)
-    super.setTimeStamp(System.currentTimeMillis())
+    this.callerBoundary = FULLY_QUALIFIED_CLASS_NAME
+    this.timeStamp = System.currentTimeMillis()
   }
 
   override fun setCause(cause: Throwable, logger: Slf4jLogger, logBuilder: LogBuilder) {
-    super.setThrowable(cause)
+    this.throwable = cause
   }
 
-  override fun addStringField(key: String, value: String) = super.addKeyValue(key, value)
+  override fun addStringField(key: String, value: String) {
+    if (!isFieldKeyAdded(key)) {
+      addKeyValue(key, value)
+    }
+  }
 
-  override fun addJsonField(key: String, json: String) = super.addKeyValue(key, RawJson(json))
+  override fun addJsonField(key: String, json: String) {
+    if (!isFieldKeyAdded(key)) {
+      addKeyValue(key, RawJson(json))
+    }
+  }
 
-  override fun isFieldKeyAdded(key: String): Boolean {
-    // getKeyValuePairs may return null if no fields have been added yet
-    val fields = super.getKeyValuePairs() ?: return false
-    return fields.any { it.key == key }
+  private fun isFieldKeyAdded(key: String): Boolean {
+    return keyValuePairs?.any { it.key == key } ?: false
   }
 
   override fun log(message: String, logger: Slf4jLogger) {
-    super.setMessage(message)
+    this.message = message
 
-    val overwrittenContextFields = removeDuplicateContextFields(super.getKeyValuePairs())
+    val overwrittenContextFields = removeDuplicateContextFields(keyValuePairs)
     try {
       when (logger) {
         // If logger is LoggingEventAware, we can just log the event directly
@@ -108,8 +114,7 @@ internal class Slf4jLogEvent(
   private fun logWithBasicSlf4jApi(logger: Slf4jLogger) {
     // Basic SLF4J API doesn't take KeyValuePair, so we must merge them into message
     val message = mergeMessageAndKeyValuePairs()
-    // level should never be null here, since we pass it in the constructor
-    when (level!!) {
+    when (level) {
       // We don't assume that the SLF4J implementation accepts a `null` cause exception in the
       // overload that takes a throwable. So we only call that overload if `throwable != null`.
       Slf4jLevel.ERROR ->
@@ -190,23 +195,25 @@ internal class LogbackLogEvent(level: LogLevel, logger: LogbackLogger) :
   }
 
   override fun addStringField(key: String, value: String) {
-    super.addKeyValuePair(KeyValuePair(key, value))
+    if (!isFieldKeyAdded(key)) {
+      addKeyValuePair(KeyValuePair(key, value))
+    }
   }
 
   override fun addJsonField(key: String, json: String) {
-    super.addKeyValuePair(KeyValuePair(key, RawJson(json)))
+    if (!isFieldKeyAdded(key)) {
+      addKeyValuePair(KeyValuePair(key, RawJson(json)))
+    }
   }
 
-  override fun isFieldKeyAdded(key: String): Boolean {
-    // getKeyValuePairs may return null if no fields have been added yet
-    val fields = super.getKeyValuePairs() ?: return false
-    return fields.any { it.key == key }
+  private fun isFieldKeyAdded(key: String): Boolean {
+    return keyValuePairs?.any { it.key == key } ?: false
   }
 
   override fun log(message: String, logger: PlatformLogger) {
-    super.setMessage(message)
+    this.message = message
 
-    val overwrittenContextFields = removeDuplicateContextFields(super.getKeyValuePairs())
+    val overwrittenContextFields = removeDuplicateContextFields(keyValuePairs)
     try {
       logger.asLogbackLogger().callAppenders(this)
     } finally {

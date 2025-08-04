@@ -103,13 +103,11 @@ internal constructor(
    * - `java.math.BigDecimal`
    */
   public inline fun <reified ValueT> field(key: String, value: ValueT) {
-    if (!logEvent.isFieldKeyAdded(key)) {
-      encodeFieldValue(
-          value,
-          onJson = { jsonValue -> logEvent.addJsonField(key, jsonValue) },
-          onString = { stringValue -> logEvent.addStringField(key, stringValue) },
-      )
-    }
+    encodeFieldValue(
+        value,
+        onJson = { jsonValue -> logEvent.addJsonField(key, jsonValue) },
+        onString = { stringValue -> logEvent.addStringField(key, stringValue) },
+    )
   }
 
   /**
@@ -183,14 +181,12 @@ internal constructor(
       value: ValueT?,
       serializer: SerializationStrategy<ValueT>
   ) {
-    if (!logEvent.isFieldKeyAdded(key)) {
-      encodeFieldValueWithSerializer(
-          value,
-          serializer,
-          onJson = { jsonValue -> logEvent.addJsonField(key, jsonValue) },
-          onString = { stringValue -> logEvent.addStringField(key, stringValue) },
-      )
-    }
+    encodeFieldValueWithSerializer(
+        value,
+        serializer,
+        onJson = { jsonValue -> logEvent.addJsonField(key, jsonValue) },
+        onString = { stringValue -> logEvent.addStringField(key, stringValue) },
+    )
   }
 
   /**
@@ -237,14 +233,12 @@ internal constructor(
    *   save the performance cost of validating it.
    */
   public fun rawJsonField(key: String, json: String, validJson: Boolean = false) {
-    if (!logEvent.isFieldKeyAdded(key)) {
-      validateRawJson(
-          json,
-          isValid = validJson,
-          onValidJson = { jsonValue -> logEvent.addJsonField(key, jsonValue) },
-          onInvalidJson = { stringValue -> logEvent.addStringField(key, stringValue) },
-      )
-    }
+    validateRawJson(
+        json,
+        isValid = validJson,
+        onValidJson = { jsonValue -> logEvent.addJsonField(key, jsonValue) },
+        onInvalidJson = { stringValue -> logEvent.addStringField(key, stringValue) },
+    )
   }
 
   /**
@@ -258,10 +252,7 @@ internal constructor(
    *   [withLoggingContext]
    */
   public fun addField(field: LogField) {
-    // Don't add fields with keys that have already been added
-    if (!logEvent.isFieldKeyAdded(field.key)) {
-      field.addToLogEvent(logEvent)
-    }
+    field.addToLogEvent(logEvent)
   }
 
   /**

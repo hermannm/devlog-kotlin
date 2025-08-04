@@ -302,13 +302,9 @@ internal actual fun addContextFieldsToLogEvent(loggingContext: LoggingContext, l
 
     if (key.endsWith(LOGGING_CONTEXT_JSON_KEY_SUFFIX)) {
       val keyWithoutSuffix = removeJsonKeySuffix(key)
-      if (!logEvent.isFieldKeyAdded(keyWithoutSuffix)) {
-        logEvent.addJsonField(keyWithoutSuffix, value)
-      }
+      logEvent.addJsonField(keyWithoutSuffix, value)
     } else {
-      if (!logEvent.isFieldKeyAdded(key)) {
-        logEvent.addStringField(key, value)
-      }
+      logEvent.addStringField(key, value)
     }
   }
 }
