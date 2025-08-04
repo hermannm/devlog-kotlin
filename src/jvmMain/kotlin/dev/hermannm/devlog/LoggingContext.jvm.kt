@@ -76,10 +76,7 @@ internal actual fun addFieldsToLoggingContext(
           //   must check if there's a previous value for the suffixed key
           // - If they differ, then the logging context key has a JSON suffix, and we must check if
           //   there's a previous value for the non-suffixed key
-          //
-          // We compare by reference here, since `keyForLoggingContext` will return the same String
-          // instance if it matches `field.key`.
-          if (field.key === keyForLoggingContext) {
+          if (field.key == keyForLoggingContext) {
             field.key + LOGGING_CONTEXT_JSON_KEY_SUFFIX
           } else {
             field.key
@@ -125,7 +122,7 @@ internal actual fun removeFieldsFromLoggingContext(
        * We compare by reference here, since `overwrittenKey` will be the same instance as
        * `keyForLoggingContext` if they match.
        */
-      if (overwrittenKey === keyForLoggingContext) {
+      if (overwrittenKey == keyForLoggingContext) {
         continue@fieldLoop
       }
     }

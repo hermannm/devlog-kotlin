@@ -11,30 +11,31 @@ import org.slf4j.LoggerFactory as Slf4jLoggerFactory
 
 @PublishedApi
 internal actual class JsonLogField
-internal constructor(
+actual constructor(
     key: String,
     value: String,
-    private val keyForLoggingContext: String,
 ) : LogField(key, value) {
-  actual constructor(
-      key: String,
-      value: String,
-  ) : this(
-      key,
-      value,
+  @kotlin.concurrent.Volatile private var keyForLoggingContext: String? = null
+
+  actual override fun getKeyForLoggingContext(): String {
+    var keyForLoggingContext = this.keyForLoggingContext
+
+    if (keyForLoggingContext == null) {
       keyForLoggingContext =
           if (ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS) {
             key + LOGGING_CONTEXT_JSON_KEY_SUFFIX
           } else {
             key
-          },
-  )
+          }
+      this.keyForLoggingContext = keyForLoggingContext
+    }
+
+    return keyForLoggingContext
+  }
 
   actual override fun addToLogEvent(logEvent: LogEvent) {
     logEvent.addJsonField(key, value)
   }
-
-  actual override fun getKeyForLoggingContext(): String = keyForLoggingContext
 
   internal companion object {
     init {
