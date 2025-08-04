@@ -78,7 +78,7 @@ internal class LoggingContextJvmTest {
 
   /** We use JVM synchronization primitives here, hence we place it under jvmTest. */
   @Test
-  fun `getLoggingContext allows passing logging context between threads`() {
+  fun `getCopyOfLOggingContext allows passing logging context between threads`() {
     val event = Event(id = 1001, type = EventType.ORDER_PLACED)
 
     val lock = ReentrantLock()
@@ -91,14 +91,14 @@ internal class LoggingContextJvmTest {
       lock.withLock {
         withLoggingContext(field("event", event)) {
           // Get the parent logging context (the one we just entered)
-          val loggingContext = getLoggingContext()
+          val parentContext = getCopyOfLoggingContext()
 
           thread {
             // Acquire the lock here in the child thread - this will block until the outer
             // logging context has exited
             lock.withLock {
               // Use the parent logging context here in the child thread
-              withLoggingContext(loggingContext) { log.error { "Test" } }
+              withLoggingContext(parentContext) { log.error { "Test" } }
               latch.countDown()
             }
           }

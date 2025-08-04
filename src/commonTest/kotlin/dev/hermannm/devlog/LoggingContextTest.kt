@@ -213,7 +213,7 @@ internal class LoggingContextTest {
 
   @Test
   fun `non-local return works in withLoggingContext existingContext overload`() {
-    withLoggingContext(getLoggingContext()) {
+    withLoggingContext(getCopyOfLoggingContext()) {
       // This won't compile if withLoggingContext isn't inline, and we want to verify that
       return
     }
@@ -245,7 +245,7 @@ internal class LoggingContextTest {
   fun `lambda uses EXACTLY_ONCE contract in withLoggingContext existingContext overload`() {
     val uninitialized: String
 
-    withLoggingContext(getLoggingContext()) { uninitialized = "Initialized" }
+    withLoggingContext(getCopyOfLoggingContext()) { uninitialized = "Initialized" }
 
     // This won't compile unless `withLoggingContext` uses `callsInPlace` contract with
     // `InvocationKind.EXACTLY_ONCE`

@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
 import org.slf4j.MDC
 import org.slf4j.event.KeyValuePair
 
-public actual fun getLoggingContext(): LoggingContext {
+public actual fun getCopyOfLoggingContext(): LoggingContext {
   return LoggingContext(MDC.getCopyOfContextMap())
 }
 
@@ -265,7 +265,7 @@ internal actual fun addLoggingContextToException(exception: Throwable) {
     return
   }
 
-  val loggingContext = getLoggingContext()
+  val loggingContext = getCopyOfLoggingContext()
   if (loggingContext.isEmpty()) {
     return
   }
@@ -423,7 +423,7 @@ internal value class ExecutorServiceWithInheritedLoggingContext(
     // Copy context fields here, to get the logging context of the parent thread.
     // We then pass this to withLoggingContext in the returned Callable below, which will be invoked
     // in the child thread, thus inheriting the parent's context fields.
-    val parentLoggingContext = getLoggingContext()
+    val parentLoggingContext = getCopyOfLoggingContext()
 
     if (parentLoggingContext.isEmpty()) {
       return callable
@@ -436,7 +436,7 @@ internal value class ExecutorServiceWithInheritedLoggingContext(
     // Copy context fields here, to get the logging context of the parent thread.
     // We then pass this to withLoggingContext in the returned Runnable below, which will be invoked
     // in the child thread, thus inheriting the parent's context fields.
-    val parentLoggingContext = getLoggingContext()
+    val parentLoggingContext = getCopyOfLoggingContext()
 
     if (parentLoggingContext.isEmpty()) {
       return runnable

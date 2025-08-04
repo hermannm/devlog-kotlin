@@ -126,7 +126,7 @@ public open class ExceptionWithLoggingContext(
       if (cause != null && hasContextForException(cause)) {
         return EMPTY_LOGGING_CONTEXT
       } else {
-        return getLoggingContext()
+        return getCopyOfLoggingContext()
       }
     }
 
