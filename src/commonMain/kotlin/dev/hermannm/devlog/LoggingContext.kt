@@ -472,4 +472,21 @@ internal value class OverwrittenContextFields(private val fields: Array<String?>
       index += 2
     }
   }
+
+  internal inline fun forEachNonNull(action: (key: String, value: String) -> Unit) {
+    if (fields == null) {
+      return
+    }
+
+    var index = 0
+    while (index < fields.size) {
+      val key = fields[index]
+      val value = fields[index + 1]
+      if (key != null && value != null) {
+        action(key, value)
+      }
+
+      index += 2
+    }
+  }
 }

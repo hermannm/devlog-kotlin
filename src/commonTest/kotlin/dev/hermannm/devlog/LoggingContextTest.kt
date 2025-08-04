@@ -6,6 +6,7 @@ import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEmpty
 import kotlin.test.Test
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -100,10 +101,10 @@ internal class LoggingContextTest {
 
   @Test
   fun `duplicate context field keys only includes the newest fields`() {
-    var outputFromInnerContext: LogOutput? = null
+    val outputFromInnerContext: LogOutput
     // We want to verify that after exiting the inner logging context, the fields from the outer
     // context are restored
-    var outputFromOuterContext: LogOutput? = null
+    val outputFromOuterContext: LogOutput
 
     withLoggingContext(
         field("duplicateKey", "outer"),
@@ -118,10 +119,10 @@ internal class LoggingContextTest {
       outputFromOuterContext = captureLogOutput { log.info { "Test" } }
     }
 
-    outputFromInnerContext!!.contextFields shouldContainExactly
+    outputFromInnerContext.contextFields shouldContainExactly
         mapOf("duplicateKey" to JsonPrimitive("inner1"))
 
-    outputFromOuterContext!!.contextFields shouldContainExactly
+    outputFromOuterContext.contextFields shouldContainExactly
         mapOf("duplicateKey" to JsonPrimitive("outer"))
   }
 
@@ -131,27 +132,33 @@ internal class LoggingContextTest {
    */
   @Test
   fun `context field does not override duplicate log event field`() {
-    val output = captureLogOutput {
-      withLoggingContext(
-          field("duplicateKey", "from context"),
-      ) {
+    val output1: LogOutput
+    val output2: LogOutput
+
+    withLoggingContext(
+        field("duplicateKey", "from context"),
+    ) {
+      output1 = captureLogOutput {
         log.info {
           field("duplicateKey", "from log event")
           "Test"
         }
       }
+
+      // Test that logging context still applies here after
+      output2 = captureLogOutput { log.info { "Test 2" } }
     }
 
-    output.logFields shouldBe
+    output1.logFields shouldBe
         """
           "duplicateKey":"from log event"
         """
             .trimIndent()
+    output1.contextFields.shouldBeEmpty()
 
-    // We would prefer for log event fields to override context fields, but logstash-logback-encoder
-    // does not have support for that at the time of writing. If the library adds support for that
-    // at some point, we can uncomment this line to test that the context fields are overwritten.
-    // output.contextFields.shouldBeEmpty()
+    output2.logFields.shouldBeEmpty()
+    output2.contextFields shouldContainExactly
+        mapOf("duplicateKey" to JsonPrimitive("from context"))
   }
 
   @Test

@@ -7,6 +7,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import org.slf4j.MDC
+import org.slf4j.event.KeyValuePair
 
 public actual fun getLoggingContext(): LoggingContext {
   return LoggingContext(MDC.getCopyOfContextMap())
@@ -313,6 +314,48 @@ internal actual fun addContextFieldsToLogEvent(loggingContext: LoggingContext, l
       }
     }
   }
+}
+
+internal fun removeDuplicateContextFields(
+    logFields: MutableList<KeyValuePair>?
+): OverwrittenContextFields {
+  var overwrittenFields = OverwrittenContextFields(null)
+  if (logFields.isNullOrEmpty()) {
+    return overwrittenFields
+  }
+
+  val totalFieldCount = logFields.size
+  var removedFieldCount = 0
+  for (index in 0..(totalFieldCount - 1)) {
+    val field = logFields[index - removedFieldCount]
+
+    var contextKey: String = field.key
+    var contextValue: String? = MDC.get(contextKey)
+    // If we found no match for the plain context key, then we look for a match with JSON suffix
+    if (contextValue == null && ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS) {
+      contextKey = field.key + LOGGING_CONTEXT_JSON_KEY_SUFFIX
+      contextValue = MDC.get(contextKey)
+    }
+
+    if (contextValue != null) {
+      // We use `toString()` here, since the field value when using `liflig-logging` will either be
+      // a `String` or a `RawJson` (whose `toString` returns the serialized JSON)
+      val fieldValue = field.value.toString()
+      if (fieldValue == contextValue) {
+        logFields.removeAt(index)
+        removedFieldCount++
+      } else {
+        MDC.remove(contextKey)
+        overwrittenFields = overwrittenFields.set(index, contextKey, contextValue, totalFieldCount)
+      }
+    }
+  }
+
+  return overwrittenFields
+}
+
+internal fun OverwrittenContextFields.restore() {
+  this.forEachNonNull { key, value -> MDC.put(key, value) }
 }
 
 /**

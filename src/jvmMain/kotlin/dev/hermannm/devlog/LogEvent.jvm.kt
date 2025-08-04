@@ -76,14 +76,19 @@ internal class Slf4jLogEvent(
   override fun log(message: String, logger: Slf4jLogger) {
     super.setMessage(message)
 
-    when (logger) {
-      // If logger is LoggingEventAware, we can just log the event directly
-      is LoggingEventAware -> logger.log(this)
-      // If logger is LocationAware, we want to use that interface so the logger implementation
-      // can show the correct file location of where the log was made
-      is LocationAwareLogger -> logWithLocationAwareApi(logger)
-      // Otherwise, we fall back to the base SLF4J Logger API
-      else -> logWithBasicSlf4jApi(logger)
+    val overwrittenContextFields = removeDuplicateContextFields(super.getKeyValuePairs())
+    try {
+      when (logger) {
+        // If logger is LoggingEventAware, we can just log the event directly
+        is LoggingEventAware -> logger.log(this)
+        // If logger is LocationAware, we want to use that interface so the logger implementation
+        // can show the correct file location of where the log was made
+        is LocationAwareLogger -> logWithLocationAwareApi(logger)
+        // Otherwise, we fall back to the base SLF4J Logger API
+        else -> logWithBasicSlf4jApi(logger)
+      }
+    } finally {
+      overwrittenContextFields.restore()
     }
   }
 
@@ -201,7 +206,12 @@ internal class LogbackLogEvent(level: LogLevel, logger: LogbackLogger) :
   override fun log(message: String, logger: PlatformLogger) {
     super.setMessage(message)
 
-    logger.asLogbackLogger().callAppenders(this)
+    val overwrittenContextFields = removeDuplicateContextFields(super.getKeyValuePairs())
+    try {
+      logger.asLogbackLogger().callAppenders(this)
+    } finally {
+      overwrittenContextFields.restore()
+    }
   }
 
   override fun getThrowableProxy(): IThrowableProxy? = cause
