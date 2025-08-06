@@ -13,7 +13,7 @@ package dev.hermannm.devlog
  * The exception also includes any log fields from [withLoggingContext], from the scope in which the
  * exception is constructed. This way, we don't lose any logging context if the exception escapes
  * the context it was thrown from. If you don't want this behavior, you can create a custom
- * exception and implement the [HasLogFields] interface.
+ * exception and implement the [HasLoggingContext] interface instead.
  *
  * This class is useful when you are throwing an exception from somewhere down in the stack, but do
  * logging further up the stack, and you have structured data that you want to attach to the
@@ -223,7 +223,7 @@ public open class ExceptionWithLoggingContext : RuntimeException {
  * ### Example
  *
  * ```
- * import dev.hermannm.devlog.HasLogFields
+ * import dev.hermannm.devlog.HasLoggingContext
  * import dev.hermannm.devlog.field
  * import dev.hermannm.devlog.getLogger
  *
@@ -246,7 +246,7 @@ public open class ExceptionWithLoggingContext : RuntimeException {
  * class OrderUpdateException(
  *     override val message: String,
  *     order: Order,
- * ) : RuntimeException(), HasLogFields {
+ * ) : RuntimeException(), HasLoggingContext {
  *   override val logFields = listOf(field("order", order))
  * }
  * ```
@@ -262,7 +262,7 @@ public open class ExceptionWithLoggingContext : RuntimeException {
  * }
  * ```
  */
-public interface HasLogFields {
+public interface HasLoggingContext {
   /** Will be attached to the log when passed through `cause` to one of [Logger]'s methods. */
   public val logFields: Collection<LogField>
 }

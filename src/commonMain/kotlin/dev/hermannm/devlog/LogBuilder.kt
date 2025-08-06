@@ -283,7 +283,7 @@ internal constructor(
 
   /**
    * Checks if the log cause exception (or any of its own cause exceptions) implements the
-   * [HasLogFields] interface, and if so, adds those fields to the log.
+   * [HasLoggingContext] interface, and if so, adds those fields to the log.
    */
   @PublishedApi
   internal fun setCause(cause: Throwable, logger: PlatformLogger) {
@@ -311,7 +311,7 @@ internal constructor(
       is LoggingContextProvider -> {
         exception.addFieldsToLog(this)
       }
-      is HasLogFields -> {
+      is HasLoggingContext -> {
         addFields(exception.logFields)
       }
     }

@@ -10,7 +10,7 @@ public class dev/hermannm/devlog/ExceptionWithLoggingContext : java/lang/Runtime
 	public fun getMessage ()Ljava/lang/String;
 }
 
-public abstract interface class dev/hermannm/devlog/HasLogFields {
+public abstract interface class dev/hermannm/devlog/HasLoggingContext {
 	public abstract fun getLogFields ()Ljava/util/Collection;
 }
 

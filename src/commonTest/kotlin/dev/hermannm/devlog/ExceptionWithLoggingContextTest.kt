@@ -15,7 +15,7 @@ private val log = getLogger()
 
 internal class ExceptionWithLoggingContextTest {
   @Test
-  fun `exception implementing HasLogFields has field included in log`() {
+  fun `ExceptionWithLoggingContext has its fields included in log`() {
     val output = captureLogOutput {
       log.error(exceptionWithLoggingContext("exceptionField", "value")) { "Test" }
     }
@@ -73,7 +73,7 @@ internal class ExceptionWithLoggingContextTest {
   }
 
   @Test
-  fun `child exception that implements HasLogFields`() {
+  fun `child exception that is ExceptionWithLoggingContext`() {
     val output = captureLogOutput {
       val exception =
           Exception(
@@ -91,7 +91,7 @@ internal class ExceptionWithLoggingContextTest {
   }
 
   @Test
-  fun `parent and child exceptions that both implement HasLogFields have their fields merged`() {
+  fun `parent and child exceptions that are both ExceptionWithLoggingContext have their fields merged`() {
     val output = captureLogOutput {
       val exception =
           ExceptionWithLoggingContext(
@@ -209,8 +209,8 @@ internal class ExceptionWithLoggingContextTest {
   }
 
   @Test
-  fun `custom implementation of HasLogFields works`() {
-    class CustomException : Exception(), HasLogFields {
+  fun `custom implementation of HasLoggingContext works`() {
+    class CustomException : Exception(), HasLoggingContext {
       override val logFields: Collection<LogField> =
           listOf(
               field("key1", "value1"),

@@ -336,7 +336,7 @@ internal class CustomLogbackThrowableProxy : IThrowableProxy {
           is ExceptionWithLoggingContext -> {
             suppressedThrowable.addFieldsToLog(logBuilder)
           }
-          is HasLogFields -> {
+          is HasLoggingContext -> {
             logBuilder.addFields(suppressedThrowable.logFields)
           }
         }
