@@ -82,7 +82,7 @@ internal class Slf4jLogEvent(
   override fun log(message: String, logger: Slf4jLogger) {
     this.message = message
 
-    val overwrittenContextFields = removeDuplicateContextFields(keyValuePairs)
+    overwriteDuplicateContextFields(keyValuePairs)
     try {
       when (logger) {
         // If logger is LoggingEventAware, we can just log the event directly
@@ -94,7 +94,7 @@ internal class Slf4jLogEvent(
         else -> logWithBasicSlf4jApi(logger)
       }
     } finally {
-      overwrittenContextFields.restore()
+      restoreOverwrittenContextFields()
     }
   }
 
@@ -213,11 +213,11 @@ internal class LogbackLogEvent(level: LogLevel, logger: LogbackLogger) :
   override fun log(message: String, logger: PlatformLogger) {
     this.message = message
 
-    val overwrittenContextFields = removeDuplicateContextFields(keyValuePairs)
+    overwriteDuplicateContextFields(keyValuePairs)
     try {
       logger.asLogbackLogger().callAppenders(this)
     } finally {
-      overwrittenContextFields.restore()
+      restoreOverwrittenContextFields()
     }
   }
 
@@ -331,11 +331,10 @@ internal class CustomLogbackThrowableProxy : IThrowableProxy {
         when (suppressedThrowable) {
           is LoggingContextProvider -> {
             indexOfLoggingContextProvider = index
-            logBuilder.addContextFields(suppressedThrowable.loggingContext)
+            suppressedThrowable.addFieldsToLog(logBuilder)
           }
           is ExceptionWithLoggingContext -> {
-            logBuilder.addFields(suppressedThrowable.logFields)
-            logBuilder.addContextFields(suppressedThrowable.loggingContext)
+            suppressedThrowable.addFieldsToLog(logBuilder)
           }
           is HasLogFields -> {
             logBuilder.addFields(suppressedThrowable.logFields)

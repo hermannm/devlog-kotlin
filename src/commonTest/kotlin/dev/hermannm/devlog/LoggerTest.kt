@@ -32,8 +32,16 @@ internal data class LoggerTestCase(
     val expectedCause: Throwable? = LoggerTest.TestInput.CAUSE,
     val expectedFields: List<LogField> =
         listOf(
-            StringLogField(LoggerTest.TestInput.FIELD_KEY_1, LoggerTest.TestInput.FIELD_VALUE_1),
-            JsonLogField(LoggerTest.TestInput.FIELD_KEY_2, """{"id":1001,"type":"ORDER_PLACED"}"""),
+            LogField(
+                key = LoggerTest.TestInput.FIELD_KEY_1,
+                value = LoggerTest.TestInput.FIELD_VALUE_1,
+                isJson = false,
+            ),
+            LogField(
+                key = LoggerTest.TestInput.FIELD_KEY_2,
+                value = """{"id":1001,"type":"ORDER_PLACED"}""",
+                isJson = true,
+            ),
         ),
     val shouldHaveCorrectFileLocation: Boolean = true,
 ) : TestCase

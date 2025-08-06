@@ -3,8 +3,7 @@
 package dev.hermannm.devlog.output.logback
 
 import com.fasterxml.jackson.core.JsonGenerator
-import dev.hermannm.devlog.ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS
-import dev.hermannm.devlog.LOGGING_CONTEXT_JSON_KEY_SUFFIX
+import dev.hermannm.devlog.LoggingContextState
 import net.logstash.logback.composite.loggingevent.mdc.MdcEntryWriter
 
 /**
@@ -33,10 +32,6 @@ import net.logstash.logback.composite.loggingevent.mdc.MdcEntryWriter
  * `net.logstash.logback:logstash-logback-encoder` as dependencies.
  */
 public class JsonContextFieldWriter : MdcEntryWriter {
-  init {
-    ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS = true
-  }
-
   /** @return true if we handled the entry, false otherwise. */
   override fun writeMdcEntry(
       generator: JsonGenerator,
@@ -44,12 +39,8 @@ public class JsonContextFieldWriter : MdcEntryWriter {
       mdcKey: String,
       value: String
   ): Boolean {
-    if (mdcKey.endsWith(LOGGING_CONTEXT_JSON_KEY_SUFFIX)) {
-      // We use fieldName instead of mdcKey here. These will typically be the same, but the user
-      // may configure a mapping from certain MDC keys to custom field names. fieldName may not have
-      // the JSON key suffix, so we call removeSuffix here, which removes the suffix if present,
-      // otherwise it returns the string as-is.
-      generator.writeFieldName(fieldName.removeSuffix(LOGGING_CONTEXT_JSON_KEY_SUFFIX))
+    if (LoggingContextState.get().isJsonField(mdcKey, value)) {
+      generator.writeFieldName(fieldName)
       generator.writeRawValue(value)
       return true
     }

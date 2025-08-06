@@ -40,7 +40,7 @@ internal class LoggingContextJvmTest {
     ) {
       val parentContext =
           mapOf(
-              "event${LOGGING_CONTEXT_JSON_KEY_SUFFIX}" to """{"id":1001,"type":"ORDER_PLACED"}""",
+              "event" to """{"id":1001,"type":"ORDER_PLACED"}""",
               "stringField" to "parentValue",
               "parentOnlyField" to "value1",
               "fieldThatIsStringInParentButJsonInChild" to "stringValue",
@@ -55,25 +55,17 @@ internal class LoggingContextJvmTest {
       ) {
         loggingContextShouldContainExactly(
             mapOf(
-                "event${LOGGING_CONTEXT_JSON_KEY_SUFFIX}" to
-                    """{"id":1002,"type":"ORDER_UPDATED"}""",
+                "event" to """{"id":1002,"type":"ORDER_UPDATED"}""",
                 "stringField" to "childValue",
                 "parentOnlyField" to "value1",
                 "childOnlyField" to "value2",
-                "fieldThatIsStringInParentButJsonInChild${LOGGING_CONTEXT_JSON_KEY_SUFFIX}" to
-                    """{"test":true}""",
+                "fieldThatIsStringInParentButJsonInChild" to """{"test":true}""",
             ),
         )
       }
 
       loggingContextShouldContainExactly(parentContext)
     }
-  }
-
-  @Test
-  fun `ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS has expected value`() {
-    // Since we use JsonContextFieldWriter in tests, we expect this to be set
-    ADD_JSON_SUFFIX_TO_LOGGING_CONTEXT_KEYS.shouldBeTrue()
   }
 
   /** We use JVM synchronization primitives here, hence we place it under jvmTest. */
@@ -122,7 +114,11 @@ internal class LoggingContextJvmTest {
 
   @Test
   fun `withLoggingContext existingContext overload merges given context with existing fields`() {
-    val existingContext = LoggingContext(mapOf("fieldMap1" to "value", "fieldMap2" to "value"))
+    val existingContext =
+        LoggingContext(
+            map = mapOf("fieldMap1" to "value", "fieldMap2" to "value"),
+            state = LoggingContextState(null),
+        )
 
     withLoggingContext(field("existingField", "value")) {
       loggingContextShouldContainExactly(mapOf("existingField" to "value"))
@@ -215,9 +211,9 @@ internal class LoggingContextJvmTest {
   }
 
   /**
-   * In [ExecutorServiceWithInheritedLoggingContext], we only call [withLoggingContextInternal] if
-   * there are fields in the logging context. Otherwise, we just forward the tasks directly - we
-   * want to test that that works.
+   * In [ExecutorServiceWithInheritedLoggingContext], we only call [withLoggingContext] if there are
+   * fields in the logging context. Otherwise, we just forward the tasks directly - we want to test
+   * that that works.
    */
   @Test
   fun `ExecutorService with inheritLoggingContext works when there are no fields in the context`() {

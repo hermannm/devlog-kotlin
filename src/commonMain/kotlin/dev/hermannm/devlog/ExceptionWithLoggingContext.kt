@@ -81,66 +81,127 @@ package dev.hermannm.devlog
  *     - Combines the two previous constructors, to let you extend `ExceptionWithLoggingContext` and
  *       override `message` while also passing log fields as varargs
  */
-public open class ExceptionWithLoggingContext(
-    /** The exception message. */
-    message: String?,
-    override val logFields: Collection<LogField> = emptyList(),
-    /**
-     * The cause of the exception. If you're throwing this exception after catching another, you
-     * should include the original exception here.
-     */
-    override val cause: Throwable? = null,
-) : RuntimeException(), HasLogFields {
+public open class ExceptionWithLoggingContext : RuntimeException {
+  public constructor(
+      message: String?,
+      logFields: Collection<LogField> = emptyList(),
+      cause: Throwable? = null,
+  ) : super(cause) {
+    this.messageField = message
+    this.logFields = logFields
+  }
+
   public constructor(
       message: String?,
       vararg logFields: LogField,
       cause: Throwable? = null,
-  ) : this(message, logFields.asList(), cause)
+  ) : super(cause) {
+    this.messageField = message
+    this.logFields = logFields
+  }
 
   public constructor(
       logFields: Collection<LogField> = emptyList(),
       cause: Throwable? = null,
-  ) : this(message = null, logFields, cause)
+  ) : super(cause) {
+    this.messageField = null
+    this.logFields = logFields
+  }
 
   public constructor(
       vararg logFields: LogField,
       cause: Throwable? = null,
-  ) : this(message = null, logFields.asList(), cause)
+  ) : super(cause) {
+    this.messageField = null
+    this.logFields = logFields
+  }
 
-  internal val loggingContext: LoggingContext = getLoggingContextForException(cause)
+  @kotlin.concurrent.Volatile private var messageField: String?
 
-  private val messageField: String? = message
+  /** The exception message. */
   override val message: String?
     get() {
-      val cause = this.cause
-      return when {
-        messageField != null -> messageField
-        cause != null -> getMessageFromCauseException(cause)
-        else -> null
+      // If we have an initialized message field, return that
+      if (messageField != null) {
+        return messageField
+      }
+
+      // Otherwise, build exception message from cause exception, on the form:
+      // "CauseExceptionClassName: Cause exception message"
+      //
+      // This method stores the built message in `messageField`, so we don't have to rebuild it.
+      // If there's no cause exception, we return `null`.
+      return buildMessageFromCauseException()
+    }
+
+  private fun buildMessageFromCauseException(): String? {
+    val cause = this.cause
+    if (cause == null) {
+      return null
+    }
+
+    val className = cause::class.simpleName
+    val causeMessage = cause.message
+    val message: String =
+        when {
+          className != null && causeMessage != null -> "${className}: ${causeMessage}"
+          className == null && causeMessage != null -> causeMessage
+          className != null && causeMessage == null -> className
+          else -> return null
+        }
+    this.messageField = message
+    return message
+  }
+
+  /**
+   * We want to allow users to pass log fields as a Collection or as varargs (Array). But we don't
+   * want to convert one to the other, as that would involve allocations through boxing/copying. And
+   * unfortunately, `Array` and `Collection` do not share a common parent class besides `Any`.
+   *
+   * So to avoid allocations, we type this field as `Any`, so it can be used for both `Collection`
+   * and `Array`. We then check the actual type in [addFieldsToLog]. We know that this type must be
+   * either `Collection<LogField>` or `Array<out LogField>` (the type for varargs), as those are the
+   * only ways to pass log fields in this class's constructors.
+   */
+  @kotlin.jvm.JvmField internal val logFields: Any
+
+  internal fun addFieldsToLog(logBuilder: LogBuilder) {
+    // Safe cast: `logFields` can only be initialized as `Collection<LogField>` or
+    // `Array<out LogField>`. See comment on `logFields` for why we do this.
+    @Suppress("UNCHECKED_CAST")
+    when (val logFields = this.logFields) {
+      is Array<*> -> {
+        logBuilder.addFields(logFields as Array<out LogField>)
+      }
+      is Collection<*> -> {
+        logBuilder.addFields(logFields as Collection<LogField>)
       }
     }
 
-  private companion object {
-    @kotlin.jvm.JvmStatic
-    private fun getLoggingContextForException(cause: Throwable?): LoggingContext {
-      if (cause != null && hasContextForException(cause)) {
-        return EMPTY_LOGGING_CONTEXT
-      } else {
-        return getCopyOfLoggingContext()
-      }
+    val loggingContext = this.loggingContext
+    if (loggingContext != null) {
+      logBuilder.addFields(loggingContext)
+    }
+  }
+
+  /**
+   * Used by [withLoggingContext] to attach logging context if this exception escapes a context
+   * scope.
+   */
+  @kotlin.concurrent.Volatile private var loggingContext: Array<out LogField>? = null
+
+  internal fun addLoggingContext(logFields: Array<out LogField>) {
+    val existingContext = this.loggingContext
+    if (existingContext == null) {
+      this.loggingContext = logFields
+      return
     }
 
-    @kotlin.jvm.JvmStatic
-    private fun getMessageFromCauseException(cause: Throwable): String? {
-      val className = cause::class.simpleName
-      val message = cause.message
-      return when {
-        className != null && message != null -> "${className}: ${message}"
-        className == null && message != null -> message
-        className != null && message == null -> className
-        else -> null
-      }
-    }
+    // We need to cast to `Array<LogField>` in order to use the `+` operator here (which we want to
+    // use, since it uses optimized `System.arraycopy` on JVM).
+    // We can safely cast from  `Array<out LogField>` to `Array<LogField>`, since `LogField` has no
+    // subclasses, so this doesn't break covariance.
+    this.loggingContext = (existingContext as Array<LogField>) + logFields
   }
 }
 
@@ -207,9 +268,11 @@ public interface HasLogFields {
 }
 
 internal expect class LoggingContextProvider : RuntimeException {
-  constructor(loggingContext: LoggingContext)
+  constructor(loggingContext: Array<out LogField>)
 
-  val loggingContext: LoggingContext
+  fun addLoggingContext(logFields: Array<out LogField>)
+
+  fun addFieldsToLog(logBuilder: LogBuilder)
 }
 
 /**

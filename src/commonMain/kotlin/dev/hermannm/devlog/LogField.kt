@@ -73,23 +73,13 @@ import kotlinx.serialization.json.longOrNull
  * }
  * ```
  */
-public abstract class LogField
+public class LogField
+@PublishedApi
 internal constructor(
     @kotlin.jvm.JvmField internal val key: String,
     @kotlin.jvm.JvmField internal val value: String,
+    @kotlin.jvm.JvmField internal val isJson: Boolean,
 ) {
-  /**
-   * Should call [LogEvent.addJsonField] / [LogEvent.addStringField] to add this field to the log.
-   */
-  internal abstract fun addToLogEvent(logEvent: LogEvent)
-
-  /**
-   * Normally, this just returns [key]. But in the JVM implementation, [JsonLogField] adds a suffix
-   * to the key in the logging context to identify the value as raw JSON (so we can write the JSON
-   * unescaped in `JsonContextFieldWriter`).
-   */
-  internal abstract fun getKeyForLoggingContext(): String
-
   /**
    * Returns a string representation of the log field, formatted as `${key}=${value}`.
    *
@@ -104,28 +94,6 @@ internal constructor(
   /** Returns the combined hash code of the key and value for this log field. */
   override fun hashCode(): Int =
       key.hashCode() * 31 + value.hashCode() // 31 is default factor for aggregate hash codes
-}
-
-@PublishedApi
-internal class StringLogField(key: String, value: String) : LogField(key, value) {
-  override fun addToLogEvent(logEvent: LogEvent) {
-    logEvent.addStringField(key, value)
-  }
-
-  override fun getKeyForLoggingContext(): String = key
-}
-
-/**
- * We mark this class as `expect`, because for the JVM implementation, we want an additional field
- * here for a separate logging context key (see `LOGGING_CONTEXT_JSON_KEY_SUFFIX` under `jvmMain`
- * for more on this). For other platforms, we may not need this extra field, so we want the
- * implementation to be platform-specific.
- */
-@PublishedApi
-internal expect class JsonLogField(key: String, value: String) : LogField {
-  override fun addToLogEvent(logEvent: LogEvent)
-
-  override fun getKeyForLoggingContext(): String
 }
 
 /**
@@ -159,8 +127,8 @@ internal expect class JsonLogField(key: String, value: String) : LogField {
 public inline fun <reified ValueT> field(key: String, value: ValueT): LogField {
   return encodeFieldValue(
       value,
-      onJson = { jsonValue -> JsonLogField(key, jsonValue) },
-      onString = { stringValue -> StringLogField(key, stringValue) },
+      onJson = { jsonValue -> LogField(key, jsonValue, isJson = true) },
+      onString = { stringValue -> LogField(key, stringValue, isJson = false) },
   )
 }
 
@@ -200,8 +168,8 @@ public fun <ValueT : Any> field(
   return encodeFieldValueWithSerializer(
       value,
       serializer,
-      onJson = { jsonValue -> JsonLogField(key, jsonValue) },
-      onString = { stringValue -> StringLogField(key, stringValue) },
+      onJson = { jsonValue -> LogField(key, jsonValue, isJson = true) },
+      onString = { stringValue -> LogField(key, stringValue, isJson = false) },
   )
 }
 
@@ -213,7 +181,7 @@ public fun <ValueT : Any> field(
  * We take callbacks for the different results here instead of returning a return value. This is
  * because we use this in both [field] and [LogBuilder.field], and they want to do different things
  * with the encoded value:
- * - [field] constructs a [StringLogField] or [JsonLogField] with it
+ * - [field] constructs a [LogField] with it
  * - [LogBuilder.field] passes the value to [LogEvent.addStringField] or [LogEvent.addJsonField]
  *
  * If we used a return value here, we would have to wrap it in an object to convey whether it was
@@ -312,8 +280,8 @@ public fun rawJsonField(key: String, json: String, validJson: Boolean = false): 
   return validateRawJson(
       json,
       isValid = validJson,
-      onValidJson = { jsonValue -> JsonLogField(key, jsonValue) },
-      onInvalidJson = { stringValue -> StringLogField(key, stringValue) },
+      onValidJson = { jsonValue -> LogField(key, jsonValue, isJson = true) },
+      onInvalidJson = { stringValue -> LogField(key, stringValue, isJson = false) },
   )
 }
 

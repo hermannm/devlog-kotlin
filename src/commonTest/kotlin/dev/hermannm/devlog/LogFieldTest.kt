@@ -226,7 +226,7 @@ internal class LogFieldTest {
           (logBuilder: LogBuilder, key: String, json: String, validJson: Boolean) -> Unit,
   ) : TestCase
 
-  val rawJsonTestCases: List<RawJsonTestCase> =
+  private val rawJsonTestCases: List<RawJsonTestCase> =
       listOf(
           RawJsonTestCase("rawJsonField LogBuilder method") { logBuilder, key, json, validJson ->
             logBuilder.rawJsonField(key, json, validJson)

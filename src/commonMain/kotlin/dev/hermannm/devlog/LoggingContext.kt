@@ -86,7 +86,15 @@ public inline fun <ReturnT> withLoggingContext(
   // Allows callers to use `block` as if it were in-place
   contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
 
-  return withLoggingContextInternal(logFields, block)
+  addFieldsToLoggingContext(logFields)
+  try {
+    return block()
+  } catch (e: Exception) {
+    addLoggingContextToException(e, logFields)
+    throw e
+  } finally {
+    removeFieldsFromLoggingContext(logFields)
+  }
 }
 
 /**
@@ -165,42 +173,20 @@ public inline fun <ReturnT> withLoggingContext(
   // Allows callers to use `block` as if it were in-place
   contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
 
-  return withLoggingContextInternal(logFields.toTypedArray(), block)
-}
+  // The logging context implementation assumes that the field collection isn't mutated. We can't
+  // guarantee for `Collection`, so we must copy it to an array here. We don't need to do this
+  // defensive copy for the `vararg` overload, since Kotlin always creates a new array for varargs:
+  // https://discuss.kotlinlang.org/t/hidden-allocations-when-using-vararg-and-spread-operator/1640/2
+  val fieldArray = logFields.toTypedArray()
 
-/**
- * Shared implementation for the `vararg` and `Collection` versions of [withLoggingContext].
- *
- * This function must be kept internal, since our logging context functions assumes that the given
- * array is not modified from the outside. We uphold this invariant in both versions of
- * [withLoggingContext]:
- * - For the `vararg` version: Varargs always give a new array to the called function, even when
- *   called with an existing array:
- *   https://discuss.kotlinlang.org/t/hidden-allocations-when-using-vararg-and-spread-operator/1640/2
- * - For the `Collection` version: Here we call [Collection.toTypedArray], which creates a new
- *   array.
- *
- * We could just call the `vararg` version of [withLoggingContext] from the `Collection` overload,
- * since you can pass an array to a function taking varargs. But this actually copies the array
- * twice: once in [Collection.toTypedArray], and again in the defensive copy that varargs make in
- * Kotlin.
- */
-@PublishedApi
-internal inline fun <ReturnT> withLoggingContextInternal(
-    logFields: Array<out LogField>,
-    block: () -> ReturnT,
-): ReturnT {
-  // Allows callers to use `block` as if it were in-place
-  contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
-
-  val overwrittenFields = addFieldsToLoggingContext(logFields)
+  addFieldsToLoggingContext(fieldArray)
   try {
     return block()
   } catch (e: Exception) {
-    addLoggingContextToException(e)
+    addLoggingContextToException(e, fieldArray)
     throw e
   } finally {
-    removeFieldsFromLoggingContext(logFields, overwrittenFields)
+    removeFieldsFromLoggingContext(fieldArray)
   }
 }
 
@@ -274,14 +260,14 @@ public inline fun <ReturnT> withLoggingContext(
   // Allows callers to use `block` as if it were in-place
   contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
 
-  val overwrittenFields = addExistingContextFieldsToLoggingContext(existingContext)
+  addExistingContextFieldsToLoggingContext(existingContext)
   try {
     return block()
   } catch (e: Exception) {
-    addLoggingContextToException(e)
+    addExistingLoggingContextToException(e, existingContext)
     throw e
   } finally {
-    removeExistingContextFieldsFromLoggingContext(existingContext, overwrittenFields)
+    removeExistingContextFieldsFromLoggingContext(existingContext)
   }
 }
 
@@ -351,142 +337,308 @@ public expect fun getCopyOfLoggingContext(): LoggingContext
  * This type is returned by [getCopyOfLoggingContext], and can be passed to one of the
  * [withLoggingContext] overloads in order to copy logging context between threads.
  */
-@kotlin.jvm.JvmInline
-public expect value class LoggingContext
-private constructor(
-    /**
-     * The platform-specific representation of the logging context. On the JVM, this is a
-     * `Map<String, String?>?`, which is the type used by SLF4J's MDC.
-     *
-     * We would prefer to use a per-platform typealias for this, but unfortunately Kotlin doesn't
-     * allow `actual` typealiases for generic types. So we get around this by marking the
-     * constructor `private`, and providing type-safe constructors and accessors in the platform
-     * implementation.
-     */
-    private val platformType: Any?,
-)
+public expect class LoggingContext {
+  internal fun toLogFields(): Array<out LogField>?
+}
 
 /** Static field for the empty logging context, to avoid redundant re-instantiations. */
 internal expect val EMPTY_LOGGING_CONTEXT: LoggingContext
 
-@PublishedApi
-internal expect fun addFieldsToLoggingContext(fields: Array<out LogField>): OverwrittenContextFields
+@PublishedApi internal expect fun addFieldsToLoggingContext(fields: Array<out LogField>)
 
-/**
- * Takes the array of overwritten field values returned by [addFieldsToLoggingContext], to restore
- * the previous context values after the current context exits.
- */
-@PublishedApi
-internal expect fun removeFieldsFromLoggingContext(
-    fields: Array<out LogField>,
-    overwrittenFields: OverwrittenContextFields
-)
+@PublishedApi internal expect fun removeFieldsFromLoggingContext(fields: Array<out LogField>)
 
 @PublishedApi
-internal expect fun addExistingContextFieldsToLoggingContext(
-    existingContext: LoggingContext
-): OverwrittenContextFields
+internal expect fun addExistingContextFieldsToLoggingContext(existingContext: LoggingContext)
 
 /** Like [removeFieldsFromLoggingContext], but for [addExistingContextFieldsToLoggingContext]. */
 @PublishedApi
-internal expect fun removeExistingContextFieldsFromLoggingContext(
-    existingContext: LoggingContext,
-    overwrittenFields: OverwrittenContextFields
-)
+internal expect fun removeExistingContextFieldsFromLoggingContext(existingContext: LoggingContext)
 
-@PublishedApi internal expect fun addLoggingContextToException(exception: Throwable)
+@PublishedApi
+internal fun addLoggingContextToException(exception: Throwable, logFields: Array<out LogField>) {
+  traverseExceptionTree(root = exception) { exception ->
+    when (exception) {
+      is ExceptionWithLoggingContext -> {
+        exception.addLoggingContext(logFields)
+        return
+      }
+      is LoggingContextProvider -> {
+        exception.addLoggingContext(logFields)
+        return
+      }
+    }
+  }
 
-internal expect fun hasContextForException(exception: Throwable): Boolean
+  exception.addSuppressed(LoggingContextProvider(logFields))
+}
 
-internal expect fun LogBuilder.addContextFields(loggingContext: LoggingContext)
+@PublishedApi
+internal fun addExistingLoggingContextToException(
+    exception: Throwable,
+    existingContext: LoggingContext
+) {
+  val logFields = existingContext.toLogFields()
+  if (logFields != null) {
+    addLoggingContextToException(exception, logFields)
+  }
+}
 
-/**
- * Fields (key/value pairs) that were overwritten by [addFieldsToLoggingContext], passed to
- * [removeFieldsFromLoggingContext] so we can restore the previous field values after the current
- * logging context exits.
- *
- * We want this object to be as efficient as possible, since it will be kept around for the whole
- * span of a [withLoggingContext] scope, which may last a while. To support this goal, we:
- * - Use an array, to store the fields as compactly as possible
- *     - We store key/values inline, alternating - so an initialized array will look like:
- *       `key1-value1-key2-value2`
- *     - We initialize the array to twice the size of the current logging context fields, since we
- *       store 2 elements (key/value) for every field in the current context. This is not a concern,
- *       since there will typically be few elements in the context, and storing `null`s in the array
- *       does not take up much space.
- * - Initialize the array to `null`, so we don't allocate anything for the common case of there
- *   being no overwritten fields
- * - Use an inline value class, so we don't allocate a redundant wrapper object
- *     - To avoid the array being boxed, we always use this object as its concrete type. We also
- *       make the `fields` array nullable instead of the outer object, as making the outer object
- *       nullable boxes it (like `Int` and `Int?`). See
- *       [Kotlin docs](https://kotlinlang.org/docs/inline-classes.html#representation) for more on
- *       when inline value classes are boxed.
- */
-@kotlin.jvm.JvmInline
-internal value class OverwrittenContextFields(private val fields: Array<String?>?) {
-  /**
-   * If the overwritten context field array has not been initialized yet, we initialize it before
-   * setting the key/value, and return the new array. It is an error not to use the return value
-   * (unfortunately,
-   * [Kotlin can't disallow unused return values yet](https://youtrack.jetbrains.com/issue/KT-12719)).
-   */
-  internal fun set(
-      index: Int,
+@JvmInline
+internal value class LoggingContextState(private val stateArray: Array<String?>?) {
+  internal fun add(
       key: String,
       value: String,
-      totalFields: Int
-  ): OverwrittenContextFields {
-    val fields = this.fields ?: arrayOfNulls(totalFields * 2)
-    fields[index * 2] = key
-    fields[index * 2 + 1] = value
-    return OverwrittenContextFields(fields)
+      isJson: Boolean,
+      overwrittenValue: String?,
+      newFieldCount: Int,
+  ): LoggingContextState {
+    if (newFieldCount <= 0) {
+      return this
+    }
+
+    val stringValue: String?
+    val jsonValue: String?
+    if (isJson) {
+      jsonValue = value
+      stringValue = null
+    } else {
+      stringValue = value
+      jsonValue = null
+    }
+
+    return add(key, stringValue, jsonValue, overwrittenValue, newFieldCount)
   }
 
-  internal fun getKey(index: Int): String? {
-    return fields?.get(index * 2)
+  private fun add(
+      key: String,
+      stringValue: String?,
+      jsonValue: String?,
+      overwrittenValue: String?,
+      newFieldCount: Int,
+  ): LoggingContextState {
+    var state = getOrInitializeState(newFieldCount)
+    var index = state.getAvailableIndex()
+    if (index == -1) {
+      index = state.stateArray.size
+      state = state.resize(newFieldCount)
+    }
+
+    state.set(index, key, stringValue, jsonValue, overwrittenValue)
+
+    return LoggingContextState(state.stateArray)
   }
 
-  internal fun getValue(index: Int): String? {
-    return fields?.get(index * 2 + 1)
+  /**
+   * @return Previous overwritten value for the given key, if any (i.e., the same value passed as
+   *   `overwrittenValue` to [add]).
+   */
+  internal fun popKey(key: String): String? {
+    if (stateArray == null) {
+      return null
+    }
+
+    val state = InitializedState(stateArray)
+    state.forEachKeyReversed { index, stateKey ->
+      if (stateKey == key) {
+        val overwrittenValue = state.getOverwrittenValue(index)
+        state.remove(index)
+        return overwrittenValue
+      }
+    }
+
+    return null
   }
 
-  internal fun isEmpty(): Boolean {
-    return fields == null
+  internal fun isJsonField(key: String, value: String): Boolean {
+    if (stateArray == null) {
+      return false
+    }
+
+    val state = InitializedState(stateArray)
+    state.forEachKeyReversed { index, stateKey ->
+      if (stateKey == key) {
+        val jsonValue = state.getJsonValue(index)
+        return jsonValue != null && jsonValue == value
+      }
+    }
+
+    return false
   }
 
-  internal inline fun forEachKey(action: (index: Int, key: String) -> Unit) {
-    if (fields == null) {
+  internal fun storeFieldOverwrittenForLog(
+      key: String,
+      overwrittenValue: String
+  ): LoggingContextState {
+    return add(
+        key = key,
+        stringValue = null,
+        jsonValue = null,
+        overwrittenValue = overwrittenValue,
+        newFieldCount = 1,
+    )
+  }
+
+  internal inline fun restoreFieldsOverwrittenForLog(
+      crossinline action: (key: String, overwrittenValue: String) -> Unit
+  ) {
+    if (stateArray == null) {
       return
     }
 
-    var index = 0
-    while (index < fields.size) {
-      val key = fields[index]
-      if (key != null) {
-        // Divide the index by 2, since the fact that we store keys and values contiguously here is
-        // an implementation detail
-        action(index / 2, key)
+    val state = InitializedState(stateArray)
+    state.forEachKeyReversed { index, key ->
+      val stringValue = state.getStringValue(index)
+      val jsonValue = state.getJsonValue(index)
+      if (stringValue == null && jsonValue == null) {
+        val overwrittenValue = state.getOverwrittenValue(index)
+        if (overwrittenValue != null) {
+          action(key, overwrittenValue)
+          state.remove(index)
+        }
+      } else {
+        // Fields overwritten for log will always be at the end of the array, and since we iterate
+        // in reverse, we can stop iterating once we get to a field with non-null value
+        return
       }
-
-      index += 2
     }
   }
 
-  internal inline fun forEachNonNull(action: (key: String, value: String) -> Unit) {
-    if (fields == null) {
-      return
+  private fun getOrInitializeState(newFieldCount: Int): InitializedState {
+    return if (stateArray != null) {
+      InitializedState(stateArray)
+    } else {
+      InitializedState(arrayOfNulls(size = newFieldCount * ELEMENTS_PER_FIELD))
+    }
+  }
+
+  @JvmInline
+  internal value class InitializedState(val stateArray: Array<String?>) {
+    internal fun set(
+        index: StateKeyIndex,
+        key: String?,
+        stringValue: String?,
+        jsonValue: String?,
+        overwrittenValue: String?,
+    ) {
+      stateArray[index] = key
+      stateArray[index + 1] = stringValue
+      stateArray[index + 2] = jsonValue
+      stateArray[index + 3] = overwrittenValue
     }
 
-    var index = 0
-    while (index < fields.size) {
-      val key = fields[index]
-      val value = fields[index + 1]
-      if (key != null && value != null) {
-        action(key, value)
+    internal fun getKey(index: StateKeyIndex): String? {
+      return stateArray[index]
+    }
+
+    internal fun getStringValue(index: StateKeyIndex): String? {
+      return stateArray[index + 1]
+    }
+
+    internal fun getJsonValue(index: StateKeyIndex): String? {
+      return stateArray[index + 2]
+    }
+
+    internal fun getOverwrittenValue(index: StateKeyIndex): String? {
+      return stateArray[index + 3]
+    }
+
+    internal fun remove(index: StateKeyIndex) {
+      stateArray.fill(element = null, fromIndex = index, toIndex = index + 3)
+    }
+
+    /** Returns -1 if no available index. */
+    internal fun getAvailableIndex(): StateKeyIndex {
+      var availableIndex = -1
+      forEachKeyIndexReversed { index ->
+        if (getKey(index) == null) {
+          availableIndex = index
+        } else {
+          return availableIndex
+        }
+      }
+      return availableIndex
+    }
+
+    internal fun resize(newFieldCount: Int): InitializedState {
+      val newState = arrayOfNulls<String?>(stateArray.size + newFieldCount * ELEMENTS_PER_FIELD)
+
+      stateArray.copyInto(newState)
+
+      return InitializedState(newState)
+    }
+
+    internal fun isEmpty(): Boolean {
+      forEachKeyReversed { _, _ ->
+        return false
+      }
+      return true
+    }
+
+    internal fun countEmptyFields(): Int {
+      var emptyFields = 0
+      forEachKeyIndexReversed { index ->
+        if (getKey(index) == null) {
+          emptyFields++
+        } else {
+          return emptyFields
+        }
+      }
+      return emptyFields
+    }
+
+    internal inline fun forEachKeyReversed(action: (index: StateKeyIndex, key: String) -> Unit) {
+      forEachKeyIndexReversed { index ->
+        val key = getKey(index)
+        if (key != null) {
+          action(index, key)
+        }
+      }
+    }
+
+    internal inline fun forEachKeyIndexReversed(action: (index: StateKeyIndex) -> Unit) {
+      val size = stateArray.size
+      if (size < ELEMENTS_PER_FIELD) {
+        return
       }
 
-      index += 2
+      var index = size - ELEMENTS_PER_FIELD
+      while (index >= 0) {
+        action(index)
+
+        index -= ELEMENTS_PER_FIELD
+      }
+    }
+  }
+
+  internal fun copy(): LoggingContextState {
+    if (stateArray == null) {
+      return this
+    }
+
+    val emptyFields = InitializedState(stateArray).countEmptyFields()
+
+    val newSize = stateArray.size - emptyFields * ELEMENTS_PER_FIELD
+    return LoggingContextState(stateArray.copyOf(newSize = newSize))
+  }
+
+  internal fun save() {
+    if (stateArray == null || InitializedState(stateArray).isEmpty()) {
+      STATE.set(null)
+    } else {
+      STATE.set(stateArray)
+    }
+  }
+
+  internal companion object {
+    private val STATE = ThreadLocal<Array<String?>?>()
+
+    private const val ELEMENTS_PER_FIELD = 4
+
+    internal fun get(): LoggingContextState {
+      return LoggingContextState(STATE.get())
     }
   }
 }
+
+internal typealias StateKeyIndex = Int

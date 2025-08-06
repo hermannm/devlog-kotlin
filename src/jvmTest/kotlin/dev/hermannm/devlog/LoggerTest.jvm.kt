@@ -85,13 +85,10 @@ internal actual fun LoggerTestCase.verifyLogOutput(expectedLogLevel: LogLevel, b
     logEvent.keyValuePairs.shouldContainExactly(
         this.expectedFields.map { field ->
           val expectedValue =
-              when (field) {
-                is StringLogField -> field.value
-                is JsonLogField -> RawJson(field.value)
-                else ->
-                    throw IllegalStateException(
-                        "Unrecognized log field type '${field::class.qualifiedName}'",
-                    )
+              if (field.isJson) {
+                RawJson(field.value)
+              } else {
+                field.value
               }
           KeyValuePair(field.key, expectedValue)
         },

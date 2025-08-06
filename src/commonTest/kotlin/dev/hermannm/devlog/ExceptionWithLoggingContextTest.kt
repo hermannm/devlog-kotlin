@@ -256,7 +256,7 @@ internal class ExceptionWithLoggingContextTest {
         )
 
     exception.message shouldBe "Test"
-    exception.logFields shouldBe listOf(field("key1", "value1"), field("key2", "value2"))
+    exception.logFields() shouldBe listOf(field("key1", "value1"), field("key2", "value2"))
     exception.cause shouldBe cause
   }
 
@@ -270,7 +270,7 @@ internal class ExceptionWithLoggingContextTest {
         )
 
     exception.message shouldBe "IllegalArgumentException: Invalid input"
-    exception.logFields shouldBe listOf(field("key", "value"))
+    exception.logFields() shouldBe listOf(field("key", "value"))
     exception.cause shouldBe cause
   }
 
@@ -285,7 +285,7 @@ internal class ExceptionWithLoggingContextTest {
         )
 
     exception.message shouldBe "IllegalArgumentException: Invalid input"
-    exception.logFields shouldBe listOf(field("key1", "value1"), field("key2", "value2"))
+    exception.logFields() shouldBe listOf(field("key1", "value1"), field("key2", "value2"))
     exception.cause shouldBe cause
   }
 
@@ -294,7 +294,7 @@ internal class ExceptionWithLoggingContextTest {
     val exception = ExceptionWithLoggingContext()
     exception.message.shouldBeNull()
     exception.cause.shouldBeNull()
-    exception.logFields.shouldBeEmpty()
+    exception.logFields().shouldBeEmpty()
   }
 
   @Test
@@ -332,7 +332,7 @@ internal class ExceptionWithLoggingContextTest {
 
     val exception = CustomException()
     exception.message shouldBe "Custom message"
-    exception.logFields shouldBe listOf(field("key", "value"))
+    exception.logFields() shouldBe listOf(field("key", "value"))
   }
 
   @Test
@@ -347,7 +347,7 @@ internal class ExceptionWithLoggingContextTest {
 
     val exception = CustomException()
     exception.message shouldBe "Custom message"
-    exception.logFields shouldBe listOf(field("key1", "value1"), field("key2", "value2"))
+    exception.logFields() shouldBe listOf(field("key1", "value1"), field("key2", "value2"))
   }
 
   /** See comments in [traverseExceptionTree]. */
@@ -378,3 +378,16 @@ private fun exceptionWithLoggingContext(key: String, value: String) =
         message = "Test exception",
         logFields = listOf(field(key, value)),
     )
+
+private fun ExceptionWithLoggingContext.logFields(): Collection<LogField> {
+  /** See [ExceptionWithLoggingContext.logFields] for why these casts are safe. */
+  @Suppress("UNCHECKED_CAST")
+  return when (val logFields = logFields) {
+    is Array<*> -> (logFields as Array<out LogField>).asList()
+    is Collection<*> -> logFields as Collection<LogField>
+    else ->
+        throw IllegalStateException(
+            "Unexpected type of 'logFields' on 'ExceptionWithLoggingContext': ${logFields}",
+        )
+  }
+}

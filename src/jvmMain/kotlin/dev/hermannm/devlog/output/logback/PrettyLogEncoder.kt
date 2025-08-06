@@ -6,7 +6,6 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.spi.IThrowableProxy
 import ch.qos.logback.core.encoder.EncoderBase
-import dev.hermannm.devlog.LOGGING_CONTEXT_JSON_KEY_SUFFIX
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.io.OutputStreamWriter
@@ -140,19 +139,11 @@ public class PrettyLogEncoder : EncoderBase<ILoggingEvent>(), StreamingEncoder<I
   }
 
   private fun writeLoggingContext(
-      loggingContext: Map<String?, String?>,
+      loggingContext: Map<String, String?>,
       output: OutputStreamWriter
   ) {
     for ((key, value) in loggingContext) {
-      if (key == null) {
-        continue
-      }
-
-      writeLogField(
-          key = key.removeSuffix(LOGGING_CONTEXT_JSON_KEY_SUFFIX),
-          value = value ?: "null",
-          output,
-      )
+      writeLogField(key, value = value ?: "null", output)
     }
   }
 

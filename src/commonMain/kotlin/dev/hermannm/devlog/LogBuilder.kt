@@ -252,7 +252,11 @@ internal constructor(
    *   [withLoggingContext]
    */
   public fun addField(field: LogField) {
-    field.addToLogEvent(logEvent)
+    if (field.isJson) {
+      logEvent.addJsonField(field.key, field.value)
+    } else {
+      logEvent.addStringField(field.key, field.value)
+    }
   }
 
   /**
@@ -266,6 +270,12 @@ internal constructor(
    *   [withLoggingContext]
    */
   public fun addFields(fields: Collection<LogField>) {
+    for (field in fields) {
+      addField(field)
+    }
+  }
+
+  internal fun addFields(fields: Array<out LogField>) {
     for (field in fields) {
       addField(field)
     }
@@ -296,11 +306,10 @@ internal constructor(
   internal fun addFieldsFromException(exception: Throwable) {
     when (exception) {
       is ExceptionWithLoggingContext -> {
-        addFields(exception.logFields)
-        addContextFields(exception.loggingContext)
+        exception.addFieldsToLog(this)
       }
       is LoggingContextProvider -> {
-        addContextFields(exception.loggingContext)
+        exception.addFieldsToLog(this)
       }
       is HasLogFields -> {
         addFields(exception.logFields)

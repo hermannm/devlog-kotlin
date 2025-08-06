@@ -1,4 +1,4 @@
-public class dev/hermannm/devlog/ExceptionWithLoggingContext : java/lang/RuntimeException, dev/hermannm/devlog/HasLogFields {
+public class dev/hermannm/devlog/ExceptionWithLoggingContext : java/lang/RuntimeException {
 	public fun <init> (Ljava/lang/String;Ljava/util/Collection;Ljava/lang/Throwable;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Collection;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;[Ldev/hermannm/devlog/LogField;Ljava/lang/Throwable;)V
@@ -7,17 +7,11 @@ public class dev/hermannm/devlog/ExceptionWithLoggingContext : java/lang/Runtime
 	public synthetic fun <init> (Ljava/util/Collection;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> ([Ldev/hermannm/devlog/LogField;Ljava/lang/Throwable;)V
 	public synthetic fun <init> ([Ldev/hermannm/devlog/LogField;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public fun getCause ()Ljava/lang/Throwable;
-	public fun getLogFields ()Ljava/util/Collection;
 	public fun getMessage ()Ljava/lang/String;
 }
 
 public abstract interface class dev/hermannm/devlog/HasLogFields {
 	public abstract fun getLogFields ()Ljava/util/Collection;
-}
-
-public final class dev/hermannm/devlog/JsonLogField : dev/hermannm/devlog/LogField {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 }
 
 public final class dev/hermannm/devlog/LogBuilder {
@@ -51,7 +45,8 @@ public final class dev/hermannm/devlog/LogEventJvm {
 	public static final fun createLogEvent (Ldev/hermannm/devlog/LogLevel;Lorg/slf4j/Logger;)Ldev/hermannm/devlog/LogEvent;
 }
 
-public abstract class dev/hermannm/devlog/LogField {
+public final class dev/hermannm/devlog/LogField {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Z)V
 	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
@@ -123,36 +118,23 @@ public final class dev/hermannm/devlog/LoggerJvm {
 }
 
 public final class dev/hermannm/devlog/LoggingContext {
-	public static final synthetic fun box-impl (Ljava/lang/Object;)Ldev/hermannm/devlog/LoggingContext;
-	public fun equals (Ljava/lang/Object;)Z
-	public static fun equals-impl (Ljava/lang/Object;Ljava/lang/Object;)Z
-	public static final fun equals-impl0 (Ljava/lang/Object;Ljava/lang/Object;)Z
-	public fun hashCode ()I
-	public static fun hashCode-impl (Ljava/lang/Object;)I
-	public fun toString ()Ljava/lang/String;
-	public static fun toString-impl (Ljava/lang/Object;)Ljava/lang/String;
-	public final synthetic fun unbox-impl ()Ljava/lang/Object;
 }
 
 public final class dev/hermannm/devlog/LoggingContextJvm {
-	public static final fun addExistingContextFieldsToLoggingContext-VjAUn8U (Ljava/lang/Object;)[Ljava/lang/String;
-	public static final fun addFieldsToLoggingContext ([Ldev/hermannm/devlog/LogField;)[Ljava/lang/String;
-	public static final fun addLoggingContextToException (Ljava/lang/Throwable;)V
-	public static final fun getCopyOfLoggingContext ()Ljava/lang/Object;
+	public static final fun addExistingContextFieldsToLoggingContext (Ldev/hermannm/devlog/LoggingContext;)V
+	public static final fun addFieldsToLoggingContext ([Ldev/hermannm/devlog/LogField;)V
+	public static final fun getCopyOfLoggingContext ()Ldev/hermannm/devlog/LoggingContext;
 	public static final fun inheritLoggingContext (Ljava/util/concurrent/ExecutorService;)Ljava/util/concurrent/ExecutorService;
-	public static final fun removeExistingContextFieldsFromLoggingContext-0aYEv-s (Ljava/lang/Object;[Ljava/lang/String;)V
-	public static final fun removeFieldsFromLoggingContext-vNTxQKI ([Ldev/hermannm/devlog/LogField;[Ljava/lang/String;)V
+	public static final fun removeExistingContextFieldsFromLoggingContext (Ldev/hermannm/devlog/LoggingContext;)V
+	public static final fun removeFieldsFromLoggingContext ([Ldev/hermannm/devlog/LogField;)V
 }
 
 public final class dev/hermannm/devlog/LoggingContextKt {
+	public static final fun addExistingLoggingContextToException (Ljava/lang/Throwable;Ldev/hermannm/devlog/LoggingContext;)V
+	public static final fun addLoggingContextToException (Ljava/lang/Throwable;[Ldev/hermannm/devlog/LogField;)V
+	public static final fun withLoggingContext (Ldev/hermannm/devlog/LoggingContext;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
 	public static final fun withLoggingContext (Ljava/util/Collection;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
 	public static final fun withLoggingContext ([Ldev/hermannm/devlog/LogField;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
-	public static final fun withLoggingContext-o2zioYE (Ljava/lang/Object;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
-	public static final fun withLoggingContextInternal ([Ldev/hermannm/devlog/LogField;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
-}
-
-public final class dev/hermannm/devlog/StringLogField : dev/hermannm/devlog/LogField {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
 }
 
 public final class dev/hermannm/devlog/output/logback/JsonContextFieldWriter : net/logstash/logback/composite/loggingevent/mdc/MdcEntryWriter {

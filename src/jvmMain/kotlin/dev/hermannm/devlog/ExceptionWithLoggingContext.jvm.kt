@@ -7,8 +7,20 @@ import java.io.PrintWriter
 
 internal actual class LoggingContextProvider
 actual constructor(
-    actual val loggingContext: LoggingContext,
+    @kotlin.concurrent.Volatile private var loggingContext: Array<out LogField>,
 ) : RuntimeException() {
+  actual fun addLoggingContext(logFields: Array<out LogField>) {
+    // We need to cast to `Array<LogField>` in order to use the `+` operator here (which we want to
+    // use, since it uses optimized `System.arraycopy` on JVM).
+    // We can safely cast from `Array<out LogField>` to `Array<LogField>`, since `LogField` has no
+    // subclasses, so this doesn't break covariance.
+    this.loggingContext = (this.loggingContext as Array<LogField>) + logFields
+  }
+
+  actual fun addFieldsToLog(logBuilder: LogBuilder) {
+    logBuilder.addFields(loggingContext)
+  }
+
   override val message: String?
     get() = "Added log fields from exception"
 
@@ -35,15 +47,13 @@ actual constructor(
   override fun printStackTrace(s: PrintWriter?) {
     return
   }
-
-  private companion object {
-    /**
-     * `emptyArray` may allocate, so we initialize the empty stack trace here on the companion
-     * object, so it only allocates once.
-     */
-    private val EMPTY_STACK_TRACE: Array<out StackTraceElement> = emptyArray()
-  }
 }
+
+/**
+ * `emptyArray` may allocate, so we initialize a static empty stack trace here, so it only allocates
+ * once.
+ */
+private val EMPTY_STACK_TRACE: Array<out StackTraceElement> = emptyArray()
 
 internal actual fun getSuppressedExceptions(exception: Throwable): List<Throwable>? {
   val suppressedExceptions: Array<Throwable> = exception.suppressed
