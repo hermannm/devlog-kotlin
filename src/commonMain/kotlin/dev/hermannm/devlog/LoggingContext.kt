@@ -608,17 +608,17 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
 
   internal fun save() {
     if (stateArray == null || InitializedState(stateArray).isEmpty()) {
-      STATE.set(null)
+      THREAD_CONTEXT_STATE.set(null)
     } else {
-      STATE.set(stateArray)
+      THREAD_CONTEXT_STATE.set(stateArray)
     }
   }
 
   internal companion object {
-    private val STATE = ThreadLocal<Array<String?>?>()
+    private val THREAD_CONTEXT_STATE = ThreadLocal<Array<String?>?>()
 
     internal fun get(): LoggingContextState {
-      return LoggingContextState(STATE.get())
+      return LoggingContextState(THREAD_CONTEXT_STATE.get())
     }
 
     private const val ELEMENTS_PER_FIELD = 4
