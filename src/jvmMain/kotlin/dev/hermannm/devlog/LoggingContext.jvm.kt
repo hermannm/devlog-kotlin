@@ -58,7 +58,7 @@ internal constructor(
 }
 
 internal actual val EMPTY_LOGGING_CONTEXT =
-    LoggingContext(map = null, state = LoggingContextState(null))
+    LoggingContext(map = null, state = LoggingContextState.empty())
 
 @PublishedApi
 internal actual fun addFieldsToLoggingContext(fields: Array<out LogField>) {
@@ -82,7 +82,7 @@ internal actual fun addFieldsToLoggingContext(fields: Array<out LogField>) {
     contextState = contextState.add(key, value, field.isJson, previousValue, newFieldCount)
   }
 
-  contextState.save()
+  contextState.saveAfterAddingFields()
 }
 
 /**
@@ -110,7 +110,7 @@ internal actual fun removeFieldsFromLoggingContext(fields: Array<out LogField>) 
     }
   }
 
-  contextState.save()
+  contextState.saveAfterRemovingFields()
 }
 
 private fun isDuplicateField(key: String, index: Int, fields: Array<out LogField>): Boolean {
@@ -146,7 +146,7 @@ internal actual fun addExistingContextFieldsToLoggingContext(existingContext: Lo
         currentState.add(key, value, isJson, previousValue, newFieldCount = existingContextSize)
   }
 
-  currentState.save()
+  currentState.saveAfterAddingFields()
 }
 
 @PublishedApi
@@ -172,10 +172,10 @@ internal actual fun removeExistingContextFieldsFromLoggingContext(existingContex
     }
   }
 
-  currentContextState.save()
+  currentContextState.saveAfterRemovingFields()
 }
 
-internal fun overwriteDuplicateContextFields(logFields: MutableList<KeyValuePair>?) {
+internal fun overwriteDuplicateContextFieldsForLog(logFields: MutableList<KeyValuePair>?) {
   if (logFields == null) {
     return
   }
@@ -209,17 +209,17 @@ internal fun overwriteDuplicateContextFields(logFields: MutableList<KeyValuePair
     }
   }
 
-  contextState.save()
+  contextState.saveAfterAddingFields()
 }
 
-internal fun restoreOverwrittenContextFields() {
+internal fun restoreContextFieldsOverwrittenForLog() {
   val contextState = LoggingContextState.get()
 
   contextState.restoreFieldsOverwrittenForLog { key, overwrittenValue ->
     MDC.put(key, overwrittenValue)
   }
 
-  contextState.save()
+  contextState.saveAfterRemovingFields()
 }
 
 /**

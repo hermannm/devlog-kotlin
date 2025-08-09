@@ -6,6 +6,7 @@
 
 package dev.hermannm.devlog
 
+import dev.hermannm.devlog.LoggingContextState.Companion.JSON_FIELD_SENTINEL
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -384,8 +385,80 @@ internal fun addExistingLoggingContextToException(
   }
 }
 
+/**
+ * In the JVM implementation, we use SLF4J's MDC for logging context. We want to use that instead of
+ * managing our own logging context, so that our logging context can be included in logs made by
+ * other libraries that use SLF4J but not `devlog-kotlin`.
+ *
+ * MDC is implemented as a thread-local `HashMap<String, String?>`. This limits what we can put in
+ * the logging context to just String values. But in this library, we want to be able to put
+ * arbitrary JSON in the logging context, so that the [field] function can have the same interface
+ * as [LogBuilder.field]. Serialized JSON is a string, so we can put it in MDC, but the issue then
+ * is that the JSON will be escaped in the log output, since our log encoder does not expect MDC
+ * values to be JSON.
+ *
+ * So in order to support JSON field values in the logging context using MDC, we need 2 things:
+ * - A way to intercept writing of MDC entries in our log encoder, to write JSON values unescaped
+ *     - `logstash-logback-encoder` (JSON encoder library for Logback) lets us do this, by
+ *       implementing the `MdcEntryWriter` interface. We do this in our `JsonContextFieldWriter`
+ *       under `jvmMain`.
+ *     - The downside is that users must explicitly add `JsonContextFieldWriter` to their Logback
+ *       config, but that's not too bad when we document it clearly in the README.
+ * - A way to track which logging context values are JSON.
+ *     - In a previous version of this library, we did this by adding a suffix to MDC keys that had
+ *       JSON values, and then we would check for the suffix in our `JsonContextFieldWriter`. If the
+ *       suffix was present, we could then write the value as unescaped JSON, and write the key
+ *       without the suffix. There were 3 downsides to this approach:
+ *         - We did not want to add this suffix if our users are not using `JsonContextFieldWriter`.
+ *           The logic for ensuring that was tricky, and led to the key suffix leaking out into the
+ *           logs in certain cases, which was not good.
+ *         - Having some MDC keys _with_ a suffix and some without greatly complicated our logic for
+ *           overwriting existing logging context entries with the same key, since there were 2
+ *           variants of the same context key (suffixed and non-suffixed).
+ *         - We had to add this suffix both when adding fields to the context, but also when
+ *           checking for fields. This caused quite a lot of allocations from runtime string
+ *           concatenation. A goal of this library is to make as few memory allocations as possible,
+ *           so this was not ideal.
+ *     - This class, `LoggingContextState`, is our new solution to this problem of tracking which
+ *       context values are JSON
+ *         - It consists of a thread-local ([THREAD_CONTEXT_STATE]) that lives side-by-side with
+ *           SLF4J's MDC.
+ *         - Whenever we add fields to the logging context, we also add to this context state, where
+ *           we can track more state than what MDC allows us:
+ *             - Firstly, we have a field to mark whether a context value is JSON
+ *             - Secondly, we can track _overwritten_ context values:
+ *                 - When a new key is put into MDC, any previous value associated with that key is
+ *                   overwritten, and gone.
+ *                 - But in our `withLoggingContext` function, we want such overwritten context
+ *                   values to be restored when the context scope exits, so that we don't lose outer
+ *                   context just because we entered an inner context.
+ *                 - To achieve this, we check for previous context values before adding a new field
+ *                   in `withLoggingContext`, and we find a previous value, we add it to this
+ *                   context state, so that we can restore it after the context scope.
+ *
+ * Because a logging context scope can live for a while, we want this context state to be as
+ * memory-efficient as possible. To do this, we implement it as an array of strings, instead of as
+ * an array of objects where we would have to allocate wrapper classes. Each field in the logging
+ * context takes up 4 elements in the array, as follows:
+ * 1. Key
+ * 2. Value
+ * 3. Marker for whether the field is JSON (see [JSON_FIELD_SENTINEL])
+ * 4. Overwritten value from previous logging context, to be restored (`null` if there was none)
+ *
+ * This lets us store the context state as compactly as possible.
+ */
 @JvmInline
-internal value class LoggingContextState(private val stateArray: Array<String?>?) {
+internal value class LoggingContextState
+private constructor(private val stateArray: Array<String?>?) {
+  /**
+   * Adds a field to the logging context state.
+   *
+   * If the context field array has not been initialized yet, we initialize it before setting the
+   * key/value, and return the new array. It is an error not to use the return value (unfortunately,
+   * [Kotlin can't disallow unused return values yet](https://youtrack.jetbrains.com/issue/KT-12719)).
+   *
+   * Remember to call [saveAfterAddingFields] after this to persist the changes.
+   */
   internal fun add(
       key: String,
       value: String?,
@@ -410,6 +483,10 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
   }
 
   /**
+   * Removes the latest logging context field with the given key from the context state.
+   *
+   * Remember to call [saveAfterRemovingFields] after this to persist the changes.
+   *
    * @return Previous overwritten value for the given key, if any (i.e., the same value passed as
    *   `overwrittenValue` to [add]).
    */
@@ -430,6 +507,44 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
     return null
   }
 
+  /**
+   * Saves added fields to the current thread context state.
+   *
+   * This method must always be called after adding fields to the context, which include:
+   * - [add]
+   * - [storeFieldOverwrittenForLog]
+   *
+   * We don't automatically call this at the end of each of these methods, as we typically want to
+   * add multiple fields in a row, so we don't need to save to the thread-local every time.
+   *
+   * See [saveAfterRemovingFields] for why we have two separate save methods.
+   */
+  internal fun saveAfterAddingFields() {
+    THREAD_CONTEXT_STATE.set(stateArray)
+  }
+
+  /**
+   * Saves this context state, with fields removed, to the current thread context.
+   *
+   * This method must always be called after removing fields from the context, which include:
+   * - [popKey]
+   * - [restoreFieldsOverwrittenForLog]
+   *
+   * We don't automatically call this at the end of each of these methods, as we typically want to
+   * remove multiple fields in a row, so we don't need to save to the thread-local every time.
+   *
+   * The reason for having a separate method for saving after _removing_ fields, is that we want to
+   * check if the state array is empty after removing fields. If it is, we want to allow that memory
+   * to be reclaimed, so we clear the thread-local.
+   */
+  internal fun saveAfterRemovingFields() {
+    if (stateArray == null || InitializedState(stateArray).isEmpty()) {
+      THREAD_CONTEXT_STATE.remove()
+    } else {
+      THREAD_CONTEXT_STATE.set(stateArray)
+    }
+  }
+
   internal fun isJsonField(key: String, value: String): Boolean {
     if (stateArray == null) {
       return false
@@ -447,6 +562,16 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
     return false
   }
 
+  /**
+   * See `overwriteDuplicateContextFields` in `LoggingContext.jvm.kt` under `jvmMain` for why we use
+   * this.
+   *
+   * If the context field array has not been initialized yet, we initialize it before setting the
+   * key/value, and return the new array. It is an error not to use the return value (unfortunately,
+   * [Kotlin can't disallow unused return values yet](https://youtrack.jetbrains.com/issue/KT-12719)).
+   *
+   * Remember to call [saveAfterAddingFields] after this to persist changes.
+   */
   internal fun storeFieldOverwrittenForLog(
       key: String,
       overwrittenValue: String
@@ -460,6 +585,12 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
     )
   }
 
+  /**
+   * See `restoreOverwrittenContextFields` in `LoggingContext.jvm.kt` under `jvmMain` for why we use
+   * this.
+   *
+   * Remember to call [saveAfterRemovingFields] after this to persist changes.
+   */
   internal inline fun restoreFieldsOverwrittenForLog(
       crossinline action: (key: String, overwrittenValue: String) -> Unit
   ) {
@@ -484,6 +615,17 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
     }
   }
 
+  internal fun copy(): LoggingContextState {
+    if (stateArray == null) {
+      return this
+    }
+
+    val emptyFields = InitializedState(stateArray).countEmptyFields()
+
+    val newSize = stateArray.size - emptyFields * ELEMENTS_PER_FIELD
+    return LoggingContextState(stateArray.copyOf(newSize = newSize))
+  }
+
   private fun getOrInitializeState(newFieldCount: Int): InitializedState {
     return if (stateArray != null) {
       InitializedState(stateArray)
@@ -501,11 +643,10 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
         isJson: Boolean,
         overwrittenValue: String?,
     ) {
+      val isJsonValue = if (isJson) JSON_FIELD_SENTINEL else null
       stateArray[index] = key
       stateArray[index + 1] = value
-      if (isJson) {
-        stateArray[index + 2] = JSON_FIELD_SENTINEL
-      }
+      stateArray[index + 2] = isJsonValue
       stateArray[index + 3] = overwrittenValue
     }
 
@@ -518,8 +659,9 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
     }
 
     internal fun isJson(index: StateKeyIndex): Boolean {
-      // We use referential equality here (===), because we use `JSON_FIELD_SENTINEL` as a unique
-      // object to mark JSON context fields.
+      /**
+       * We use referential equality here (===), because [JSON_FIELD_SENTINEL] is a unique object.
+       */
       return stateArray[index + 2] === JSON_FIELD_SENTINEL
     }
 
@@ -554,6 +696,8 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
 
     internal fun isEmpty(): Boolean {
       forEachKeyReversed { _, _ ->
+        // This function iterates over non-null keys, so if we get a single hit, then we know we're
+        // not empty
         return false
       }
       return true
@@ -595,46 +739,39 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
     }
   }
 
-  internal fun copy(): LoggingContextState {
-    if (stateArray == null) {
-      return this
-    }
-
-    val emptyFields = InitializedState(stateArray).countEmptyFields()
-
-    val newSize = stateArray.size - emptyFields * ELEMENTS_PER_FIELD
-    return LoggingContextState(stateArray.copyOf(newSize = newSize))
-  }
-
-  internal fun save() {
-    if (stateArray == null || InitializedState(stateArray).isEmpty()) {
-      THREAD_CONTEXT_STATE.set(null)
-    } else {
-      THREAD_CONTEXT_STATE.set(stateArray)
-    }
-  }
-
   internal companion object {
+    /** See [LoggingContextState]. */
     private val THREAD_CONTEXT_STATE = ThreadLocal<Array<String?>?>()
 
+    @kotlin.jvm.JvmStatic
     internal fun get(): LoggingContextState {
       return LoggingContextState(THREAD_CONTEXT_STATE.get())
     }
 
+    @kotlin.jvm.JvmStatic
+    internal fun empty(): LoggingContextState {
+      return LoggingContextState(null)
+    }
+
+    /** See [LoggingContextState]. */
     private const val ELEMENTS_PER_FIELD = 4
 
     /**
-     * A sentinel value (unique object) to mark whether a logging context field value is JSON.
+     * A sentinel value (unique object) to mark whether a logging context field value is JSON. We
+     * use a sentinel String object for this instead of a boolean, because we want the
+     * [LoggingContextState] array to be an array of Strings, for maximum memory efficiency and also
+     * type safety (since all the other values in the context state are Strings).
      *
      * We call [kotlin.String] explicitly here, because we want to make sure that we create an
      * actual unique instance of the `String` class for the sentinel value, using the zero-parameter
      * `String` constructor. If we just called `String()`, then that may in the future call a
      * pseudo-constructor from [kotlin.text.String] (which are also in the global scope). Since
-     * those pseudo-constructors are just functions, they don't guarantee that they return a unique
+     * those pseudo-constructors are just functions, they can't guarantee that they return a unique
      * instance.
      */
     @Suppress("RemoveRedundantQualifierName") private val JSON_FIELD_SENTINEL = kotlin.String()
   }
 }
 
-internal typealias StateKeyIndex = Int
+/** A valid index for a key in the [LoggingContextState] array. */
+private typealias StateKeyIndex = Int

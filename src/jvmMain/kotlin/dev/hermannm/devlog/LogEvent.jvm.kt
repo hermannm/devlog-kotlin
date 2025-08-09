@@ -82,7 +82,7 @@ internal class Slf4jLogEvent(
   override fun log(message: String, logger: Slf4jLogger) {
     this.message = message
 
-    overwriteDuplicateContextFields(keyValuePairs)
+    overwriteDuplicateContextFieldsForLog(keyValuePairs)
     try {
       when (logger) {
         // If logger is LoggingEventAware, we can just log the event directly
@@ -94,7 +94,7 @@ internal class Slf4jLogEvent(
         else -> logWithBasicSlf4jApi(logger)
       }
     } finally {
-      restoreOverwrittenContextFields()
+      restoreContextFieldsOverwrittenForLog()
     }
   }
 
@@ -213,11 +213,11 @@ internal class LogbackLogEvent(level: LogLevel, logger: LogbackLogger) :
   override fun log(message: String, logger: PlatformLogger) {
     this.message = message
 
-    overwriteDuplicateContextFields(keyValuePairs)
+    overwriteDuplicateContextFieldsForLog(keyValuePairs)
     try {
       logger.asLogbackLogger().callAppenders(this)
     } finally {
-      restoreOverwrittenContextFields()
+      restoreContextFieldsOverwrittenForLog()
     }
   }
 

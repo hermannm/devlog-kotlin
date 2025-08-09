@@ -117,7 +117,7 @@ internal class LoggingContextJvmTest {
     val existingContext =
         LoggingContext(
             map = mapOf("fieldMap1" to "value", "fieldMap2" to "value"),
-            state = LoggingContextState(null),
+            state = LoggingContextState.empty(),
         )
 
     withLoggingContext(field("existingField", "value")) {
