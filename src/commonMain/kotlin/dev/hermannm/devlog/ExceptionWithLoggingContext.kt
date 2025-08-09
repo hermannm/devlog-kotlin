@@ -376,11 +376,11 @@ internal inline fun traverseExceptionTree(root: Throwable, action: (Throwable) -
  */
 internal class ExceptionParent(
     /** The parent exception. */
-    @JvmField val exception: Throwable,
+    @kotlin.jvm.JvmField val exception: Throwable,
     /**
      * The depth in the exception tree we're currently traversing where this exception is located.
      */
-    @JvmField val depth: Int,
+    @kotlin.jvm.JvmField val depth: Int,
     /**
      * The suppressed exceptions of [exception]. We store this here, because getting suppressed
      * exceptions potentially does an array copy, so we can avoid that allocation by keeping the
@@ -389,7 +389,7 @@ internal class ExceptionParent(
      * This is non-null, since we only need to allocate an `ExceptionParent` if we have suppressed
      * exceptions to traverse on it.
      */
-    @JvmField val suppressedExceptions: List<Throwable>,
+    @kotlin.jvm.JvmField val suppressedExceptions: List<Throwable>,
     /**
      * The index of the next exception in [suppressedExceptions] that should be traversed.
      *
@@ -398,9 +398,9 @@ internal class ExceptionParent(
      * exception set to the same exception instance, which may cause an infinite loop in a naive
      * implementation of exception traversal.
      */
-    @JvmField var nextSuppressedExceptionIndex: Int,
+    @kotlin.jvm.JvmField var nextSuppressedExceptionIndex: Int,
     /** The parent of this parent exception (i.e., the grandparent). */
-    @JvmField val parent: ExceptionParent?,
+    @kotlin.jvm.JvmField val parent: ExceptionParent?,
 )
 
 /**

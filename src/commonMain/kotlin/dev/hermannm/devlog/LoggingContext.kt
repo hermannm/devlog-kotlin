@@ -446,7 +446,7 @@ internal fun addExistingLoggingContextToException(
  *
  * This lets us store the context state as compactly as possible.
  */
-@JvmInline
+@kotlin.jvm.JvmInline
 internal value class LoggingContextState
 private constructor(private val stateArray: Array<String?>?) {
   /**
@@ -635,7 +635,7 @@ private constructor(private val stateArray: Array<String?>?) {
     }
   }
 
-  @JvmInline
+  @kotlin.jvm.JvmInline
   internal value class InitializedState(val stateArray: Array<String?>) {
     internal fun set(
         index: StateKeyIndex,
