@@ -2,6 +2,7 @@ package dev.hermannm.devlog
 
 import dev.hermannm.devlog.testutils.LogOutput
 import dev.hermannm.devlog.testutils.captureLogOutput
+import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -250,6 +251,20 @@ internal class LoggingContextTest {
     // This won't compile unless `withLoggingContext` uses `callsInPlace` contract with
     // `InvocationKind.EXACTLY_ONCE`
     useString(uninitialized)
+  }
+
+  /**
+   * We want to make sure that constructing a unique object of `String` works, for
+   * [LoggingContextState.IS_JSON_SENTINEL].
+   */
+  @Test
+  fun `constructing a string creates a unique String instance`() {
+    /**
+     * We call [kotlin.String] explicitly here, for the same reason as
+     * [LoggingContextState.IS_JSON_SENTINEL].
+     */
+    @Suppress("RemoveRedundantQualifierName") val uniqueString = kotlin.String()
+    (uniqueString === "").shouldBeFalse()
   }
 
   // Dummy method for contract tests

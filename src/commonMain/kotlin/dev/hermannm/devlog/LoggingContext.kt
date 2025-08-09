@@ -388,7 +388,7 @@ internal fun addExistingLoggingContextToException(
 internal value class LoggingContextState(private val stateArray: Array<String?>?) {
   internal fun add(
       key: String,
-      value: String,
+      value: String?,
       isJson: Boolean,
       overwrittenValue: String?,
       newFieldCount: Int,
@@ -397,26 +397,6 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
       return this
     }
 
-    val stringValue: String?
-    val jsonValue: String?
-    if (isJson) {
-      jsonValue = value
-      stringValue = null
-    } else {
-      stringValue = value
-      jsonValue = null
-    }
-
-    return add(key, stringValue, jsonValue, overwrittenValue, newFieldCount)
-  }
-
-  private fun add(
-      key: String,
-      stringValue: String?,
-      jsonValue: String?,
-      overwrittenValue: String?,
-      newFieldCount: Int,
-  ): LoggingContextState {
     var state = getOrInitializeState(newFieldCount)
     var index = state.getAvailableIndex()
     if (index == -1) {
@@ -424,7 +404,7 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
       state = state.resize(newFieldCount)
     }
 
-    state.set(index, key, stringValue, jsonValue, overwrittenValue)
+    state.set(index, key, value, isJson, overwrittenValue)
 
     return LoggingContextState(state.stateArray)
   }
@@ -458,8 +438,9 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
     val state = InitializedState(stateArray)
     state.forEachKeyReversed { index, stateKey ->
       if (stateKey == key) {
-        val jsonValue = state.getJsonValue(index)
-        return jsonValue != null && jsonValue == value
+        val stateValue = state.getValue(index)
+        val isJson = state.isJson(index)
+        return isJson && stateValue == value
       }
     }
 
@@ -472,8 +453,8 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
   ): LoggingContextState {
     return add(
         key = key,
-        stringValue = null,
-        jsonValue = null,
+        value = null,
+        isJson = false,
         overwrittenValue = overwrittenValue,
         newFieldCount = 1,
     )
@@ -488,18 +469,17 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
 
     val state = InitializedState(stateArray)
     state.forEachKeyReversed { index, key ->
-      val stringValue = state.getStringValue(index)
-      val jsonValue = state.getJsonValue(index)
-      if (stringValue == null && jsonValue == null) {
-        val overwrittenValue = state.getOverwrittenValue(index)
-        if (overwrittenValue != null) {
-          action(key, overwrittenValue)
-          state.remove(index)
-        }
-      } else {
-        // Fields overwritten for log will always be at the end of the array, and since we iterate
-        // in reverse, we can stop iterating once we get to a field with non-null value
+      val value = state.getValue(index)
+      // Fields overwritten for log will always be at the end of the array, and since we iterate
+      // in reverse, we can stop iterating once we get to a field with non-null value
+      if (value != null) {
         return
+      }
+
+      val overwrittenValue = state.getOverwrittenValue(index)
+      if (overwrittenValue != null) {
+        action(key, overwrittenValue)
+        state.remove(index)
       }
     }
   }
@@ -517,13 +497,15 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
     internal fun set(
         index: StateKeyIndex,
         key: String?,
-        stringValue: String?,
-        jsonValue: String?,
+        value: String?,
+        isJson: Boolean,
         overwrittenValue: String?,
     ) {
       stateArray[index] = key
-      stateArray[index + 1] = stringValue
-      stateArray[index + 2] = jsonValue
+      stateArray[index + 1] = value
+      if (isJson) {
+        stateArray[index + 2] = JSON_FIELD_SENTINEL
+      }
       stateArray[index + 3] = overwrittenValue
     }
 
@@ -531,12 +513,14 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
       return stateArray[index]
     }
 
-    internal fun getStringValue(index: StateKeyIndex): String? {
+    internal fun getValue(index: StateKeyIndex): String? {
       return stateArray[index + 1]
     }
 
-    internal fun getJsonValue(index: StateKeyIndex): String? {
-      return stateArray[index + 2]
+    internal fun isJson(index: StateKeyIndex): Boolean {
+      // We use referential equality here (===), because we use `JSON_FIELD_SENTINEL` as a unique
+      // object to mark JSON context fields.
+      return stateArray[index + 2] === JSON_FIELD_SENTINEL
     }
 
     internal fun getOverwrittenValue(index: StateKeyIndex): String? {
@@ -633,11 +617,23 @@ internal value class LoggingContextState(private val stateArray: Array<String?>?
   internal companion object {
     private val STATE = ThreadLocal<Array<String?>?>()
 
-    private const val ELEMENTS_PER_FIELD = 4
-
     internal fun get(): LoggingContextState {
       return LoggingContextState(STATE.get())
     }
+
+    private const val ELEMENTS_PER_FIELD = 4
+
+    /**
+     * A sentinel value (unique object) to mark whether a logging context field value is JSON.
+     *
+     * We call [kotlin.String] explicitly here, because we want to make sure that we create an
+     * actual unique instance of the `String` class for the sentinel value, using the zero-parameter
+     * `String` constructor. If we just called `String()`, then that may in the future call a
+     * pseudo-constructor from [kotlin.text.String] (which are also in the global scope). Since
+     * those pseudo-constructors are just functions, they don't guarantee that they return a unique
+     * instance.
+     */
+    @Suppress("RemoveRedundantQualifierName") private val JSON_FIELD_SENTINEL = kotlin.String()
   }
 }
 
