@@ -398,7 +398,7 @@ internal fun addExistingLoggingContextToException(
  * values to be JSON.
  *
  * So in order to support JSON field values in the logging context using MDC, we need 2 things:
- * - A way to intercept writing of MDC entries in our log encoder, to write JSON values unescaped
+ * - A way to intercept writing of MDC entries in our log encoder, to write JSON values unescaped.
  *     - `logstash-logback-encoder` (JSON encoder library for Logback) lets us do this, by
  *       implementing the `MdcEntryWriter` interface. We do this in our `JsonContextFieldWriter`
  *       under `jvmMain`.
@@ -420,12 +420,11 @@ internal fun addExistingLoggingContextToException(
  *           concatenation. A goal of this library is to make as few memory allocations as possible,
  *           so this was not ideal.
  *     - This class, `LoggingContextState`, is our new solution to this problem of tracking which
- *       context values are JSON
- *         - It consists of a thread-local ([THREAD_CONTEXT_STATE]) that lives side-by-side with
- *           SLF4J's MDC.
+ *       context values are JSON.
+ *         - It consists of a thread-local that lives side-by-side with SLF4J's MDC.
  *         - Whenever we add fields to the logging context, we also add to this context state, where
  *           we can track more state than what MDC allows us:
- *             - Firstly, we have a field to mark whether a context value is JSON
+ *             - Firstly, we have a field to mark whether a context value is JSON.
  *             - Secondly, we can track _overwritten_ context values:
  *                 - When a new key is put into MDC, any previous value associated with that key is
  *                   overwritten, and gone.
@@ -520,7 +519,9 @@ private constructor(private val stateArray: Array<String?>?) {
    * See [saveAfterRemovingFields] for why we have two separate save methods.
    */
   internal fun saveAfterAddingFields() {
-    THREAD_CONTEXT_STATE.set(stateArray)
+    if (stateArray != null) {
+      setThreadLoggingContextState(stateArray)
+    }
   }
 
   /**
@@ -539,9 +540,9 @@ private constructor(private val stateArray: Array<String?>?) {
    */
   internal fun saveAfterRemovingFields() {
     if (stateArray == null || InitializedState(stateArray).isEmpty()) {
-      THREAD_CONTEXT_STATE.remove()
+      clearThreadLoggingContextState()
     } else {
-      THREAD_CONTEXT_STATE.set(stateArray)
+      setThreadLoggingContextState(stateArray)
     }
   }
 
@@ -740,12 +741,9 @@ private constructor(private val stateArray: Array<String?>?) {
   }
 
   internal companion object {
-    /** See [LoggingContextState]. */
-    private val THREAD_CONTEXT_STATE = ThreadLocal<Array<String?>?>()
-
     @kotlin.jvm.JvmStatic
     internal fun get(): LoggingContextState {
-      return LoggingContextState(THREAD_CONTEXT_STATE.get())
+      return LoggingContextState(getThreadLoggingContextState())
     }
 
     @kotlin.jvm.JvmStatic
@@ -772,6 +770,17 @@ private constructor(private val stateArray: Array<String?>?) {
     @Suppress("RemoveRedundantQualifierName") private val JSON_FIELD_SENTINEL = kotlin.String()
   }
 }
+
+/**
+ * Unfortunately, Kotlin does not at the moment offer a multi-platform `ThreadLocal` abstraction. So
+ * we have to define `expect` functions ourselves for getting the thread-local context state for
+ * [LoggingContextState].
+ */
+internal expect fun getThreadLoggingContextState(): Array<String?>?
+
+internal expect fun setThreadLoggingContextState(stateArray: Array<String?>)
+
+internal expect fun clearThreadLoggingContextState()
 
 /** A valid index for a key in the [LoggingContextState] array. */
 private typealias StateKeyIndex = Int
