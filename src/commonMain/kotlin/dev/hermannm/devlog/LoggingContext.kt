@@ -499,6 +499,7 @@ private constructor(private val stateArray: Array<String?>?) {
     var state = getOrInitializeState(newFieldCount)
     var index = state.getAvailableIndex()
     if (index == -1) {
+      // When we resize, the next available key index will be the size of the array before resizing
       index = state.stateArray.size
       state = state.resize(newFieldCount)
     }
@@ -664,8 +665,15 @@ private constructor(private val stateArray: Array<String?>?) {
     }
   }
 
+  /**
+   * Helper class for a [LoggingContextState] where we know the state array is initialized
+   * (non-null). This lets us avoid redundant null checks.
+   *
+   * Since this is a `value class` (same as [LoggingContextState]), wrapping the same array, there's
+   * no allocation made when instantiating this.
+   */
   @kotlin.jvm.JvmInline
-  internal value class InitializedState(val stateArray: Array<String?>) {
+  internal value class InitializedState(internal val stateArray: Array<String?>) {
     internal fun set(
         index: StateKeyIndex,
         key: String?,

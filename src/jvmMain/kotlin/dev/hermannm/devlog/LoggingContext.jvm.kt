@@ -225,6 +225,11 @@ internal fun restoreContextFieldsOverwrittenForLog() {
 /**
  * See [LoggingContextState].
  *
+ * We store the array directly here instead of storing a [LoggingContextState] object, because value
+ * classes are boxed when used as generics, and we want to avoid such redundant allocations (see
+ * [Kotlin docs](https://kotlinlang.org/docs/inline-classes.html#representation) for more on value
+ * class boxing).
+ *
  * We have to define this in platform-specific modules, because `ThreadLocal` is not multi-platform.
  */
 private val THREAD_LOGGING_CONTEXT_STATE = ThreadLocal<Array<String?>?>()
