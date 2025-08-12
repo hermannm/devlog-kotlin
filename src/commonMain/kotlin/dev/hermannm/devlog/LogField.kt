@@ -25,53 +25,22 @@ import kotlinx.serialization.json.longOrNull
  * analysis tool of your choice, in a more structured manner than if you were to just use string
  * concatenation.
  *
- * You can add a field to a log by calling [LogBuilder.field] on one of [Logger]'s methods (see
- * example below). This serializes the value using `kotlinx.serialization`. Alternatively, if you
- * have a value that is already serialized, you can instead call [LogBuilder.rawJsonField].
+ * There are 3 ways to add log fields in this library:
+ * - Adding fields to a single log, by calling [LogBuilder.field] in the scope of one of the methods
+ *   on [Logger] (see example on [LogBuilder.field]).
+ * - Adding fields to all logs within a scope using [withLoggingContext], calling the [field]
+ *   top-level function to construct log fields (see example on [withLoggingContext]).
+ * - Adding fields to an exception using [ExceptionWithLoggingContext] (see example on its
+ *   docstring).
  *
- * If you want to attach fields to all logs within a scope, you can use [withLoggingContext] and
- * pass fields to it with the [field]/[rawJsonField] functions.
+ * If you have a value that is already serialized, you can use [LogBuilder.rawJsonField] or the
+ * [rawJsonField] top-level function.
  *
- * Finally, you can throw or extend [ExceptionWithLoggingContext] to attach structured data to an
- * exception when it's logged.
- *
- * ### Example
- *
- * ```
- * import dev.hermannm.devlog.getLogger
- * import kotlinx.serialization.Serializable
- *
- * private val log = getLogger()
- *
- * fun example() {
- *   val event = Event(id = 1001, type = EventType.ORDER_PLACED)
- *
- *   log.info {
- *     field("event", event)
- *     "Processing event"
- *   }
- * }
- *
- * @Serializable
- * data class Event(val id: Long, val type: EventType)
- *
- * enum class EventType {
- *   ORDER_PLACED,
- *   ORDER_UPDATED,
- * }
- * ```
- *
- * This gives the following output (using `logstash-logback-encoder`):
- * ```json
- * {
- *   "message": "Processing event",
- *   "event": {
- *     "id": 1001,
- *     "type": "ORDER_PLACED"
- *   },
- *   // ...timestamp etc.
- * }
- * ```
+ * If there are duplicate keys in the fields that would apply to a log, we only add 1 of the fields
+ * (to avoid duplicate keys in the JSON output). Fields are prioritized as follows:
+ * 1. Single-log fields (i.e. [LogBuilder.field])
+ * 2. Exception log fields
+ * 3. Logging context fields
  */
 public class LogField
 @PublishedApi
@@ -332,7 +301,7 @@ public fun rawJsonField(key: String, json: String, validJson: Boolean = false): 
  * @param validJson Set this true if you are 100% sure that [json] is valid JSON, and you want to
  *   save the performance cost of validating it.
  */
-// For JsonUnquotedLiteral. This will likely be stabilized as-is:
+// `JsonUnquotedLiteral` is experimental, but will likely be stabilized as-is:
 // https://github.com/Kotlin/kotlinx.serialization/issues/2900
 @OptIn(ExperimentalSerializationApi::class)
 public fun rawJson(json: String, validJson: Boolean = false): JsonElement {

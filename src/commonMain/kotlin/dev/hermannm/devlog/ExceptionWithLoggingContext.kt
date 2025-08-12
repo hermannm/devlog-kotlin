@@ -4,21 +4,20 @@
 package dev.hermannm.devlog
 
 /**
- * Base exception class to allow you to attach [log fields][LogField] to exceptions. When passing a
- * `cause` exception to one of the methods on [Logger], it will check if the given exception is an
- * instance of this class, and if it is, these fields will be added to the log.
+ * Exception that carries [log fields][LogField], to provide structured logging context when the
+ * exception is logged. When passing a `cause` exception to one of the methods on [Logger], it will
+ * check if the given exception is an instance of this class, and if it is, these fields will be
+ * added to the log.
  *
  * Use the [field]/[rawJsonField] functions to construct log fields.
- *
- * The exception also includes any log fields from [withLoggingContext], from the scope in which the
- * exception is constructed. This way, we don't lose any logging context if the exception escapes
- * the context it was thrown from. If you don't want this behavior, you can create a custom
- * exception and implement the [HasLoggingContext] interface instead.
  *
  * This class is useful when you are throwing an exception from somewhere down in the stack, but do
  * logging further up the stack, and you have structured data that you want to attach to the
  * exception log. In this case, one may typically resort to string concatenation, but this class
  * allows you to have the benefits of structured logging for exceptions as well.
+ *
+ * You can extend this class for your own custom exception types. If you'd rather implement an
+ * interface than extend a class, use [HasLoggingContext].
  *
  * ### Example
  *
@@ -121,32 +120,39 @@ public open class ExceptionWithLoggingContext : RuntimeException {
   /** The exception message. */
   override val message: String?
     get() {
-      // If we have an initialized message field, return that
+      val messageField = this.messageField
       if (messageField != null) {
+        // If an exception message was provided in the constructor, return that
         return messageField
+      } else {
+        // Otherwise, use message from cause exception (if any)
+        return buildMessageFromCauseException()
       }
-
-      // Otherwise, build exception message from cause exception, on the form:
-      // "CauseExceptionClassName: Cause exception message"
-      //
-      // This method stores the built message in `messageField`, so we don't have to rebuild it.
-      // If there's no cause exception, we return `null`.
-      return buildMessageFromCauseException()
     }
 
+  /**
+   * If no exception message was provided in the constructor, and [message] is not overridden, we
+   * use the message from the cause exception (if any). We prepend the class name of the cause
+   * exception (to make it clear where it comes from), on the following format:
+   * ```
+   * CauseExceptionClassName: Cause exception message
+   * ```
+   *
+   * The built message is stored in [messageField], so we don't have to rebuild it.
+   */
   private fun buildMessageFromCauseException(): String? {
     val cause = this.cause
     if (cause == null) {
       return null
     }
 
-    val className = cause::class.simpleName
+    val causeClass = cause::class.simpleName
     val causeMessage = cause.message
     val message: String =
         when {
-          className != null && causeMessage != null -> "${className}: ${causeMessage}"
-          className == null && causeMessage != null -> causeMessage
-          className != null && causeMessage == null -> className
+          causeClass != null && causeMessage != null -> "${causeClass}: ${causeMessage}"
+          causeClass == null && causeMessage != null -> causeMessage
+          causeClass != null && causeMessage == null -> causeClass
           else -> return null
         }
     this.messageField = message
@@ -206,9 +212,10 @@ public open class ExceptionWithLoggingContext : RuntimeException {
 }
 
 /**
- * Interface to allow you to attach [log fields][LogField] to exceptions. When passing a `cause`
- * exception to one of the methods on [Logger], it will check if the given exception implements this
- * interface, and if it does, these fields will be added to the log.
+ * Interface for exceptions that carry [log fields][LogField], to provide structured logging context
+ * when an exception is logged. When passing a `cause` exception to one of the methods on [Logger],
+ * it will check if the given exception implements this interface, and if it does, these fields will
+ * be added to the log.
  *
  * Use the [field]/[rawJsonField] functions to construct log fields.
  *
@@ -217,8 +224,8 @@ public open class ExceptionWithLoggingContext : RuntimeException {
  * exception log. In this case, one may typically resort to string concatenation, but this interface
  * allows you to have the benefits of structured logging for exceptions as well.
  *
- * If you want to include log fields from [withLoggingContext] on the exception, you should instead
- * throw or extend the [ExceptionWithLoggingContext] base class.
+ * You can implement this interface for your custom exception types. If you just want to throw an
+ * exception with logging context and don't need a custom type, throw [ExceptionWithLoggingContext].
  *
  * ### Example
  *
@@ -267,6 +274,54 @@ public interface HasLoggingContext {
   public val logFields: Collection<LogField>
 }
 
+/**
+ * In [withLoggingContext], we want the ability to attach log fields to exceptions, so that we don't
+ * lose context when an exception escapes the context scope (which is when we need it most!).
+ *
+ * However, exceptions don't really have a mechanism to attach arbitrary data. We could wrap
+ * exceptions in a new exception type, but that would mean that the underlying exception could not
+ * be caught as its original exception type. This would not be good, as we want the exception
+ * handling of [withLoggingContext] to be transparent, and wrapping exceptions is intrusive.
+ *
+ * But exceptions do _kind of_ provide a way to attach arbitrary data: suppressed exceptions (read
+ * [the `Throwable.addSuppressed` docs for more](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Throwable.html#addSuppressed(java.lang.Throwable))).
+ * We can create this `LoggingContextProvider` exception with log fields attached, to "smuggle" the
+ * logging context through a suppressed exception, added to the original exception. Then, when the
+ * original exception is logged, we can look for our exception type among its suppressed exceptions,
+ * in order to add these log fields.
+ *
+ * A couple issues with this approach:
+ * - Exceptions are expensive to create, because they record a stack trace on construction. We don't
+ *   want to pay the cost of a stack trace for our synthetic exception that only exists to carry log
+ *   fields.
+ *     - Solution: We can avoid this cost by overriding `Throwable.fillInStackTrace` to be a no-op.
+ *       This method is only available on the JVM platform, so we have to make this an `expect`
+ *       class here in the common module, with an `actual` implementation under `jvmMain` that
+ *       overrides `fillInStackTrace`. Then our exception will be just as cheap to create as any
+ *       other object!
+ * - Using a suppressed exception means that our `LoggingContextProvider` will show up in the logs
+ *   when the exception it's added to is logged.
+ *     - This is not ideal, as `LoggingContextProvider` is an internal implementation detail of the
+ *       library, which we don't want to leak out to users.
+ *     - Solution: When Logback is used as the SLF4J implementation, we extend Logback's
+ *       `LoggingEvent` to make some special-case optimizations. Logback does not use exceptions
+ *       directly, instead using an `IThrowableProxy` interface, in order to avoid reference cycles
+ *       in exception cause chains. We can create our own custom implementation of this interface
+ *       (see `CustomLogbackThrowableProxy` in `LogEvent.jvm.kt` under `jvmMain`), and exclude our
+ *       `LoggingContextProvider` when translating `Throwable.getSuppressed` to
+ *       `IThrowableProxy.getSuppressed`. Then, when the exception is logged,
+ *       `LoggingContextProvider` won't show up!
+ *     - Drawback: The above solution only works for Logback. For other SLF4J implementations, we
+ *       use SLF4J's `DefaultLoggingEvent`, which uses `Throwable` directly. We can't override or
+ *       mutate the suppressed exceptions on an existing exception, so in this case,
+ *       `LoggingContextProvider` will show up in the logs. We deem this acceptable, because:
+ *         - Logback is the most popular SLF4J implementation, so this will not affect many users.
+ *         - Since we don't record a stack trace for `LoggingContextProvider`, it will only show up
+ *           as a single line in the log: `dev.hermannm.devlog.LoggingContextProvider: Added log
+ *           fields from exception context`. Though not ideal, this at least explains to the user
+ *           why it shows up, and still gives the significant benefit of providing more context to
+ *           an exception.
+ */
 internal expect class LoggingContextProvider : RuntimeException {
   constructor(loggingContext: Array<out LogField>)
 

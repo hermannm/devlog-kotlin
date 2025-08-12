@@ -5,6 +5,7 @@ package dev.hermannm.devlog
 import java.io.PrintStream
 import java.io.PrintWriter
 
+// See docstring on the `expect` declaration of this class under `commonMain`
 internal actual class LoggingContextProvider
 actual constructor(
     @kotlin.concurrent.Volatile private var loggingContext: Array<out LogField>,
@@ -22,7 +23,7 @@ actual constructor(
   }
 
   override val message: String?
-    get() = "Added log fields from exception"
+    get() = "Added log fields from exception context"
 
   override fun fillInStackTrace(): Throwable {
     return this

@@ -274,6 +274,8 @@ internal fun LogLevel.toLogback(): LogbackLevel {
  * Implements Logback's [IThrowableProxy] interface to omit [LoggingContextProvider] from suppressed
  * exceptions (since we only use that exception to carry logging context, and we don't want it to
  * show up in the logged stack trace).
+ *
+ * See the docstring on [LoggingContextProvider] for more on this.
  */
 internal class CustomLogbackThrowableProxy : IThrowableProxy {
   @JvmField internal val throwable: Throwable

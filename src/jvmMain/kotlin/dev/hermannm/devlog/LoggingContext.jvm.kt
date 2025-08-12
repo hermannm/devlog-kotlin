@@ -9,25 +9,6 @@ import java.util.concurrent.TimeUnit
 import org.slf4j.MDC
 import org.slf4j.event.KeyValuePair
 
-/**
- * See [LoggingContextState].
- *
- * We have to define this in platform-specific modules, because `ThreadLocal` is not multi-platform.
- */
-private val THREAD_LOGGING_CONTEXT_STATE = ThreadLocal<Array<String?>?>()
-
-internal actual fun getThreadLoggingContextState(): Array<String?>? {
-  return THREAD_LOGGING_CONTEXT_STATE.get()
-}
-
-internal actual fun setThreadLoggingContextState(stateArray: Array<String?>) {
-  THREAD_LOGGING_CONTEXT_STATE.set(stateArray)
-}
-
-internal actual fun clearThreadLoggingContextState() {
-  THREAD_LOGGING_CONTEXT_STATE.remove()
-}
-
 public actual fun getCopyOfLoggingContext(): LoggingContext {
   val contextMap = MDC.getCopyOfContextMap()
   if (contextMap.isNullOrEmpty()) {
@@ -239,6 +220,25 @@ internal fun restoreContextFieldsOverwrittenForLog() {
   }
 
   contextState.saveAfterRemovingFields()
+}
+
+/**
+ * See [LoggingContextState].
+ *
+ * We have to define this in platform-specific modules, because `ThreadLocal` is not multi-platform.
+ */
+private val THREAD_LOGGING_CONTEXT_STATE = ThreadLocal<Array<String?>?>()
+
+internal actual fun getThreadLoggingContextState(): Array<String?>? {
+  return THREAD_LOGGING_CONTEXT_STATE.get()
+}
+
+internal actual fun setThreadLoggingContextState(stateArray: Array<String?>) {
+  THREAD_LOGGING_CONTEXT_STATE.set(stateArray)
+}
+
+internal actual fun clearThreadLoggingContextState() {
+  THREAD_LOGGING_CONTEXT_STATE.remove()
 }
 
 /**

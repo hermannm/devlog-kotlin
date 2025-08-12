@@ -13,7 +13,13 @@ import kotlin.contracts.contract
 
 /**
  * Adds the given [log fields][LogField] to every log made by a [Logger] in the context of the given
- * [block]. Use the [field]/[rawJsonField] functions to construct log fields.
+ * [block].
+ *
+ * Use the [field]/[rawJsonField] functions to construct log fields.
+ *
+ * If an exception is thrown from [block], then the given log fields are attached to the exception,
+ * and included in the log output when the exception is logged. That way, we don't lose logging
+ * context when an exception escapes the context scope.
  *
  * An example of when this is useful is when processing an event, and you want to trace all the logs
  * made in the context of the event. Instead of manually attaching the event ID to each log, you can
@@ -100,7 +106,13 @@ public inline fun <ReturnT> withLoggingContext(
 
 /**
  * Adds the given [log fields][LogField] to every log made by a [Logger] in the context of the given
- * [block]. Use the [field]/[rawJsonField] functions to construct log fields.
+ * [block].
+ *
+ * Use the [field]/[rawJsonField] functions to construct log fields.
+ *
+ * If an exception is thrown from [block], then the given log fields are attached to the exception,
+ * and included in the log output when the exception is logged. That way, we don't lose logging
+ * context when an exception escapes the context scope.
  *
  * An example of when this is useful is when processing an event, and you want to trace all the logs
  * made in the context of the event. Instead of manually attaching the event ID to each log, you can
@@ -192,18 +204,20 @@ public inline fun <ReturnT> withLoggingContext(
 }
 
 /**
- * Applies the fields from the given logging context to all logs made by a [Logger] in the context
- * of the given [block].
- *
- * This overload of [withLoggingContext][dev.hermannm.devlog.withLoggingContext] is designed to be
- * used with [getCopyOfLoggingContext], to pass logging context between threads. If you want to add
- * fields to the current thread's logging context, you should instead construct log fields with the
- * [field]/[rawJsonField] functions, and pass them to one of the
- * [withLoggingContext][dev.hermannm.devlog.withLoggingContext] overloads that take [LogField]s.
+ * Adds the fields from an existing logging context to all logs made by a [Logger] in the context of
+ * the given [block]. This overload is designed to be used with [getCopyOfLoggingContext], to pass
+ * logging context between threads. If you want to add fields to the current thread's logging
+ * context, you should instead construct log fields with the [field]/[rawJsonField] functions, and
+ * pass them to one of the [withLoggingContext][dev.hermannm.devlog.withLoggingContext] overloads
+ * that take [LogField]s.
  *
  * If you spawn threads using a `java.util.concurrent.ExecutorService`, you may instead use the
- * `dev.hermannm.devlog.inheritLoggingContext` extension function, which passes logging context from
- * parent to child for you.
+ * `ExecutorService.inheritLoggingContext` extension function from this library, which passes
+ * logging context from parent to child for you.
+ *
+ * If an exception is thrown from [block], then the given logging context is attached to the
+ * exception, and included in the log output when the exception is logged. That way, we don't lose
+ * logging context when an exception escapes the context scope.
  *
  * ### Example
  *
@@ -255,20 +269,20 @@ public inline fun <ReturnT> withLoggingContext(
  * ```
  */
 public inline fun <ReturnT> withLoggingContext(
-    existingContext: LoggingContext,
+    context: LoggingContext,
     block: () -> ReturnT
 ): ReturnT {
   // Allows callers to use `block` as if it were in-place
   contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
 
-  addExistingContextFieldsToLoggingContext(existingContext)
+  addExistingContextFieldsToLoggingContext(context)
   try {
     return block()
   } catch (e: Exception) {
-    addExistingLoggingContextToException(e, existingContext)
+    addExistingLoggingContextToException(e, context)
     throw e
   } finally {
-    removeExistingContextFieldsFromLoggingContext(existingContext)
+    removeExistingContextFieldsFromLoggingContext(context)
   }
 }
 
@@ -358,6 +372,15 @@ internal expect fun removeExistingContextFieldsFromLoggingContext(existingContex
 
 @PublishedApi
 internal fun addLoggingContextToException(exception: Throwable, logFields: Array<out LogField>) {
+  if (logFields.isEmpty()) {
+    return
+  }
+
+  /**
+   * If there's already an [ExceptionWithLoggingContext] or [LoggingContextProvider] in the
+   * exception tree, we can add these log fields to their existing logging context, instead of
+   * creating a new `LoggingContextProvider`.
+   */
   traverseExceptionTree(root = exception) { exception ->
     when (exception) {
       is ExceptionWithLoggingContext -> {
@@ -371,6 +394,10 @@ internal fun addLoggingContextToException(exception: Throwable, logFields: Array
     }
   }
 
+  /**
+   * If there were no eligible exception to add the context to, we add a suppressed
+   * [LoggingContextProvider] - see its docstring for more on how this mechanism works.
+   */
   exception.addSuppressed(LoggingContextProvider(logFields))
 }
 
