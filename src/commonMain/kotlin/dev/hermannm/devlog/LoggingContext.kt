@@ -689,9 +689,7 @@ private constructor(private val stateArray: Array<String?>?) {
     }
 
     internal fun isJson(index: StateKeyIndex): Boolean {
-      /**
-       * We use referential equality here (===), because [JSON_FIELD_SENTINEL] is a unique object.
-       */
+      /** See [JSON_FIELD_SENTINEL] for why we use referential equality (`===`) here. */
       return stateArray[index + 2] === JSON_FIELD_SENTINEL
     }
 
@@ -784,19 +782,16 @@ private constructor(private val stateArray: Array<String?>?) {
     private const val ELEMENTS_PER_FIELD = 4
 
     /**
-     * A sentinel value (unique object) to mark whether a logging context field value is JSON. We
-     * use a sentinel String object for this instead of a boolean, because we want the
-     * [LoggingContextState] array to be an array of Strings, for maximum memory efficiency and also
-     * type safety (since all the other values in the context state are Strings).
+     * A sentinel value to mark whether a logging context field is JSON. We use a sentinel String
+     * object for this instead of a boolean, because we want the [LoggingContextState] array to be
+     * an array of Strings (since all the other values in the context state are Strings, and we
+     * don't want to do casting).
      *
-     * We call [kotlin.String] explicitly here, because we want to make sure that we create an
-     * actual unique instance of the `String` class for the sentinel value, using the zero-parameter
-     * `String` constructor. If we just called `String()`, then that may in the future call a
-     * pseudo-constructor from [kotlin.text.String] (which are also in the global scope). Since
-     * those pseudo-constructors are just functions, they can't guarantee that they return a unique
-     * instance.
+     * We don't use `const` here, since we want to be 100% sure that we use the same string
+     * reference when inserting into the state array as when we check for this value, so we can use
+     * faster reference equality (`===`) instead of structural equality (`==`).
      */
-    @Suppress("RemoveRedundantQualifierName") private val JSON_FIELD_SENTINEL = kotlin.String()
+    @Suppress("MayBeConstant") private val JSON_FIELD_SENTINEL: String = "JSON"
   }
 }
 
