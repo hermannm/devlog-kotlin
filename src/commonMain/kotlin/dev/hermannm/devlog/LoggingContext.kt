@@ -593,6 +593,8 @@ private constructor(private val stateArray: Array<String?>?) {
    * Remember to call [saveAfterRemovingFields] after this to persist changes.
    */
   internal inline fun restoreFieldsOverwrittenForLog(
+      // `crossinline` because we don't want non-local returns in this lambda, to ensure that we
+      // call `state.remove` after the action
       crossinline action: (key: String, overwrittenValue: String) -> Unit
   ) {
     if (stateArray == null) {

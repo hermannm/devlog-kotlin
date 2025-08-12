@@ -318,6 +318,29 @@ internal class LoggerTest {
     disabledLogger.isErrorEnabled.shouldBeFalse()
     disabledLogger.isEnabledFor(LogLevel.ERROR).shouldBeFalse()
   }
+
+  @Test
+  fun `lambda arguments to logger methods are inlined`() {
+    val log = getLogger()
+
+    // Non-local returns in lambdas are only allowed if the enclosing function is inline.
+    // So this will only compile if Logger's methods are inline, which is what we want to test here.
+    log.info {
+      return
+    }
+    log.warn {
+      return
+    }
+    log.error {
+      return
+    }
+    log.debug {
+      return
+    }
+    log.trace {
+      return
+    }
+  }
 }
 
 private val loggerOutsideClass = getLogger()
