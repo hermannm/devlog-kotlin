@@ -101,6 +101,29 @@ internal class LoggingContextTest {
   }
 
   @Test
+  fun `logging context is attached to exceptions`() {
+    val output = captureLogOutput {
+      try {
+        withLoggingContext(
+            field("key", "value"),
+        ) {
+          throw IllegalStateException("Something went wrong")
+        }
+      } catch (e: IllegalStateException) {
+        log.error(e) { "Test" }
+      }
+    }
+
+    // We expect the exception context field to be in `logFields`, not `contextFields`, because it
+    // has escaped its original context
+    output.logFields shouldBe
+        """
+          "key":"value"
+        """
+            .trimIndent()
+  }
+
+  @Test
   fun `duplicate context field keys only includes the newest fields`() {
     val outputFromInnerContext: LogOutput
     // We want to verify that after exiting the inner logging context, the fields from the outer
@@ -163,6 +186,43 @@ internal class LoggingContextTest {
   }
 
   @Test
+  fun `exception context field overrides outer context field`() {
+    val exceptionLogOutput: LogOutput
+    val outputAfterException: LogOutput
+
+    withLoggingContext(
+        field("duplicateKey", "from outer context"),
+    ) {
+      try {
+        withLoggingContext(
+            field("duplicateKey", "attached to exception"),
+        ) {
+          throw IllegalStateException("Something went wrong")
+        }
+      } catch (e: IllegalStateException) {
+        exceptionLogOutput = captureLogOutput { log.error(e) { "Test" } }
+      }
+
+      outputAfterException = captureLogOutput { log.info { "Test 2" } }
+    }
+
+    // We expect the exception context field to be in `logFields`, not `contextFields`, because it
+    // has escaped its original context
+    exceptionLogOutput.logFields shouldBe
+        """
+          "duplicateKey":"attached to exception"
+        """
+            .trimIndent()
+    // The context fields should be empty, since the outer `duplicateKey` was overridden
+    exceptionLogOutput.contextFields.shouldBeEmpty()
+
+    // Check that the outer logging context is restored after logging the exception
+    outputAfterException.logFields.shouldBeEmpty()
+    outputAfterException.contextFields shouldContainExactly
+        mapOf("duplicateKey" to JsonPrimitive("from outer context"))
+  }
+
+  @Test
   fun `passing a list to withLoggingContext works`() {
     val output = captureLogOutput {
       withLoggingContext(
@@ -192,6 +252,13 @@ internal class LoggingContextTest {
         log.info { "Test" }
       }
     }
+
+    output.contextFields.shouldBeEmpty()
+  }
+
+  @Test
+  fun `passing empty varargs to withLoggingContext works`() {
+    val output = captureLogOutput { withLoggingContext { log.info { "Test" } } }
 
     output.contextFields.shouldBeEmpty()
   }
