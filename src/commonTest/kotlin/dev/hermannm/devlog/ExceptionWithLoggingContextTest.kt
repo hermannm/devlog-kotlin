@@ -4,6 +4,7 @@ import dev.hermannm.devlog.testutils.Event
 import dev.hermannm.devlog.testutils.EventType
 import dev.hermannm.devlog.testutils.captureLogOutput
 import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
@@ -368,7 +369,58 @@ internal class ExceptionWithLoggingContextTest {
     exception2.settableCause = exception3
     exception3.settableCause = exception1
 
+    /**
+     * We test that both logging the exception and calling `traverseExceptionTree` do not cause
+     * infinite loops (we want to test both, since we use a different exception traversal mechanism
+     * when using Logback, see [LogEvent.handlesExceptionTreeTraversal]).
+     */
     log.info(exception1) { "Should not cause an infinite loop" }
+
+    val traversed = mutableSetOf<Throwable>()
+    traverseExceptionTree(root = exception1) { exception -> traversed.add(exception) }
+
+    traversed shouldContainExactly listOf(exception1, exception2, exception3)
+  }
+
+  /** See comments in [traverseExceptionTree]. */
+  @Test
+  fun `cycle in cause and suppressed exceptions should not cause infinite loop`() {
+    class EvilException(val number: Int) : Exception() {
+      override fun toString() = number.toString()
+
+      var settableCause: Throwable? = null
+
+      override val cause: Throwable?
+        get() = settableCause
+    }
+
+    val exception1 = EvilException(1)
+    val exception2 = EvilException(2)
+    val exception3 = EvilException(3)
+
+    // Set up cycle
+    exception1.settableCause = exception2
+    exception1.addSuppressed(exception2)
+    exception1.addSuppressed(exception2)
+    exception1.addSuppressed(exception1)
+
+    exception2.addSuppressed(exception3)
+
+    exception3.settableCause = exception1
+    exception3.addSuppressed(exception2)
+    exception3.addSuppressed(exception1)
+
+    /**
+     * We test that both logging the exception and calling `traverseExceptionTree` do not cause
+     * infinite loops (we want to test both, since we use a different exception traversal mechanism
+     * when using Logback, see [LogEvent.handlesExceptionTreeTraversal]).
+     */
+    log.info(exception1) { "Should not cause an infinite loop" }
+
+    val traversed = mutableSetOf<Throwable>()
+    traverseExceptionTree(root = exception1) { exception -> traversed.add(exception) }
+
+    traversed shouldContainExactly listOf(exception1, exception2, exception3)
   }
 }
 
