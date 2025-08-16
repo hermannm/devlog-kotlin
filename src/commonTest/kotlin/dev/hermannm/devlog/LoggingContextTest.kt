@@ -194,16 +194,21 @@ internal class LoggingContextTest {
    * field should override context field.
    */
   @Test
-  fun `context field does not override duplicate log event field`() {
+  fun `log event field overrides context fields`() {
     val output1: LogOutput
     val output2: LogOutput
 
     withLoggingContext(
-        field("duplicateKey", "from context"),
+        field("duplicateKey1", "context value"),
+        // Test that JSON context fields are also overridden and restored as expected
+        field("duplicateKey2", Event(id = 1, type = EventType.ORDER_PLACED)),
     ) {
       output1 = captureLogOutput {
         log.info {
-          field("duplicateKey", "from log event")
+          field("duplicateKey1", "log event value 1")
+          field("duplicateKey2", "log event value 2")
+          // Test that another duplicate key on the log event does not interfere with context fields
+          field("duplicateKey2", "log event value 3")
           "Test"
         }
       }
@@ -214,13 +219,23 @@ internal class LoggingContextTest {
 
     output1.logFields shouldBe
         """
-          "duplicateKey":"from log event"
+          "duplicateKey1":"log event value 1","duplicateKey2":"log event value 2"
         """
             .trimIndent()
     output1.contextFields.shouldBeEmpty()
 
     output2.logFields.shouldBeEmpty()
-    output2.contextFields shouldContainExactly mapOf("duplicateKey" to "from context")
+    output2.contextFields shouldContainExactly
+        mapOf(
+            "duplicateKey1" to "context value",
+            "duplicateKey2" to
+                JsonObject(
+                    mapOf(
+                        "id" to JsonPrimitive(1),
+                        "type" to JsonPrimitive("ORDER_PLACED"),
+                    ),
+                ),
+        )
   }
 
   @Test
@@ -334,17 +349,15 @@ internal class LoggingContextTest {
   }
 
   @Test
-  fun `passing a list to withLoggingContext works`() {
+  fun `passing a collection to withLoggingContext works`() {
+    val logFields: Collection<LogField> =
+        listOf(
+            field("key1", "value1"),
+            field("key2", "value2"),
+        )
+
     val output = captureLogOutput {
-      withLoggingContext(
-          logFields =
-              listOf(
-                  field("key1", "value1"),
-                  field("key2", "value2"),
-              ),
-      ) {
-        log.info { "Test" }
-      }
+      withLoggingContext(logFields = logFields) { log.info { "Test" } }
     }
 
     output.contextFields shouldContainExactly
@@ -354,8 +367,64 @@ internal class LoggingContextTest {
         )
   }
 
+  /** See comment inside the [withLoggingContext] overload that takes a `Collection`. */
   @Test
-  fun `passing an empty list to withLoggingContext works`() {
+  fun `mutating collection passed to withLoggingContext does not affect context fields`() {
+    val logFields =
+        mutableListOf(
+            field("key1", "value1"),
+            field("key2", Event(id = 1, type = EventType.ORDER_PLACED)),
+        )
+
+    // We want to test 2 different log outputs that may rely on the log field collection:
+    // - A log made _inside_ the context scope should be unaffected by the mutation
+    // - A log made with an exception thrown from inside the context (which will carry the context
+    //   fields) should also be unaffected
+    var logOutputInsideContext: LogOutput? = null
+    val exceptionLogOutput: LogOutput
+
+    try {
+      withLoggingContext(logFields) {
+        // Mutate the log field collection here inside the context scope
+        logFields.removeFirst()
+
+        logOutputInsideContext = captureLogOutput { log.info { "Test 1" } }
+
+        throw TestException()
+      }
+    } catch (e: TestException) {
+      exceptionLogOutput = captureLogOutput { log.error(e) { "Test 2" } }
+    }
+
+    // We want to verify that `withLoggingContext` properly cleaned up its context fields, despite
+    // the collection being mutated before the context scope ended. So this log after the context
+    // exited should not have any log fields
+    val logOutputAfterContext = captureLogOutput { log.info { "Test 3" } }
+
+    logOutputInsideContext.shouldNotBeNull()
+    logOutputInsideContext.contextFields shouldContainExactly
+        mapOf(
+            "key1" to "value1",
+            "key2" to
+                JsonObject(
+                    mapOf("id" to JsonPrimitive(1), "type" to JsonPrimitive("ORDER_PLACED")),
+                ),
+        )
+    logOutputAfterContext.logFields.shouldBeEmpty()
+
+    exceptionLogOutput.logFields shouldBe
+        """
+          "key1":"value1","key2":{"id":1,"type":"ORDER_PLACED"}
+        """
+            .trimIndent()
+    exceptionLogOutput.contextFields.shouldBeEmpty()
+
+    logOutputAfterContext.contextFields.shouldBeEmpty()
+    logOutputAfterContext.logFields.shouldBeEmpty()
+  }
+
+  @Test
+  fun `passing an empty collection to withLoggingContext works`() {
     val output = captureLogOutput {
       withLoggingContext(
           logFields = emptyList(),

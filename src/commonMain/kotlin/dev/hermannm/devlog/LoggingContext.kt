@@ -187,7 +187,7 @@ public inline fun <ReturnT> withLoggingContext(
   contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
 
   // The logging context implementation assumes that the field collection isn't mutated. We can't
-  // guarantee for `Collection`, so we must copy it to an array here. We don't need to do this
+  // guarantee this for `Collection`, so we must copy it to an array here. We don't need to do this
   // defensive copy for the `vararg` overload, since Kotlin always creates a new array for varargs:
   // https://discuss.kotlinlang.org/t/hidden-allocations-when-using-vararg-and-spread-operator/1640/2
   val fieldArray = logFields.toTypedArray()
