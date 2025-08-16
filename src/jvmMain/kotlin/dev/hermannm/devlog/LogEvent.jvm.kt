@@ -64,19 +64,15 @@ internal class Slf4jLogEvent(
   }
 
   override fun addStringField(key: String, value: String) {
-    if (!isFieldKeyAdded(key)) {
+    if (!isFieldKeyAdded(keyValuePairs, key)) {
       addKeyValue(key, value)
     }
   }
 
   override fun addJsonField(key: String, json: String) {
-    if (!isFieldKeyAdded(key)) {
+    if (!isFieldKeyAdded(keyValuePairs, key)) {
       addKeyValue(key, RawJson(json))
     }
-  }
-
-  private fun isFieldKeyAdded(key: String): Boolean {
-    return keyValuePairs?.any { it.key == key } ?: false
   }
 
   override fun log(message: String, logger: Slf4jLogger) {
@@ -195,19 +191,15 @@ internal class LogbackLogEvent(level: LogLevel, logger: LogbackLogger) :
   }
 
   override fun addStringField(key: String, value: String) {
-    if (!isFieldKeyAdded(key)) {
+    if (!isFieldKeyAdded(keyValuePairs, key)) {
       addKeyValuePair(KeyValuePair(key, value))
     }
   }
 
   override fun addJsonField(key: String, json: String) {
-    if (!isFieldKeyAdded(key)) {
+    if (!isFieldKeyAdded(keyValuePairs, key)) {
       addKeyValuePair(KeyValuePair(key, RawJson(json)))
     }
-  }
-
-  private fun isFieldKeyAdded(key: String): Boolean {
-    return keyValuePairs?.any { it.key == key } ?: false
   }
 
   override fun log(message: String, logger: PlatformLogger) {
@@ -268,6 +260,10 @@ internal fun LogLevel.toLogback(): LogbackLevel {
       DEBUG = { LogbackLevel.DEBUG },
       TRACE = { LogbackLevel.TRACE },
   )
+}
+
+internal fun isFieldKeyAdded(keyValuePairs: List<KeyValuePair>?, key: String): Boolean {
+  return keyValuePairs?.any { it.key == key } ?: false
 }
 
 /**
