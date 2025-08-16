@@ -9,7 +9,6 @@ import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import kotlin.test.Test
-import kotlinx.serialization.json.JsonPrimitive
 
 private val log = getLogger()
 
@@ -69,7 +68,7 @@ internal class ExceptionWithLoggingContextTest {
           "exceptionField":"value"
         """
             .trimIndent()
-    output.contextFields shouldContainExactly mapOf("contextField" to JsonPrimitive("value"))
+    output.contextFields shouldContainExactly mapOf("contextField" to "value")
   }
 
   @Test

@@ -205,8 +205,7 @@ internal class LoggingContextJvmTest {
         latch.await() // Waits until child thread calls countDown()
       }
 
-      output.contextFields shouldContainExactly
-          mapOf("fieldFromParentThread" to JsonPrimitive("value"))
+      output.contextFields shouldContainExactly mapOf("fieldFromParentThread" to "value")
     }
   }
 

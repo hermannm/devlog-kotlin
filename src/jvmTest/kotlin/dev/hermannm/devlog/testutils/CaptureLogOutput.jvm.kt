@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * Since we have configured Logback in resources/logback-test.xml to use the Logstash JSON encoder,
@@ -77,7 +78,14 @@ internal actual fun captureLogOutput(block: () -> Unit): LogOutput {
 
   val contextFields =
       try {
-        jsonEncoder.decodeFromString<ContextFieldsInLogOutput>(logOutput).context
+        jsonEncoder.decodeFromString<ContextFieldsInLogOutput>(logOutput).context?.mapValues {
+            (_, jsonValue) ->
+          if (jsonValue is JsonPrimitive && jsonValue.isString) {
+            jsonValue.content
+          } else {
+            jsonValue
+          }
+        }
       } catch (_: Exception) {
         null
       }

@@ -2,7 +2,6 @@ package dev.hermannm.devlog
 
 import dev.hermannm.devlog.testutils.LogOutput
 import dev.hermannm.devlog.testutils.captureLogOutput
-import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -25,7 +24,7 @@ internal class LoggingContextTest {
       }
     }
 
-    output.contextFields shouldContainExactly mapOf("key" to JsonPrimitive("value"))
+    output.contextFields shouldContainExactly mapOf("key" to "value")
   }
 
   @Test
@@ -41,7 +40,7 @@ internal class LoggingContextTest {
 
     outputs.forEach { output ->
       output.shouldNotBeNull()
-      output.contextFields shouldContainExactly mapOf("key" to JsonPrimitive("value"))
+      output.contextFields shouldContainExactly mapOf("key" to "value")
     }
   }
 
@@ -95,8 +94,8 @@ internal class LoggingContextTest {
 
     output.contextFields shouldContainExactly
         mapOf(
-            "nestedContext" to JsonPrimitive("value"),
-            "outerContext" to JsonPrimitive("value"),
+            "nestedContext" to "value",
+            "outerContext" to "value",
         )
   }
 
@@ -143,11 +142,9 @@ internal class LoggingContextTest {
       outputFromOuterContext = captureLogOutput { log.info { "Test" } }
     }
 
-    outputFromInnerContext.contextFields shouldContainExactly
-        mapOf("duplicateKey" to JsonPrimitive("inner1"))
+    outputFromInnerContext.contextFields shouldContainExactly mapOf("duplicateKey" to "inner1")
 
-    outputFromOuterContext.contextFields shouldContainExactly
-        mapOf("duplicateKey" to JsonPrimitive("outer"))
+    outputFromOuterContext.contextFields shouldContainExactly mapOf("duplicateKey" to "outer")
   }
 
   /**
@@ -181,8 +178,7 @@ internal class LoggingContextTest {
     output1.contextFields.shouldBeEmpty()
 
     output2.logFields.shouldBeEmpty()
-    output2.contextFields shouldContainExactly
-        mapOf("duplicateKey" to JsonPrimitive("from context"))
+    output2.contextFields shouldContainExactly mapOf("duplicateKey" to "from context")
   }
 
   @Test
@@ -219,7 +215,7 @@ internal class LoggingContextTest {
     // Check that the outer logging context is restored after logging the exception
     outputAfterException.logFields.shouldBeEmpty()
     outputAfterException.contextFields shouldContainExactly
-        mapOf("duplicateKey" to JsonPrimitive("from outer context"))
+        mapOf("duplicateKey" to "from outer context")
   }
 
   @Test
@@ -238,8 +234,8 @@ internal class LoggingContextTest {
 
     output.contextFields shouldContainExactly
         mapOf(
-            "key1" to JsonPrimitive("value1"),
-            "key2" to JsonPrimitive("value2"),
+            "key1" to "value1",
+            "key2" to "value2",
         )
   }
 
@@ -318,20 +314,6 @@ internal class LoggingContextTest {
     // This won't compile unless `withLoggingContext` uses `callsInPlace` contract with
     // `InvocationKind.EXACTLY_ONCE`
     useString(uninitialized)
-  }
-
-  /**
-   * We want to make sure that constructing a unique object of `String` works, for
-   * [LoggingContextState.IS_JSON_SENTINEL].
-   */
-  @Test
-  fun `constructing a string creates a unique String instance`() {
-    /**
-     * We call [kotlin.String] explicitly here, for the same reason as
-     * [LoggingContextState.IS_JSON_SENTINEL].
-     */
-    @Suppress("RemoveRedundantQualifierName") val uniqueString = kotlin.String()
-    (uniqueString === "").shouldBeFalse()
   }
 
   // Dummy method for contract tests
