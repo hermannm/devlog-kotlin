@@ -27,50 +27,9 @@ import kotlinx.serialization.json.JsonPrimitive
 private val log = getLogger()
 
 internal class LoggingContextJvmTest {
+  /** We use JVM synchronization primitives here, hence we place it under `jvmTest`. */
   @Test
-  fun `nested logging context restores previous context fields on exit`() {
-    val event1 = Event(id = 1001, type = EventType.ORDER_PLACED)
-    val event2 = Event(id = 1002, type = EventType.ORDER_UPDATED)
-
-    withLoggingContext(
-        field("event", event1),
-        field("stringField", "parentValue"),
-        field("parentOnlyField", "value1"),
-        field("fieldThatIsStringInParentButJsonInChild", "stringValue"),
-    ) {
-      val parentContext =
-          mapOf(
-              "event" to """{"id":1001,"type":"ORDER_PLACED"}""",
-              "stringField" to "parentValue",
-              "parentOnlyField" to "value1",
-              "fieldThatIsStringInParentButJsonInChild" to "stringValue",
-          )
-      loggingContextShouldContainExactly(parentContext)
-
-      withLoggingContext(
-          field("event", event2),
-          field("stringField", "childValue"),
-          field("childOnlyField", "value2"),
-          rawJsonField("fieldThatIsStringInParentButJsonInChild", """{"test":true}"""),
-      ) {
-        loggingContextShouldContainExactly(
-            mapOf(
-                "event" to """{"id":1002,"type":"ORDER_UPDATED"}""",
-                "stringField" to "childValue",
-                "parentOnlyField" to "value1",
-                "childOnlyField" to "value2",
-                "fieldThatIsStringInParentButJsonInChild" to """{"test":true}""",
-            ),
-        )
-      }
-
-      loggingContextShouldContainExactly(parentContext)
-    }
-  }
-
-  /** We use JVM synchronization primitives here, hence we place it under jvmTest. */
-  @Test
-  fun `getCopyOfLOggingContext allows passing logging context between threads`() {
+  fun `getCopyOfLoggingContext allows passing logging context between threads`() {
     val event = Event(id = 1001, type = EventType.ORDER_PLACED)
 
     val lock = ReentrantLock()
@@ -110,32 +69,6 @@ internal class LoggingContextJvmTest {
                     ),
                 ),
         )
-  }
-
-  @Test
-  fun `withLoggingContext existingContext overload merges given context with existing fields`() {
-    val existingContext =
-        LoggingContext(
-            map = mapOf("fieldMap1" to "value", "fieldMap2" to "value"),
-            state = LoggingContextState.empty(),
-        )
-
-    withLoggingContext(field("existingField", "value")) {
-      loggingContextShouldContainExactly(mapOf("existingField" to "value"))
-
-      withLoggingContext(existingContext) {
-        loggingContextShouldContainExactly(
-            mapOf(
-                "existingField" to "value",
-                "fieldMap1" to "value",
-                "fieldMap2" to "value",
-            ),
-        )
-      }
-
-      // Previous fields should be restored after
-      loggingContextShouldContainExactly(mapOf("existingField" to "value"))
-    }
   }
 
   /**

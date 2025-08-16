@@ -1,7 +1,11 @@
 package dev.hermannm.devlog
 
+import dev.hermannm.devlog.testutils.Event
+import dev.hermannm.devlog.testutils.EventType
 import dev.hermannm.devlog.testutils.LogOutput
 import dev.hermannm.devlog.testutils.captureLogOutput
+import dev.hermannm.devlog.testutils.createLoggingContext
+import dev.hermannm.devlog.testutils.loggingContextShouldContainExactly
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -216,6 +220,70 @@ internal class LoggingContextTest {
     outputAfterException.logFields.shouldBeEmpty()
     outputAfterException.contextFields shouldContainExactly
         mapOf("duplicateKey" to "from outer context")
+  }
+
+  @Test
+  fun `nested logging context restores previous context fields on exit`() {
+    val event1 = Event(id = 1001, type = EventType.ORDER_PLACED)
+    val event2 = Event(id = 1002, type = EventType.ORDER_UPDATED)
+
+    withLoggingContext(
+        field("event", event1),
+        field("stringField", "parentValue"),
+        field("parentOnlyField", "value1"),
+        field("fieldThatIsStringInParentButJsonInChild", "stringValue"),
+    ) {
+      val parentContext =
+          mapOf(
+              "event" to """{"id":1001,"type":"ORDER_PLACED"}""",
+              "stringField" to "parentValue",
+              "parentOnlyField" to "value1",
+              "fieldThatIsStringInParentButJsonInChild" to "stringValue",
+          )
+      loggingContextShouldContainExactly(parentContext)
+
+      withLoggingContext(
+          field("event", event2),
+          field("stringField", "childValue"),
+          field("childOnlyField", "value2"),
+          rawJsonField("fieldThatIsStringInParentButJsonInChild", """{"test":true}"""),
+      ) {
+        loggingContextShouldContainExactly(
+            mapOf(
+                "event" to """{"id":1002,"type":"ORDER_UPDATED"}""",
+                "stringField" to "childValue",
+                "parentOnlyField" to "value1",
+                "childOnlyField" to "value2",
+                "fieldThatIsStringInParentButJsonInChild" to """{"test":true}""",
+            ),
+        )
+      }
+
+      loggingContextShouldContainExactly(parentContext)
+    }
+  }
+
+  @Test
+  fun `withLoggingContext existingContext overload merges given context with existing fields`() {
+    val existingContext =
+        createLoggingContext(mapOf("fieldMap1" to "value", "fieldMap2" to "value"))
+
+    withLoggingContext(field("existingField", "value")) {
+      loggingContextShouldContainExactly(mapOf("existingField" to "value"))
+
+      withLoggingContext(existingContext) {
+        loggingContextShouldContainExactly(
+            mapOf(
+                "existingField" to "value",
+                "fieldMap1" to "value",
+                "fieldMap2" to "value",
+            ),
+        )
+      }
+
+      // Previous fields should be restored after
+      loggingContextShouldContainExactly(mapOf("existingField" to "value"))
+    }
   }
 
   @Test
