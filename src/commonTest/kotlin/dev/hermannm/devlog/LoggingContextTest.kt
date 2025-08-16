@@ -103,6 +103,8 @@ internal class LoggingContextTest {
         )
   }
 
+  private class TestException : RuntimeException()
+
   @Test
   fun `logging context is attached to exceptions`() {
     val output = captureLogOutput {
@@ -110,9 +112,9 @@ internal class LoggingContextTest {
         withLoggingContext(
             field("key", "value"),
         ) {
-          throw IllegalStateException("Something went wrong")
+          throw TestException()
         }
-      } catch (e: IllegalStateException) {
+      } catch (e: TestException) {
         log.error(e) { "Test" }
       }
     }
@@ -124,6 +126,42 @@ internal class LoggingContextTest {
           "key":"value"
         """
             .trimIndent()
+    output.contextFields.shouldBeEmpty()
+  }
+
+  @Test
+  fun `exception propagating through multiple levels of logging context includes them all`() {
+    val output = captureLogOutput {
+      withLoggingContext(
+          field("level1", "value"),
+      ) {
+        try {
+          withLoggingContext(
+              field("level2_key1", "value"),
+              field("level2_key2", Event(id = 1, type = EventType.ORDER_UPDATED)),
+          ) {
+            withLoggingContext(
+                field("level3", "value"),
+            ) {
+              throw TestException()
+            }
+          }
+        } catch (e: TestException) {
+          log.error(e) { "Test" }
+        }
+      }
+    }
+
+    // We expect these exception context fields to be in `logFields`, not `contextFields`, because
+    // they have escaped their original context
+    output.logFields shouldBe
+        """
+          "level3":"value","level2_key1":"value","level2_key2":{"id":1,"type":"ORDER_UPDATED"}
+        """
+            .trimIndent()
+    // We expect the outermost logging context fields to still be in `contextFields`, because the
+    // exception is caught inside of its scope
+    output.contextFields shouldContainExactly mapOf("level1" to "value")
   }
 
   @Test
@@ -191,15 +229,24 @@ internal class LoggingContextTest {
     val outputAfterException: LogOutput
 
     withLoggingContext(
-        field("duplicateKey", "from outer context"),
+        field("duplicateKey", "outer context value"),
     ) {
       try {
+        // Let exception propagate through nested logging contexts, so we can verify that only the
+        // innermost context value is included in the log
         withLoggingContext(
-            field("duplicateKey", "attached to exception"),
+            field("duplicateKey", "middle context value"),
         ) {
-          throw IllegalStateException("Something went wrong")
+          withLoggingContext(
+              // Include 2 fields on the duplicate key here, to verify that only the first field is
+              // included in the log
+              field("duplicateKey", "inner context value 1"),
+              field("duplicateKey", "inner context value 2"),
+          ) {
+            throw TestException()
+          }
         }
-      } catch (e: IllegalStateException) {
+      } catch (e: TestException) {
         exceptionLogOutput = captureLogOutput { log.error(e) { "Test" } }
       }
 
@@ -210,7 +257,7 @@ internal class LoggingContextTest {
     // has escaped its original context
     exceptionLogOutput.logFields shouldBe
         """
-          "duplicateKey":"attached to exception"
+          "duplicateKey":"inner context value 1"
         """
             .trimIndent()
     // The context fields should be empty, since the outer `duplicateKey` was overridden
@@ -219,7 +266,7 @@ internal class LoggingContextTest {
     // Check that the outer logging context is restored after logging the exception
     outputAfterException.logFields.shouldBeEmpty()
     outputAfterException.contextFields shouldContainExactly
-        mapOf("duplicateKey" to "from outer context")
+        mapOf("duplicateKey" to "outer context value")
   }
 
   @Test
