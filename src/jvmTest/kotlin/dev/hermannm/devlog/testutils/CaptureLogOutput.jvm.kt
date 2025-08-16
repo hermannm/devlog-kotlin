@@ -1,6 +1,6 @@
 package dev.hermannm.devlog.testutils
 
-import dev.hermannm.devlog.jsonEncoder
+import dev.hermannm.devlog.LOG_FIELD_JSON_FORMAT
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContainOnlyOnce
@@ -78,14 +78,15 @@ internal actual fun captureLogOutput(block: () -> Unit): LogOutput {
 
   val contextFields =
       try {
-        jsonEncoder.decodeFromString<ContextFieldsInLogOutput>(logOutput).context?.mapValues {
-            (_, jsonValue) ->
-          if (jsonValue is JsonPrimitive && jsonValue.isString) {
-            jsonValue.content
-          } else {
-            jsonValue
-          }
-        }
+        LOG_FIELD_JSON_FORMAT.decodeFromString<ContextFieldsInLogOutput>(logOutput)
+            .context
+            ?.mapValues { (_, jsonValue) ->
+              if (jsonValue is JsonPrimitive && jsonValue.isString) {
+                jsonValue.content
+              } else {
+                jsonValue
+              }
+            }
       } catch (_: Exception) {
         null
       }

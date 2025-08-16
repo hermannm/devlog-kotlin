@@ -171,7 +171,7 @@ internal inline fun <reified ValueT, ReturnT> encodeFieldValue(
       // Special case for common types that kotlinx.serialization doesn't handle by default
       fieldValueShouldUseToString(value) -> onString(value.toString())
       // Try to serialize with kotlinx.serialization - if it fails, we fall back to toString below
-      else -> onJson(jsonEncoder.encodeToString(value))
+      else -> onJson(LOG_FIELD_JSON_FORMAT.encodeToString(value))
     }
   } catch (_: Exception) {
     // We don't want to ever throw an exception from constructing a log field, which may happen if
@@ -192,7 +192,7 @@ internal inline fun <ValueT : Any, ReturnT> encodeFieldValueWithSerializer(
       // Handle nulls here, so users don't have to deal with passing a null-handling serializer
       value == null -> onJson(JSON_NULL_VALUE)
       // Try to serialize with kotlinx.serialization - if it fails, we fall back to toString below
-      else -> onJson(jsonEncoder.encodeToString(serializer, value))
+      else -> onJson(LOG_FIELD_JSON_FORMAT.encodeToString(serializer, value))
     }
   } catch (_: Exception) {
     // We don't want to ever throw an exception from constructing a log field, which may happen if
@@ -344,7 +344,7 @@ internal inline fun <ReturnT> validateRawJson(
     }
 
     // If we do not assume that the JSON is valid, we must try to decode it.
-    val decoded = jsonEncoder.parseToJsonElement(json)
+    val decoded = LOG_FIELD_JSON_FORMAT.parseToJsonElement(json)
     if (!isValidJson(decoded)) {
       return onInvalidJson(json)
     }
@@ -356,7 +356,7 @@ internal inline fun <ReturnT> validateRawJson(
     }
 
     // If the JSON did contain unescaped newlines, then we need to re-encode to escape them.
-    val encoded = jsonEncoder.encodeToString(JsonElement.serializer(), decoded)
+    val encoded = LOG_FIELD_JSON_FORMAT.encodeToString(JsonElement.serializer(), decoded)
     return onValidJson(encoded)
   } catch (_: Exception) {
     // If we failed to decode/re-encode the JSON string, we return it as a non-JSON string.
@@ -418,7 +418,7 @@ internal fun isValidJson(jsonElement: JsonElement): Boolean {
 
 @PublishedApi
 @kotlin.jvm.JvmField
-internal val jsonEncoder: Json = Json {
+internal val LOG_FIELD_JSON_FORMAT: Json = Json {
   encodeDefaults = true
   ignoreUnknownKeys = true
 }

@@ -58,7 +58,7 @@ public final class dev/hermannm/devlog/LogFieldJvm {
 
 public final class dev/hermannm/devlog/LogFieldKt {
 	public static final field JSON_NULL_VALUE Ljava/lang/String;
-	public static final field jsonEncoder Lkotlinx/serialization/json/Json;
+	public static final field LOG_FIELD_JSON_FORMAT Lkotlinx/serialization/json/Json;
 	public static final fun field (Ljava/lang/String;Ljava/lang/Object;Lkotlinx/serialization/SerializationStrategy;)Ldev/hermannm/devlog/LogField;
 	public static final fun rawJson (Ljava/lang/String;Z)Lkotlinx/serialization/json/JsonElement;
 	public static synthetic fun rawJson$default (Ljava/lang/String;ZILjava/lang/Object;)Lkotlinx/serialization/json/JsonElement;
