@@ -84,8 +84,8 @@ a more structured manner than if you were to just use string concatenation.
 }
 ```
 
-Sometimes, you may want to add fields to all logs within a scope. For example, you can add an event
-ID to the logs when processing an event, so you can trace all the logs made in the context of that
+Sometimes, you may want to add fields to all logs in a scope. For example, you can add an event ID
+to the logs when processing an event, so you can trace all the logs made in the context of that
 event. To do this, you can use `withLoggingContext`:
 
 ```kotlin

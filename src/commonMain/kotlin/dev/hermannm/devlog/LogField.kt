@@ -26,21 +26,21 @@ import kotlinx.serialization.json.longOrNull
  * concatenation.
  *
  * There are 3 ways to add log fields in this library:
- * - Adding fields to a single log, by calling [LogBuilder.field] in the scope of one of the methods
- *   on [Logger] (see example on [LogBuilder.field]).
- * - Adding fields to all logs within a scope using [withLoggingContext], calling the [field]
- *   top-level function to construct log fields (see example on [withLoggingContext]).
- * - Adding fields to an exception using [ExceptionWithLoggingContext] (see example on its
+ * - Adding fields to a single log: Use [LogBuilder.field] in the scope of one of the methods on
+ *   [Logger] (see example on [LogBuilder.field]).
+ * - Adding fields to all logs in a scope: Use [withLoggingContext], with the [field] top-level
+ *   function to construct log fields (see example on [withLoggingContext]).
+ * - Adding fields to an exception: Use [ExceptionWithLoggingContext] (see example on its
  *   docstring).
  *
  * If you have a value that is already serialized, you can use [LogBuilder.rawJsonField] or the
  * [rawJsonField] top-level function.
  *
  * If there are duplicate keys in the fields that would apply to a log, we only add 1 of the fields
- * (to avoid duplicate keys in the JSON output). Fields are prioritized as follows:
- * 1. Single-log fields (i.e. [LogBuilder.field])
- * 2. Exception log fields
- * 3. Logging context fields
+ * (to avoid duplicate keys in the JSON log output). Fields are prioritized as follows:
+ * 1. Single-log fields (from [LogBuilder.field])
+ * 2. Exception log fields (from [ExceptionWithLoggingContext])
+ * 3. Logging context fields (from [withLoggingContext])
  */
 public class LogField
 @PublishedApi
@@ -68,9 +68,9 @@ internal constructor(
 /**
  * Constructs a [LogField], a key-value pair for adding structured data to logs.
  *
- * This function is made to be used with [withLoggingContext], to add fields to all logs within a
- * scope. If you just want to add a field to a single log, you should instead call
- * [LogBuilder.field] on one of [Logger]'s methods ([see example][LogBuilder.field]).
+ * This function is made to be used with [withLoggingContext], to add fields to all logs in a scope.
+ * If you just want to add a field to a single log, you should instead call [LogBuilder.field] on
+ * one of [Logger]'s methods ([see example][LogBuilder.field]).
  *
  * The value is serialized using `kotlinx.serialization`, so if you pass an object here, you should
  * make sure it is annotated with [@Serializable][kotlinx.serialization.Serializable]. If
@@ -104,9 +104,9 @@ public inline fun <reified ValueT> field(key: String, value: ValueT): LogField {
 /**
  * Constructs a [LogField], a key-value pair for adding structured data to logs.
  *
- * This function is made to be used with [withLoggingContext], to add fields to all logs within a
- * scope. If you just want to add a field to a single log, you should instead call
- * [LogBuilder.field] on one of [Logger]'s methods ([see example][LogBuilder.field]).
+ * This function is made to be used with [withLoggingContext], to add fields to all logs in a scope.
+ * If you just want to add a field to a single log, you should instead call [LogBuilder.field] on
+ * one of [Logger]'s methods ([see example][LogBuilder.field]).
  *
  * The value is serialized using `kotlinx.serialization`, so if you pass an object here, you should
  * make sure it is annotated with [@Serializable][kotlinx.serialization.Serializable]. If
@@ -205,8 +205,8 @@ internal inline fun <ValueT : Any, ReturnT> encodeFieldValueWithSerializer(
  * Constructs a [LogField], a key-value pair for adding structured data to logs, with the given
  * pre-serialized JSON value.
  *
- * This function is made to be used with [withLoggingContext], to add fields to all logs within a
- * scope. If you just want to add a field to a single log, you should instead call
+ * This function is made to be used with [withLoggingContext], to add fields to all logs in a scope.
+ * If you just want to add a field to a single log, you should instead call
  * [LogBuilder.rawJsonField] on one of [Logger]'s methods (see example on
  * [rawJsonField][LogBuilder.rawJsonField]).
  *

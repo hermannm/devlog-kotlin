@@ -246,9 +246,9 @@ internal constructor(
    * constructed field from the
    * [field][dev.hermannm.devlog.field]/[rawJsonField][dev.hermannm.devlog.rawJsonField] top-level
    * functions, that you want to add to a single log.
-   * - If you want to create a new field and add it to the log, you should instead call
+   * - If you want to create a new field and add it to the log, you should instead use
    *   [LogBuilder.field] to create the field in-place
-   * - If you want to add the field to all logs within a scope, you should instead use
+   * - If you want to add a field to all logs in a scope, you should instead use
    *   [withLoggingContext]
    */
   public fun addField(field: LogField) {
@@ -264,10 +264,9 @@ internal constructor(
    * previously constructed fields from the
    * [field][dev.hermannm.devlog.field]/[rawJsonField][dev.hermannm.devlog.rawJsonField] top-level
    * functions, that you want to add to a single log.
-   * - If you want to create new fields and add them to the log, you should instead call
+   * - If you want to create new fields and add them to the log, you should instead use
    *   [LogBuilder.field] to create the fields in-place
-   * - If you want to add the fields to all logs within a scope, you should instead use
-   *   [withLoggingContext]
+   * - If you want to add fields to all logs in a scope, you should instead use [withLoggingContext]
    */
   public fun addFields(fields: Collection<LogField>) {
     for (field in fields) {
