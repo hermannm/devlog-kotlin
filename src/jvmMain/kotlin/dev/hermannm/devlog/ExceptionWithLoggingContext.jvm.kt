@@ -7,6 +7,13 @@ internal actual class LoggingContextProvider
 actual constructor(
     @kotlin.concurrent.Volatile private var loggingContext: Array<out LogField>,
 ) : RuntimeException() {
+  /**
+   * We set this to true when [addFieldsToLog] is called.
+   *
+   * See [getLoggingContextProviderMessage] for why we want this state.
+   */
+  @kotlin.concurrent.Volatile private var fieldsAddedToLog = false
+
   actual fun addLoggingContext(logFields: Array<out LogField>) {
     // We need to cast to `Array<LogField>` in order to use the `+` operator here (which we want to
     // use, since it uses optimized `System.arraycopy` on JVM).
@@ -17,10 +24,11 @@ actual constructor(
 
   actual fun addFieldsToLog(logBuilder: LogBuilder) {
     logBuilder.addFields(loggingContext)
+    this.fieldsAddedToLog = true
   }
 
   override val message: String?
-    get() = "Added log fields from exception logging context"
+    get() = getLoggingContextProviderMessage(loggingContext, fieldsAddedToLog)
 
   override fun fillInStackTrace(): Throwable {
     return this

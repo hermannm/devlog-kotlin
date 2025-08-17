@@ -7,6 +7,7 @@ import dev.hermannm.devlog.testutils.captureLogOutput
 import dev.hermannm.devlog.testutils.captureStdoutAndStderr
 import dev.hermannm.devlog.testutils.createLoggingContext
 import dev.hermannm.devlog.testutils.loggingContextShouldContainExactly
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -286,6 +287,28 @@ internal class LoggingContextTest {
   }
 
   @Test
+  fun `LoggingContextProvider is not added to exception if logging context is empty`() {
+    /**
+     * If there are fields in the logging context, we add a [LoggingContextProvider] suppressed
+     * exception if an exception would escape the logging context. But if the logging context is
+     * empty (which it may be if we e.g. build a log field collection conditionally), we want to
+     * make sure that we don't add any such redundant suppressed exception.
+     */
+    val exception: TestException
+    try {
+      withLoggingContext(
+          logFields = emptyList(),
+      ) {
+        throw TestException()
+      }
+    } catch (e: TestException) {
+      exception = e
+    }
+
+    exception.suppressedExceptions.shouldBeEmpty()
+  }
+
+  @Test
   fun `nested logging context restores previous context fields on exit`() {
     val event1 = Event(id = 1001, type = EventType.ORDER_PLACED)
     val event2 = Event(id = 1002, type = EventType.ORDER_UPDATED)
@@ -501,19 +524,54 @@ internal class LoggingContextTest {
     useString(uninitialized)
   }
 
+  /**
+   * The exception message for [LoggingContextProvider] shouldn't normally show up in the logs
+   * (since we exclude it in our `CustomThrowableProxy`, see `LogEvent.jvm.kt`). But it may still
+   * show up when an exception is logged outside of our library (e.g. by JUnit), and in that case,
+   * we want to verify that the exception message is as we expect.
+   *
+   * If the fields from [LoggingContextProvider] have not been added to a log, then the fields
+   * should be included in the exception message (see [getLoggingContextProviderMessage] for more on
+   * this).
+   */
   @Test
   fun `LoggingContextProvider has expected exception message and empty stack trace`() {
-    val loggingContextProvider = LoggingContextProvider(emptyArray())
+    val loggingContextProvider =
+        LoggingContextProvider(
+            loggingContext =
+                arrayOf(
+                    field("key1", "value"),
+                    field("key2", Event(id = 1, type = EventType.ORDER_PLACED)),
+                ),
+        )
 
-    // This exception shouldn't show up in the logs when using Logback (since we exclude it in our
-    // `CustomThrowableProxy`, see `LogEvent.jvm.kt`). But it may still show up when an exception
-    // is logged outside of our library (e.g. by JUnit), and in that case, we want to verify that
-    // the exception message is as we expect.
+    // Here, the `LoggingContextProvider` fields have not been added to a log yet, so we expect them
+    // to be included in the exception message
+    loggingContextProvider.message shouldBe
+        """
+          Fields from exception logging context:
+          		key1: value
+          		key2: {"id":1,"type":"ORDER_PLACED"}
+        """
+            .trimIndent()
+
+    log.info(loggingContextProvider) { "Test" }
+
+    // Now, the `LoggingContextProvider` has been logged, so we expect a message without fields
     loggingContextProvider.message shouldBe "Added log fields from exception logging context"
+  }
 
-    // We override `fillInStackTrace` on `LoggingContextProvider` to be a no-op (see its docstring
-    // for why), so we expect the output of `printStackTrace` to contain only the exception class
-    // name and message (and a newline, since `printStackTrace` adds a trailing newline).
+  /**
+   * We override `fillInStackTrace` on [LoggingContextProvider] to be a no-op (see its docstring for
+   * why), so we expect the output of `printStackTrace` to contain only the exception class name and
+   * message (and a newline, since `printStackTrace` adds a trailing newline).
+   */
+  @Test
+  fun `LoggingContextProvider has empty stack trace`() {
+    val loggingContextProvider = LoggingContextProvider(arrayOf(field("key", "value")))
+    // Log the `LoggingContextProvider`, so we get an exception message without fields
+    log.info(loggingContextProvider) { "Test" }
+
     val stackTraceOutput = captureStdoutAndStderr { loggingContextProvider.printStackTrace() }
     stackTraceOutput shouldBe
         "dev.hermannm.devlog.LoggingContextProvider: Added log fields from exception logging context\n"

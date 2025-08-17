@@ -331,6 +331,52 @@ internal expect class LoggingContextProvider : RuntimeException {
 }
 
 /**
+ * Builds the exception message for [LoggingContextProvider]. As explained on its docstring, we
+ * declare that class as `expect` in order to override `fillInStackTrace` on the JVM. But we can
+ * have a common implementation of the exception message, which is what this function provides.
+ *
+ * If [LoggingContextProvider.addFieldsToLog] has been called on the exception, then you should set
+ * [fieldsAddedToLog] to `true`. If `addFieldsToLog` has not been called, then that may be because
+ * this exception is logged by a logger outside of this library. In that case, we include the
+ * logging context fields in the exception message, so we don't lose context.
+ */
+internal fun getLoggingContextProviderMessage(
+    loggingContext: Array<out LogField>,
+    fieldsAddedToLog: Boolean,
+): String {
+  if (fieldsAddedToLog) {
+    return "Added log fields from exception logging context"
+  }
+
+  val messagePrefix = "Fields from exception logging context:"
+
+  // Pre-calculate capacity, so that StringBuilder only has to allocate once
+  val capacity =
+      messagePrefix.length +
+          loggingContext.sumOf { logField ->
+            // +5 chars for "\n\t\t" before each field and ": " between key and value
+            logField.key.length + logField.value.length + 5
+          }
+
+  val message = StringBuilder(capacity)
+  message.append(messagePrefix)
+
+  for (logField in loggingContext) {
+    // Use double tabs here, since we want the fields to be indented, and suppressed exceptions
+    // (which we use for `LoggingContextProvider`) are already indented by one tab
+    message.append('\n')
+    message.append('\t')
+    message.append('\t')
+    message.append(logField.key)
+    message.append(':')
+    message.append(' ')
+    message.append(logField.value)
+  }
+
+  return message.toString()
+}
+
+/**
  * Traverses the exception tree from the given root exception: Its cause exceptions and suppressed
  * exceptions, and any of their own cause or suppressed exceptions. The traversal is
  * [pre-order (depth-first)](https://en.wikipedia.org/wiki/Tree_traversal#Depth-first_search),
