@@ -4,6 +4,7 @@ import dev.hermannm.devlog.testutils.Event
 import dev.hermannm.devlog.testutils.EventType
 import dev.hermannm.devlog.testutils.LogOutput
 import dev.hermannm.devlog.testutils.captureLogOutput
+import dev.hermannm.devlog.testutils.captureStdoutAndStderr
 import dev.hermannm.devlog.testutils.createLoggingContext
 import dev.hermannm.devlog.testutils.loggingContextShouldContainExactly
 import io.kotest.matchers.maps.shouldBeEmpty
@@ -498,6 +499,24 @@ internal class LoggingContextTest {
     // This won't compile unless `withLoggingContext` uses `callsInPlace` contract with
     // `InvocationKind.EXACTLY_ONCE`
     useString(uninitialized)
+  }
+
+  @Test
+  fun `LoggingContextProvider has expected exception message and empty stack trace`() {
+    val loggingContextProvider = LoggingContextProvider(emptyArray())
+
+    // This exception shouldn't show up in the logs when using Logback (since we exclude it in our
+    // `CustomThrowableProxy`, see `LogEvent.jvm.kt`). But it may still show up when an exception
+    // is logged outside of our library (e.g. by JUnit), and in that case, we want to verify that
+    // the exception message is as we expect.
+    loggingContextProvider.message shouldBe "Added log fields from exception logging context"
+
+    // We override `fillInStackTrace` on `LoggingContextProvider` to be a no-op (see its docstring
+    // for why), so we expect the output of `printStackTrace` to contain only the exception class
+    // name and message (and a newline, since `printStackTrace` adds a trailing newline).
+    val stackTraceOutput = captureStdoutAndStderr { loggingContextProvider.printStackTrace() }
+    stackTraceOutput shouldBe
+        "dev.hermannm.devlog.LoggingContextProvider: Added log fields from exception logging context\n"
   }
 
   // Dummy method for contract tests

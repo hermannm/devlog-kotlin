@@ -10,25 +10,31 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 
-/**
- * Since we have configured Logback in resources/logback-test.xml to use the Logstash JSON encoder,
- * we can verify in our tests that user-provided log fields have the expected JSON output.
- */
-internal actual fun captureLogOutput(block: () -> Unit): LogOutput {
+internal actual inline fun captureStdoutAndStderr(crossinline block: () -> Unit): String {
   val originalStdout = System.out
+  val originalStderr = System.err
 
   // We redirect System.out to our own output stream, so we can capture the log output
   val outputStream = ByteArrayOutputStream()
-  System.setOut(PrintStream(outputStream))
+  val printStream = PrintStream(outputStream)
+  System.setOut(printStream)
+  System.setErr(printStream)
 
   try {
     block()
   } finally {
     System.setOut(originalStdout)
+    System.setErr(originalStderr)
   }
 
-  val logOutput = outputStream.toString("UTF-8")
+  return outputStream.toString("UTF-8")
+}
 
+/**
+ * Since we have configured Logback in resources/logback-test.xml to use the Logstash JSON encoder,
+ * we can parse the log output on that format here.
+ */
+internal actual fun parseLogOutput(logOutput: String): LogOutput {
   // We expect each call to captureLogFields to capture just a single log line, so it should only
   // contain 1 newline. If we get more, that is likely an error and should fail our tests.
   logOutput shouldContainOnlyOnce "\n"
