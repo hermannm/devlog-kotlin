@@ -2,9 +2,6 @@
 
 package dev.hermannm.devlog
 
-import java.io.PrintStream
-import java.io.PrintWriter
-
 // See docstring on the `expect` declaration of this class under `commonMain`
 internal actual class LoggingContextProvider
 actual constructor(
@@ -23,7 +20,7 @@ actual constructor(
   }
 
   override val message: String?
-    get() = "Added log fields from exception context"
+    get() = "Added log fields from exception logging context"
 
   override fun fillInStackTrace(): Throwable {
     return this
@@ -34,18 +31,6 @@ actual constructor(
   }
 
   override fun setStackTrace(stackTrace: Array<out StackTraceElement>) {
-    return
-  }
-
-  override fun printStackTrace() {
-    return
-  }
-
-  override fun printStackTrace(s: PrintStream?) {
-    return
-  }
-
-  override fun printStackTrace(s: PrintWriter?) {
     return
   }
 }
