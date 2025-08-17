@@ -142,23 +142,3 @@ public final class dev/hermannm/devlog/output/logback/JsonContextFieldWriter : n
 	public fun writeMdcEntry (Lcom/fasterxml/jackson/core/JsonGenerator;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
 }
 
-public final class dev/hermannm/devlog/output/logback/PrettyLogEncoder : ch/qos/logback/core/encoder/EncoderBase, net/logstash/logback/encoder/StreamingEncoder {
-	public fun <init> ()V
-	public fun encode (Lch/qos/logback/classic/spi/ILoggingEvent;)[B
-	public fun encode (Lch/qos/logback/classic/spi/ILoggingEvent;Ljava/io/OutputStream;)V
-	public synthetic fun encode (Ljava/lang/Object;)[B
-	public synthetic fun encode (Ljava/lang/Object;Ljava/io/OutputStream;)V
-	public fun footerBytes ()[B
-	public fun headerBytes ()[B
-	public final fun setIncludeLoggerName (Z)V
-	public final fun setTimeFormat (Ldev/hermannm/devlog/output/logback/TimeFormat;)V
-}
-
-public final class dev/hermannm/devlog/output/logback/TimeFormat : java/lang/Enum {
-	public static final field DATE_TIME Ldev/hermannm/devlog/output/logback/TimeFormat;
-	public static final field TIME_OF_DAY Ldev/hermannm/devlog/output/logback/TimeFormat;
-	public static fun getEntries ()Lkotlin/enums/EnumEntries;
-	public static fun valueOf (Ljava/lang/String;)Ldev/hermannm/devlog/output/logback/TimeFormat;
-	public static fun values ()[Ldev/hermannm/devlog/output/logback/TimeFormat;
-}
-
