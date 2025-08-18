@@ -1,24 +1,22 @@
 # Gradle version catalog: https://docs.gradle.org/current/userguide/version_catalogs.html
 # Plugins/libraries declared in this file become available on the `libs` object in build.gradle.kts
-
 [versions]
 # Plugin versions
-kotlin = "2.1.21"
-spotless = "7.0.4"
-ktfmt = "0.54"
-gradleMavenPublish = "0.32.0"
-binaryCompatibilityValidator = "0.17.0"
+kotlin = "2.2.10"
+spotless = "7.2.1"
+gradleMavenPublish = "0.34.0"
+binaryCompatibilityValidator = "0.18.1"
 dokka = "2.0.0"
 versionCatalogUpdate = "1.0.0"
 # Library versions
-kotlinxSerialization = "1.8.1"
+kotlinxSerialization = "1.9.0"
 slf4j = "2.0.17"
 logback = "1.5.18"
 logstashLogbackEncoder = "8.1"
-jackson = "2.19.0"
+jackson = "2.19.2"
 # Test libraries
-kotest = "5.9.1"
-log4j = "2.24.3"
+kotest = "6.0.0"
+log4j = "2.25.1"
 
 [plugins]
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
@@ -34,7 +32,7 @@ binaryCompatibilityValidator = { id = "org.jetbrains.kotlinx.binary-compatibilit
 # Kotlin documentation rendering
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 dokkaJavadoc = { id = "org.jetbrains.dokka-javadoc", version.ref = "dokka" }
-# Provides dependencyUpdates task to check for new library versions
+# Provides versionCatalogUpdate task to update dependencies
 versionCatalogUpdate = { id = "nl.littlerobots.version-catalog-update", version.ref = "versionCatalogUpdate" }
 
 [libraries]
@@ -44,9 +42,7 @@ slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 logstashLogbackEncoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstashLogbackEncoder" }
 jackson = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
-
 ### Test libraries
-
 kotlinTest = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotest = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 # For integration testing other SLF4J logger implementations

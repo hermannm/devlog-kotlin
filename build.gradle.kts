@@ -1,6 +1,5 @@
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
-import com.vanniktech.maven.publish.SonatypeHost
 import java.net.URI
 import nl.littlerobots.vcu.plugin.versionSelector
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -50,7 +49,7 @@ mavenPublishing {
       ),
   )
   signAllPublications()
-  publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, automaticRelease = false)
+  publishToMavenCentral(automaticRelease = false)
 }
 
 // Dependency versions are declared in Gradle version catalog (./gradle/libs.versions.toml)
@@ -136,7 +135,8 @@ repositories { mavenCentral() }
 spotless {
   kotlin {
     toggleOffOn()
-    ktfmt(libs.versions.ktfmt.get())
+    // Check for new versions here here: https://github.com/facebook/ktfmt
+    ktfmt("0.56")
   }
 }
 
@@ -201,6 +201,8 @@ dokka {
 }
 
 versionCatalogUpdate {
+  sortByKey = false // We order dependencies by importance in `libs.versions.toml`
+
   versionSelector { module ->
     val invalidVersionRegexes =
         listOf(
