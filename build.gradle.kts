@@ -2,6 +2,7 @@ import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SonatypeHost
 import java.net.URI
+import nl.littlerobots.vcu.plugin.versionSelector
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
@@ -61,7 +62,7 @@ plugins {
   alias(libs.plugins.binaryCompatibilityValidator)
   alias(libs.plugins.dokka)
   alias(libs.plugins.dokkaJavadoc)
-  alias(libs.plugins.gradleVersions)
+  alias(libs.plugins.versionCatalogUpdate)
   signing
 }
 
@@ -199,8 +200,8 @@ dokka {
   dokkaPublications.html { failOnWarning = true }
 }
 
-tasks.dependencyUpdates {
-  rejectVersionIf {
+versionCatalogUpdate {
+  versionSelector { module ->
     val invalidVersionRegexes =
         listOf(
             Regex("(?i).*Alpha(?:-?\\d+)?"),
@@ -211,6 +212,6 @@ tasks.dependencyUpdates {
             Regex("(?i).*CR(?:-?\\d+)?"),
             Regex("(?i).*M(?:-?\\d+)?"),
         )
-    return@rejectVersionIf invalidVersionRegexes.any { it.matches(candidate.version) }
+    return@versionSelector invalidVersionRegexes.none { it.matches(module.candidate.version) }
   }
 }

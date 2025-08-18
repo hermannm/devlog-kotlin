@@ -9,7 +9,7 @@ ktfmt = "0.54"
 gradleMavenPublish = "0.32.0"
 binaryCompatibilityValidator = "0.17.0"
 dokka = "2.0.0"
-gradleVersions = "0.52.0"
+versionCatalogUpdate = "1.0.0"
 # Library versions
 kotlinxSerialization = "1.8.1"
 slf4j = "2.0.17"
@@ -35,7 +35,7 @@ binaryCompatibilityValidator = { id = "org.jetbrains.kotlinx.binary-compatibilit
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 dokkaJavadoc = { id = "org.jetbrains.dokka-javadoc", version.ref = "dokka" }
 # Provides dependencyUpdates task to check for new library versions
-gradleVersions = { id = "com.github.ben-manes.versions", version.ref = "gradleVersions" }
+versionCatalogUpdate = { id = "nl.littlerobots.version-catalog-update", version.ref = "versionCatalogUpdate" }
 
 [libraries]
 kotlinxSerialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
