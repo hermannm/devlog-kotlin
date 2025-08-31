@@ -101,7 +101,7 @@ internal class LogFieldTest {
    * On [field] and [LogBuilder.field], we place a non-nullable `Any` bound on the `ValueT` type
    * parameter, and type the `value` parameter as `ValueT?`. This is to support passing in a custom
    * serializer for a type, but still allow passing in `null` for the value (since this is handled
-   * before checking the serializer in [encodeFieldValue]). This test checks that this works.
+   * before checking the serializer). This test checks that this works.
    */
   @Test
   fun `custom serializer with nullable value`() {
@@ -257,8 +257,8 @@ internal class LogFieldTest {
 
           output.logFields shouldBe
               """
-              "event":${eventJson}
-            """
+                "event":${eventJson}
+              """
                   .trimIndent()
         }
       }
@@ -279,8 +279,8 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-          "event":"{\"id\":1"
-        """
+            "event":"{\"id\":1"
+          """
               .trimIndent()
     }
   }
@@ -304,8 +304,8 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-          "event":${invalidJson}
-        """
+            "event":${invalidJson}
+          """
               .trimIndent()
     }
   }
@@ -315,11 +315,11 @@ internal class LogFieldTest {
     parameterizedTest(rawJsonTestCases) { test ->
       val jsonWithNewlines =
           """
-          {
-            "id": 1001,
-            "type": "ORDER_UPDATED"
-          }
-        """
+            {
+              "id": 1001,
+              "type": "ORDER_UPDATED"
+            }
+          """
               .trimIndent()
 
       val output = captureLogOutput {
@@ -331,8 +331,8 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-          "event":{"id":1001,"type":"ORDER_UPDATED"}
-        """
+            "event":{"id":1001,"type":"ORDER_UPDATED"}
+          """
               .trimIndent()
     }
   }
