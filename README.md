@@ -3,10 +3,12 @@
 Structured logging library for Kotlin, that aims to provide a developer-friendly API with minimal
 runtime overhead. Currently only supports the JVM platform, wrapping SLF4J.
 
-- Docs: https://devlog-kotlin.hermannm.dev
+- Docs: [devlog-kotlin.hermannm.dev](https://devlog-kotlin.hermannm.dev)
 - Published on:
-  - klibs.io: https://klibs.io/project/hermannm/devlog-kotlin
-  - Maven Central: https://central.sonatype.com/artifact/dev.hermannm/devlog-kotlin
+  - klibs.io:
+    [klibs.io/project/hermannm/devlog-kotlin](https://klibs.io/project/hermannm/devlog-kotlin)
+  - Maven Central:
+    [central.sonatype.com/artifact/dev.hermannm/devlog-kotlin](https://central.sonatype.com/artifact/dev.hermannm/devlog-kotlin)
 
 **Contents:**
 
@@ -424,7 +426,8 @@ Publishing a new release:
   ```
   git push && git push --tags
   ```
-  - Our release workflow will then create a GitHub release with the pushed tag's changelog entry
+  - Our release workflows will then create a GitHub release with the pushed tag's changelog entry,
+    and deploy documentation to [devlog-kotlin.hermannm.dev](https://devlog-kotlin.hermannm.dev)
 
 ## Credits
 
