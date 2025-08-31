@@ -13,9 +13,9 @@ kotlinxSerialization = "1.9.0"
 slf4j = "2.0.17"
 logback = "1.5.18"
 logstashLogbackEncoder = "8.1"
-jackson = "2.19.2"
+jackson = "2.20.0"
 # Test libraries
-kotest = "6.0.0"
+kotest = "6.0.1"
 log4j = "2.25.1"
 
 [plugins]
