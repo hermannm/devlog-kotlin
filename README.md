@@ -374,7 +374,10 @@ improve with this library:
 
 Updating dependencies:
 
-- Run `./gradlew versionCatalogUpdate`
+- Run:
+  ```
+  ./gradlew versionCatalogUpdate
+  ```
 - Also check for new versions of [`ktfmt`](https://github.com/facebook/ktfmt), and update the
   `ktfmt` entry under `spotless` in `build.gradle.kts`
 
@@ -385,7 +388,7 @@ Checking binary compatibility:
   avoid accidental breaking changes
   - This plugin generates an `api/devlog-kotlin.api` file that contains all the public APIs of the
     library. When making changes to the library, any changes to the library's public API will be
-    checked against this file, to detect possible breaking changes
+    checked against this file (in the `apiCheck` Gradle task), to detect possible breaking changes
   - When _adding_ new APIs (which should not be a breaking change), you must update this `.api` file
     by running the `apiDump` Gradle task
 
@@ -395,8 +398,24 @@ Publishing a new release:
   ```
   ./gradlew check
   ```
+- Bump version in `build.gradle.kts`
 - Add an entry to `CHANGELOG.md` (with the current date)
   - Remember to update the link section, and bump the version for the `[Unreleased]` link
+- Run:
+  ```
+  ./gradlew publishToMavenCentral
+  ```
+  - This will create a deployment at
+    [central.sonatype.com/publishing/deployments](https://central.sonatype.com/publishing/deployments),
+    and start verification
+  - Once verification completes, click "Publish" on the deployment
+  - If you have issues, see the following resources:
+    - Gradle Maven Publish Plugin guide to Maven Central:
+      https://vanniktech.github.io/gradle-maven-publish-plugin/central/
+    - Sonatype guide to Maven Central publishing:
+      https://central.sonatype.org/publish/publish-portal-guide/
+    - Kotlin guide to publishing multiplatform libraries to Maven Central:
+      https://www.jetbrains.com/help/kotlin-multiplatform-dev/multiplatform-publish-libraries.html
 - Create commit and tag for the release (update `TAG` variable in below command):
   ```
   TAG=vX.Y.Z && git commit -m "Release ${TAG}" && git tag -a "${TAG}" -m "Release ${TAG}" && git log --oneline -2
