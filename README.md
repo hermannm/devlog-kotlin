@@ -18,6 +18,7 @@ runtime overhead. Currently only supports the JVM platform, wrapping SLF4J.
   - [Automatic logger names](#automatic-logger-names)
 - [Project Structure](#project-structure)
 - [Why another logging library?](#why-another-logging-library)
+- [Developer's guide](#developers-guide)
 - [Credits](#credits)
 
 ## Usage
@@ -368,6 +369,43 @@ improve with this library:
     arbitrary serializable value, as the parameter to our `withLoggingContext` function. We then
     provide `JsonContextFieldWriter` for interoperability with `MDC` when using Logback +
     `logstash-logback-encoder`.
+
+## Developer's guide
+
+Updating dependencies:
+
+- Run `./gradlew versionCatalogUpdate`
+- Also check for new versions of [`ktfmt`](https://github.com/facebook/ktfmt), and update the
+  `ktfmt` entry under `spotless` in `build.gradle.kts`
+
+Checking binary compatibility:
+
+- We use the Kotlin
+  [Binary Compatibility Validator](https://github.com/Kotlin/binary-compatibility-validator) to
+  avoid accidental breaking changes
+  - This plugin generates an `api/devlog-kotlin.api` file that contains all the public APIs of the
+    library. When making changes to the library, any changes to the library's public API will be
+    checked against this file, to detect possible breaking changes
+  - When _adding_ new APIs (which should not be a breaking change), you must update this `.api` file
+    by running the `apiDump` Gradle task
+
+Publishing a new release:
+
+- Run tests:
+  ```
+  ./gradlew check
+  ```
+- Add an entry to `CHANGELOG.md` (with the current date)
+  - Remember to update the link section, and bump the version for the `[Unreleased]` link
+- Create commit and tag for the release (update `TAG` variable in below command):
+  ```
+  TAG=vX.Y.Z && git commit -m "Release ${TAG}" && git tag -a "${TAG}" -m "Release ${TAG}" && git log --oneline -2
+  ```
+- Push the commit and tag:
+  ```
+  git push && git push --tags
+  ```
+  - Our release workflow will then create a GitHub release with the pushed tag's changelog entry
 
 ## Credits
 
