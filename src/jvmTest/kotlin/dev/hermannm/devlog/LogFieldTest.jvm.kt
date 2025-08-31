@@ -1,6 +1,7 @@
 package dev.hermannm.devlog
 
 import dev.hermannm.devlog.testutils.captureLogOutput
+import dev.hermannm.devlog.testutils.parameterizedTest
 import io.kotest.matchers.string.shouldContain
 import java.math.BigDecimal
 import java.net.URI
@@ -14,21 +15,23 @@ private val log = getLogger()
 internal class LogFieldJvmTest {
   @Test
   fun `special-case types`() {
-    val output = captureLogOutput {
-      log.info {
-        field("instant", Instant.parse("2024-12-09T16:38:23Z"))
-        field("uri", URI.create("https://example.com"))
-        @Suppress("DEPRECATION") field("url", URL("https://example.com"))
-        field("uuid", UUID.fromString("3638dd04-d196-41ad-8b15-5188a22a6ba4"))
-        field("bigDecimal", BigDecimal("100.0"))
-        "Test"
+    parameterizedTest(LogFieldTestCase.entries) { test ->
+      val output = captureLogOutput {
+        log.info {
+          test.addField(this, "instant", Instant.parse("2024-12-09T16:38:23Z"))
+          test.addField(this, "uri", URI.create("https://example.com"))
+          @Suppress("DEPRECATION") test.addField(this, "url", URL("https://example.com"))
+          test.addField(this, "uuid", UUID.fromString("3638dd04-d196-41ad-8b15-5188a22a6ba4"))
+          test.addField(this, "bigDecimal", BigDecimal("100.0"))
+          "Test"
+        }
       }
-    }
 
-    output.logFields shouldContain """"instant":"2024-12-09T16:38:23Z""""
-    output.logFields shouldContain """"uri":"https://example.com""""
-    output.logFields shouldContain """"url":"https://example.com""""
-    output.logFields shouldContain """"uuid":"3638dd04-d196-41ad-8b15-5188a22a6ba4""""
-    output.logFields shouldContain """"bigDecimal":"100.0""""
+      output.logFields shouldContain """"instant":"2024-12-09T16:38:23Z""""
+      output.logFields shouldContain """"uri":"https://example.com""""
+      output.logFields shouldContain """"url":"https://example.com""""
+      output.logFields shouldContain """"uuid":"3638dd04-d196-41ad-8b15-5188a22a6ba4""""
+      output.logFields shouldContain """"bigDecimal":"100.0""""
+    }
   }
 }

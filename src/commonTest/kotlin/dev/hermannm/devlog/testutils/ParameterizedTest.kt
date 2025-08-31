@@ -21,7 +21,7 @@ internal inline fun <TestCaseT> parameterizedTest(
       withClue(
           {
             val clue: String = if (testCase is TestCase) testCase.name else testCase.toString()
-            "Test Case ${index}: ${clue}"
+            "Test Case ${index + 1}: ${clue}"
           },
       ) {
         test(testCase)
