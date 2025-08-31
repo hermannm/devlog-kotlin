@@ -75,14 +75,35 @@ subprojects {
 
 kotlin {
   sourceSets {
-    commonMain.dependencies {
-      implementation(libs.kotlinxSerialization)
-      implementation(libs.kotlinReflect)
+    commonMain {
+      dependencies {
+        implementation(libs.kotlinxSerialization)
+        implementation(libs.kotlinReflect)
+      }
+      jvm {
+        compilerOptions {
+          jvmTarget = JvmTarget.JVM_1_8
+          // We set this in addition to jvmTarget, as it gives us some additional verification that
+          // we don't use more modern JDK features:
+          // https://kotlinlang.org/docs/compiler-reference.html#xjdk-release-version
+          freeCompilerArgs.add("-Xjdk-release=1.8")
+        }
+      }
     }
-    commonTest.dependencies {
-      implementation(libs.kotlinTest)
-      implementation(libs.kotest)
+    commonTest {
+      dependencies {
+        implementation(libs.kotlinTest)
+        implementation(libs.kotest)
+      }
+      // kotest 6 requires JDK 11
+      jvm {
+        compilerOptions {
+          jvmTarget = JvmTarget.JVM_11
+          freeCompilerArgs.add("-Xjdk-release=11")
+        }
+      }
     }
+
     jvmMain.dependencies {
       implementation(libs.slf4j)
       implementation(libs.jackson)
@@ -97,12 +118,6 @@ kotlin {
   }
 
   jvm {
-    compilerOptions {
-      jvmTarget = JvmTarget.JVM_1_8
-      // Needed due to https://youtrack.jetbrains.com/issue/KT-49746
-      freeCompilerArgs.add("-Xjdk-release=1.8")
-    }
-
     // To use JUnit 5 rather than JUnit 4:
     // https://kotlinlang.org/docs/gradle-configure-project.html#jvm-variants-of-kotlin-test
     testRuns["test"].executionTask.configure { useJUnitPlatform() }

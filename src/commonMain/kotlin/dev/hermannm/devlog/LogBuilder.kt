@@ -3,7 +3,10 @@
 
 package dev.hermannm.devlog
 
+import kotlin.reflect.KType
+import kotlin.reflect.typeOf
 import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.serializer
 
 /**
  * Class used in the logging methods on [Logger], allowing you to add structured key-value data to
@@ -103,11 +106,55 @@ internal constructor(
    * - `java.math.BigDecimal`
    */
   public inline fun <reified ValueT> field(key: String, value: ValueT) {
-    encodeFieldValue(
-        value,
-        onJson = { jsonValue -> logEvent.addJsonField(key, jsonValue) },
-        onString = { stringValue -> logEvent.addStringField(key, stringValue) },
-    )
+    try {
+      addLogFieldOfType(key, value, typeOf<ValueT>())
+    } catch (_: Exception) {
+      // Falls back to `toString()` if serialization fails
+      addStringLogField(key, value)
+    }
+  }
+
+  /**
+   * We split this out from [field] to reduce the amount of inlined code (more inlined code ->
+   * bigger code size -> possibly worse performance, and also more internal API that must be exposed
+   * with `@PublishedApi`).
+   */
+  @PublishedApi
+  internal fun addLogFieldOfType(
+      key: String,
+      value: Any?,
+      valueType: KType,
+  ) {
+    when {
+      /** See [JSON_NULL_VALUE] for why we handle nulls like this. */
+      value == null -> {
+        logEvent.addJsonField(key, JSON_NULL_VALUE)
+      }
+      // Special case for String, to avoid redundant serialization
+      value is String -> {
+        logEvent.addStringField(key, value)
+      }
+      // Special case for common types that kotlinx.serialization doesn't handle by default
+      fieldValueShouldUseToString(value) -> {
+        logEvent.addStringField(key, value.toString())
+      }
+      // Try to serialize with kotlinx.serialization - if it fails, we fall back to toString below
+      else -> {
+        val serializer = LOG_FIELD_JSON_FORMAT.serializersModule.serializer(valueType)
+        val serializedValue = LOG_FIELD_JSON_FORMAT.encodeToString(serializer, value)
+        logEvent.addJsonField(key, serializedValue)
+      }
+    }
+  }
+
+  /** `toString()` fallback for the log field value when [addLogFieldOfType] fails. */
+  @PublishedApi
+  internal fun addStringLogField(key: String, value: Any?) {
+    if (value == null) {
+      logEvent.addJsonField(key, JSON_NULL_VALUE)
+    } else {
+      logEvent.addStringField(key, value.toString())
+    }
   }
 
   /**
@@ -181,12 +228,17 @@ internal constructor(
       value: ValueT?,
       serializer: SerializationStrategy<ValueT>
   ) {
-    encodeFieldValueWithSerializer(
-        value,
-        serializer,
-        onJson = { jsonValue -> logEvent.addJsonField(key, jsonValue) },
-        onString = { stringValue -> logEvent.addStringField(key, stringValue) },
-    )
+    try {
+      if (value == null) {
+        logEvent.addJsonField(key, JSON_NULL_VALUE)
+      } else {
+        val serializedValue = LOG_FIELD_JSON_FORMAT.encodeToString(serializer, value)
+        logEvent.addJsonField(key, serializedValue)
+      }
+    } catch (_: Exception) {
+      // Falls back to `toString()` if serialization fails
+      addStringLogField(key, value)
+    }
   }
 
   /**

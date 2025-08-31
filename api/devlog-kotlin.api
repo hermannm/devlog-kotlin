@@ -17,6 +17,8 @@ public abstract interface class dev/hermannm/devlog/HasLoggingContext {
 public final class dev/hermannm/devlog/LogBuilder {
 	public static final fun addField-impl (Ldev/hermannm/devlog/LogEvent;Ldev/hermannm/devlog/LogField;)V
 	public static final fun addFields-impl (Ldev/hermannm/devlog/LogEvent;Ljava/util/Collection;)V
+	public static final fun addLogFieldOfType-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/String;Ljava/lang/Object;Lkotlin/reflect/KType;)V
+	public static final fun addStringLogField-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/String;Ljava/lang/Object;)V
 	public static final synthetic fun box-impl (Ldev/hermannm/devlog/LogEvent;)Ldev/hermannm/devlog/LogBuilder;
 	public static fun constructor-impl (Ldev/hermannm/devlog/LogEvent;)Ldev/hermannm/devlog/LogEvent;
 	public fun equals (Ljava/lang/Object;)Z
@@ -46,19 +48,14 @@ public final class dev/hermannm/devlog/LogEventJvm {
 }
 
 public final class dev/hermannm/devlog/LogField {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Z)V
 	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class dev/hermannm/devlog/LogFieldJvm {
-	public static final fun fieldValueShouldUseToString (Ljava/lang/Object;)Z
-}
-
 public final class dev/hermannm/devlog/LogFieldKt {
-	public static final field JSON_NULL_VALUE Ljava/lang/String;
-	public static final field LOG_FIELD_JSON_FORMAT Lkotlinx/serialization/json/Json;
+	public static final fun createLogFieldOfType (Ljava/lang/String;Ljava/lang/Object;Lkotlin/reflect/KType;)Ldev/hermannm/devlog/LogField;
+	public static final fun createStringLogField (Ljava/lang/String;Ljava/lang/Object;)Ldev/hermannm/devlog/LogField;
 	public static final fun field (Ljava/lang/String;Ljava/lang/Object;Lkotlinx/serialization/SerializationStrategy;)Ldev/hermannm/devlog/LogField;
 	public static final fun rawJson (Ljava/lang/String;Z)Lkotlinx/serialization/json/JsonElement;
 	public static synthetic fun rawJson$default (Ljava/lang/String;ZILjava/lang/Object;)Lkotlinx/serialization/json/JsonElement;

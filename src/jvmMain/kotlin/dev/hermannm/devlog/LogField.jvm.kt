@@ -2,20 +2,13 @@
 
 package dev.hermannm.devlog
 
-import java.math.BigDecimal
-import java.net.URI
-import java.net.URL
-import java.time.Instant
-import java.util.UUID
-
-@PublishedApi
 internal actual fun fieldValueShouldUseToString(value: Any): Boolean {
   return when (value) {
-    is Instant,
-    is UUID,
-    is URI,
-    is URL,
-    is BigDecimal -> true
+    is java.time.Instant,
+    is java.util.UUID,
+    is java.net.URI,
+    is java.net.URL,
+    is java.math.BigDecimal -> true
     else -> false
   }
 }

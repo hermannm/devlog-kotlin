@@ -3,6 +3,8 @@
 
 package dev.hermannm.devlog
 
+import kotlin.reflect.KType
+import kotlin.reflect.typeOf
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.Json
@@ -15,6 +17,7 @@ import kotlinx.serialization.json.JsonUnquotedLiteral
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.serializer
 
 /**
  * A log field is a key-value pair for adding structured data to logs.
@@ -43,7 +46,6 @@ import kotlinx.serialization.json.longOrNull
  * 3. Logging context fields (from [withLoggingContext])
  */
 public class LogField
-@PublishedApi
 internal constructor(
     @kotlin.jvm.JvmField internal val key: String,
     @kotlin.jvm.JvmField internal val value: String,
@@ -94,11 +96,55 @@ internal constructor(
  * - `java.math.BigDecimal`
  */
 public inline fun <reified ValueT> field(key: String, value: ValueT): LogField {
-  return encodeFieldValue(
-      value,
-      onJson = { jsonValue -> LogField(key, jsonValue, isJson = true) },
-      onString = { stringValue -> LogField(key, stringValue, isJson = false) },
-  )
+  return try {
+    createLogFieldOfType(key, value, valueType = typeOf<ValueT>())
+  } catch (_: Exception) {
+    // Falls back to `toString()` if serialization fails
+    createStringLogField(key, value)
+  }
+}
+
+/**
+ * We split this out from [field] to reduce the amount of inlined code (more inlined code -> bigger
+ * code size -> possibly worse performance, and also more internal API that must be exposed with
+ * `@PublishedApi`).
+ */
+@PublishedApi
+internal fun createLogFieldOfType(
+    key: String,
+    value: Any?,
+    valueType: KType,
+): LogField {
+  return when {
+    /** See [JSON_NULL_VALUE] for why we handle nulls like this. */
+    value == null -> {
+      LogField(key, JSON_NULL_VALUE, isJson = true)
+    }
+    // Special case for String, to avoid redundant serialization
+    value is String -> {
+      LogField(key, value, isJson = false)
+    }
+    // Special case for common types that kotlinx.serialization doesn't handle by default
+    fieldValueShouldUseToString(value) -> {
+      LogField(key, value.toString(), isJson = false)
+    }
+    // Try to serialize with kotlinx.serialization - if it fails, we fall back to toString below
+    else -> {
+      val serializer = LOG_FIELD_JSON_FORMAT.serializersModule.serializer(valueType)
+      val serializedValue = LOG_FIELD_JSON_FORMAT.encodeToString(serializer, value)
+      LogField(key, serializedValue, isJson = true)
+    }
+  }
+}
+
+/** `toString()` fallback for the log field value when [createLogFieldOfType] fails. */
+@PublishedApi
+internal fun createStringLogField(key: String, value: Any?): LogField {
+  return if (value == null) {
+    LogField(key, JSON_NULL_VALUE, isJson = true)
+  } else {
+    LogField(key, value.toString(), isJson = false)
+  }
 }
 
 /**
@@ -134,70 +180,16 @@ public fun <ValueT : Any> field(
     value: ValueT?,
     serializer: SerializationStrategy<ValueT>,
 ): LogField {
-  return encodeFieldValueWithSerializer(
-      value,
-      serializer,
-      onJson = { jsonValue -> LogField(key, jsonValue, isJson = true) },
-      onString = { stringValue -> LogField(key, stringValue, isJson = false) },
-  )
-}
-
-/**
- * Encodes the given value to JSON, calling [onJson] with the result. If we failed to encode to
- * JSON, or the value was already a string (or one of the types with special handling as explained
- * on [field]'s docstring), we fall back to its `toString` representation and call [onString].
- *
- * We take callbacks for the different results here instead of returning a return value. This is
- * because we use this in both [field] and [LogBuilder.field], and they want to do different things
- * with the encoded value:
- * - [field] constructs a [LogField] with it
- * - [LogBuilder.field] passes the value to [LogEvent.addStringField] or [LogEvent.addJsonField]
- *
- * If we used a return value here, we would have to wrap it in an object to convey whether it was
- * encoded to JSON or just a plain string, which requires an allocation. By instead taking callbacks
- * and making the function `inline`, we pay no extra cost.
- */
-@PublishedApi
-internal inline fun <reified ValueT, ReturnT> encodeFieldValue(
-    value: ValueT,
-    crossinline onJson: (String) -> ReturnT,
-    crossinline onString: (String) -> ReturnT,
-): ReturnT {
-  try {
-    return when {
-      value == null -> onJson(JSON_NULL_VALUE)
-      // Special case for String, to avoid redundant serialization
-      value is String -> onString(value)
-      // Special case for common types that kotlinx.serialization doesn't handle by default
-      fieldValueShouldUseToString(value) -> onString(value.toString())
-      // Try to serialize with kotlinx.serialization - if it fails, we fall back to toString below
-      else -> onJson(LOG_FIELD_JSON_FORMAT.encodeToString(value))
+  return try {
+    if (value == null) {
+      LogField(key, JSON_NULL_VALUE, isJson = true)
+    } else {
+      val serializedValue = LOG_FIELD_JSON_FORMAT.encodeToString(serializer, value)
+      LogField(key, serializedValue, isJson = true)
     }
   } catch (_: Exception) {
-    // We don't want to ever throw an exception from constructing a log field, which may happen if
-    // serialization fails, for example. So in these cases we fall back to toString()
-    return onString(value.toString())
-  }
-}
-
-/** Same as [encodeFieldValue], but takes a user-provided serializer for serializing the value. */
-internal inline fun <ValueT : Any, ReturnT> encodeFieldValueWithSerializer(
-    value: ValueT?,
-    serializer: SerializationStrategy<ValueT>,
-    crossinline onJson: (String) -> ReturnT,
-    crossinline onString: (String) -> ReturnT,
-): ReturnT {
-  try {
-    return when {
-      // Handle nulls here, so users don't have to deal with passing a null-handling serializer
-      value == null -> onJson(JSON_NULL_VALUE)
-      // Try to serialize with kotlinx.serialization - if it fails, we fall back to toString below
-      else -> onJson(LOG_FIELD_JSON_FORMAT.encodeToString(serializer, value))
-    }
-  } catch (_: Exception) {
-    // We don't want to ever throw an exception from constructing a log field, which may happen if
-    // serialization fails, for example. So in these cases we fall back to toString().
-    return onString(value.toString())
+    // Falls back to `toString()` if serialization fails
+    createStringLogField(key, value)
   }
 }
 
@@ -324,8 +316,16 @@ public fun rawJson(json: String, validJson: Boolean = false): JsonElement {
  * Validates that the given raw JSON string is valid JSON, calling [onValidJson] if it is, or
  * [onInvalidJson] if it's not.
  *
- * We take lambdas here instead of returning a value, for the same reason as [encodeFieldValue]. We
- * use this in both [rawJsonField] and [LogBuilder.rawJsonField].
+ * We take callbacks for the different results here instead of returning a return value. This is
+ * because we use this in both [rawJsonField] and [LogBuilder.rawJsonField], and they want to do
+ * different things with the encoded value:
+ * - [rawJsonField] constructs a [LogField] with it
+ * - [LogBuilder.rawJsonField] passes the value to [LogEvent.addStringField] or
+ *   [LogEvent.addJsonField]
+ *
+ * If we used a return value here, we would have to wrap it in an object to convey whether it was
+ * encoded to JSON or just a plain string, which requires an allocation. By instead taking callbacks
+ * and making the function `inline`, we pay no extra cost.
  */
 internal inline fun <ReturnT> validateRawJson(
     json: String,
@@ -405,7 +405,7 @@ internal fun isValidJson(jsonElement: JsonElement): Boolean {
  * We make this an expect-actual function, so that implementations can use platform-specific types
  * (such as Java standard library classes on the JVM).
  */
-@PublishedApi internal expect fun fieldValueShouldUseToString(value: Any): Boolean
+internal expect fun fieldValueShouldUseToString(value: Any): Boolean
 
 /**
  * SLF4J supports null values in `KeyValuePair`s, and it's up to the logger implementation for how
@@ -414,9 +414,8 @@ internal fun isValidJson(jsonElement: JsonElement): Boolean {
  * field was omitted due to some error. So in this library, we instead use a JSON `null` as the
  * value for null log fields.
  */
-@PublishedApi internal const val JSON_NULL_VALUE: String = "null"
+internal const val JSON_NULL_VALUE: String = "null"
 
-@PublishedApi
 @kotlin.jvm.JvmField
 internal val LOG_FIELD_JSON_FORMAT: Json = Json {
   encodeDefaults = true
