@@ -312,38 +312,42 @@ internal class LogFieldTest {
 
   @Test
   fun `duplicate field keys only includes the first field`() {
-    val output = captureLogOutput {
-      log.info {
-        field("duplicateKey", "value1")
-        field("duplicateKey", "value2")
-        field("duplicateKey", "value3")
-        "Test"
+    parameterizedTest(LogFieldTestCase.entries) { test ->
+      val output = captureLogOutput {
+        log.info {
+          test.addField(this, "duplicateKey", "value1")
+          test.addField(this, "duplicateKey", "value2")
+          test.addField(this, "duplicateKey", "value3")
+          "Test"
+        }
       }
-    }
 
-    output.logFields shouldBe
-        """
-          "duplicateKey":"value1"
-        """
-            .trimIndent()
+      output.logFields shouldBe
+          """
+            "duplicateKey":"value1"
+          """
+              .trimIndent()
+    }
   }
 
   @Test
   fun `null field value is allowed`() {
-    val nullValue: String? = null
+    parameterizedTest(LogFieldTestCase.entries) { test ->
+      val nullValue: String? = null
 
-    val output = captureLogOutput {
-      log.info {
-        field("key", nullValue)
-        "Test"
+      val output = captureLogOutput {
+        log.info {
+          test.addField(this, "key", nullValue)
+          "Test"
+        }
       }
-    }
 
-    output.logFields shouldBe
-        """
-          "key":null
-        """
-            .trimIndent()
+      output.logFields shouldBe
+          """
+            "key":null
+          """
+              .trimIndent()
+    }
   }
 
   @Test
