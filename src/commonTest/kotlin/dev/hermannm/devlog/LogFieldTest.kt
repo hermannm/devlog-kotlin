@@ -104,7 +104,7 @@ internal class LogFieldTest {
   @Test
   fun `log field with Serializable object`() {
     parameterizedTest(LogFieldTestCase.entries) { test ->
-      val event = Event(id = 1001, type = EventType.ORDER_PLACED)
+      val event = Event(id = 1000, type = EventType.ORDER_PLACED)
 
       val output = captureLogOutput {
         log.info {
@@ -115,7 +115,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "event":{"id":1001,"type":"ORDER_PLACED"}
+            "event":{"id":1000,"type":"ORDER_PLACED"}
           """
               .trimIndent()
     }
@@ -277,12 +277,12 @@ internal class LogFieldTest {
       }
 
       val output = captureLogOutput {
-        genericLogFunction(Event(id = 1001, type = EventType.ORDER_PLACED), Event.serializer())
+        genericLogFunction(Event(id = 1000, type = EventType.ORDER_PLACED), Event.serializer())
       }
 
       output.logFields shouldBe
           """
-            "object":{"id":1001,"type":"ORDER_PLACED"}
+            "object":{"id":1000,"type":"ORDER_PLACED"}
           """
               .trimIndent()
     }
@@ -293,7 +293,7 @@ internal class LogFieldTest {
     parameterizedTest(LogFieldTestCase.entries) { test ->
       data class NonSerializableEvent(val id: Long, val type: String)
 
-      val event = NonSerializableEvent(id = 1001, type = "ORDER_UPDATED")
+      val event = NonSerializableEvent(id = 1000, type = "ORDER_UPDATED")
 
       val output = captureLogOutput {
         log.info {
@@ -304,7 +304,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "event":"NonSerializableEvent(id=1001, type=ORDER_UPDATED)"
+            "event":"NonSerializableEvent(id=1000, type=ORDER_UPDATED)"
           """
               .trimIndent()
     }
@@ -353,7 +353,7 @@ internal class LogFieldTest {
   @Test
   fun `raw JSON field works for valid JSON`() {
     parameterizedTest(RawJsonTestCase.entries) { test ->
-      val eventJson = """{"id":1001,"type":"ORDER_UPDATED"}"""
+      val eventJson = """{"id":1000,"type":"ORDER_UPDATED"}"""
 
       // The above JSON should work both for validJson = true and validJson = false
       for (assumeValidJson in listOf(true, false)) {
@@ -426,7 +426,7 @@ internal class LogFieldTest {
       val jsonWithNewlines =
           """
             {
-              "id": 1001,
+              "id": 1000,
               "type": "ORDER_UPDATED"
             }
           """
@@ -441,7 +441,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "event":{"id":1001,"type":"ORDER_UPDATED"}
+            "event":{"id":1000,"type":"ORDER_UPDATED"}
           """
               .trimIndent()
     }
@@ -557,16 +557,16 @@ internal class LogFieldTest {
     stringField.toString() shouldBe "key=value"
     stringField.toString() shouldBe stringField2.toString()
 
-    val objectField = field("key", Event(id = 1001, type = EventType.ORDER_PLACED))
+    val objectField = field("key", Event(id = 1000, type = EventType.ORDER_PLACED))
 
     stringField.equals(objectField).shouldBeFalse()
     stringField.hashCode() shouldNotBe objectField.hashCode()
 
-    val objectAsStringField = field("key", """{"id":1001,"type":"ORDER_PLACED"}""")
+    val objectAsStringField = field("key", """{"id":1000,"type":"ORDER_PLACED"}""")
 
     objectField.equals(objectAsStringField).shouldBeTrue()
     objectField.hashCode() shouldBe objectAsStringField.hashCode()
-    objectField.toString() shouldBe """key={"id":1001,"type":"ORDER_PLACED"}"""
+    objectField.toString() shouldBe """key={"id":1000,"type":"ORDER_PLACED"}"""
     objectField.toString() shouldBe objectAsStringField.toString()
   }
 }

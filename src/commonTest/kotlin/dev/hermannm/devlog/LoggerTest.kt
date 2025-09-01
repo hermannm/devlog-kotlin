@@ -40,7 +40,7 @@ internal data class LoggerTestCase(
             ),
             LogField(
                 key = LoggerTest.TestInput.FIELD_KEY_2,
-                value = """{"id":1001,"type":"ORDER_PLACED"}""",
+                value = """{"id":1000,"type":"ORDER_PLACED"}""",
                 isJson = true,
             ),
         ),
@@ -72,7 +72,7 @@ internal class LoggerTest {
     const val FIELD_KEY_1: String = "key1"
     const val FIELD_VALUE_1: String = "value1"
     const val FIELD_KEY_2: String = "key2"
-    val FIELD_VALUE_2: Event = Event(id = 1001, type = EventType.ORDER_PLACED)
+    val FIELD_VALUE_2: Event = Event(id = 1000, type = EventType.ORDER_PLACED)
     val CAUSE: Throwable? = Exception("Something went wrong")
   }
 

@@ -30,7 +30,7 @@ internal class LoggingContextJvmTest {
   /** We use JVM synchronization primitives here, hence we place it under `jvmTest`. */
   @Test
   fun `getCopyOfLoggingContext allows passing logging context between threads`() {
-    val event = Event(id = 1001, type = EventType.ORDER_PLACED)
+    val event = Event(id = 1000, type = EventType.ORDER_PLACED)
 
     val lock = ReentrantLock()
     // Used to wait for the child thread to complete its log
@@ -64,7 +64,7 @@ internal class LoggingContextJvmTest {
             "event" to
                 JsonObject(
                     mapOf(
-                        "id" to JsonPrimitive(1001),
+                        "id" to JsonPrimitive(1000),
                         "type" to JsonPrimitive("ORDER_PLACED"),
                     ),
                 ),

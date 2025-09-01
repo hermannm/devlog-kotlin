@@ -246,7 +246,7 @@ internal class ExceptionWithLoggingContextTest {
 
   @Test
   fun `serializable object field works on ExceptionWithLoggingContext`() {
-    val event = Event(id = 1001, type = EventType.ORDER_PLACED)
+    val event = Event(id = 1000, type = EventType.ORDER_PLACED)
 
     val output = captureLogOutput {
       log.error(
@@ -258,7 +258,7 @@ internal class ExceptionWithLoggingContextTest {
 
     output.logFields shouldBe
         """
-          "event":{"id":1001,"type":"ORDER_PLACED"}
+          "event":{"id":1000,"type":"ORDER_PLACED"}
         """
             .trimIndent()
   }

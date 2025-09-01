@@ -218,7 +218,7 @@ public fun <ValueT : Any> field(
  * private val log = getLogger()
  *
  * fun example() {
- *   val eventJson = """{"id":1001,"type":"ORDER_PLACED"}"""
+ *   val eventJson = """{"id":1000,"type":"ORDER_PLACED"}"""
  *
  *   withLoggingContext(rawJsonField("event", eventJson)) {
  *     log.debug { "Started processing event" }
@@ -230,8 +230,8 @@ public fun <ValueT : Any> field(
  *
  * This gives the following output (using `logstash-logback-encoder`):
  * ```json
- * {"message":"Started processing event","event":{"id":1001,"type":"ORDER_PLACED"},/* ...timestamp etc. */}
- * {"message":"Finished processing event","event":{"id":1001,"type":"ORDER_PLACED"},/* ...timestamp etc. */}
+ * {"message":"Started processing event","event":{"id":1000,"type":"ORDER_PLACED"},/* ...timestamp etc. */}
+ * {"message":"Finished processing event","event":{"id":1000,"type":"ORDER_PLACED"},/* ...timestamp etc. */}
  * ```
  *
  * @param validJson Set this true if you are 100% sure that [json] is valid JSON, and you want to

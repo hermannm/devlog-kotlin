@@ -21,7 +21,7 @@ class LogbackLoggerTest {
 
     @Serializable data class Event(val id: Long, val type: String)
 
-    val event = Event(id = 1001, type = "ORDER_UPDATED")
+    val event = Event(id = 1000, type = "ORDER_UPDATED")
 
     val log = getLogger()
 
@@ -36,7 +36,7 @@ class LogbackLoggerTest {
 
     output shouldContain """"level":"INFO""""
     output shouldContain """"message":"Test""""
-    output shouldContain """"event":{"id":1001,"type":"ORDER_UPDATED"}"""
+    output shouldContain """"event":{"id":1000,"type":"ORDER_UPDATED"}"""
     output shouldContain """"contextField":{"test":true}"""
   }
 

@@ -65,7 +65,7 @@ internal constructor(
    * private val log = getLogger()
    *
    * fun example() {
-   *   val event = Event(id = 1001, type = EventType.ORDER_PLACED)
+   *   val event = Event(id = 1000, type = EventType.ORDER_PLACED)
    *
    *   log.info {
    *     field("event", event)
@@ -87,7 +87,7 @@ internal constructor(
    * {
    *   "message": "Processing event",
    *   "event": {
-   *     "id": 1001,
+   *     "id": 1000,
    *     "type": "ORDER_PLACED"
    *   },
    *   // ...timestamp etc.
@@ -183,7 +183,7 @@ internal constructor(
    * private val log = getLogger()
    *
    * fun example() {
-   *   val event = Event(id = 1001, type = EventType.ORDER_PLACED)
+   *   val event = Event(id = 1000, type = EventType.ORDER_PLACED)
    *
    *   log.info {
    *     field("event", event)
@@ -205,7 +205,7 @@ internal constructor(
    * {
    *   "message": "Processing event",
    *   "event": {
-   *     "id": 1001,
+   *     "id": 1000,
    *     "type": "ORDER_PLACED"
    *   },
    *   // ...timestamp etc.
@@ -262,7 +262,7 @@ internal constructor(
    * private val log = getLogger()
    *
    * fun example() {
-   *   val eventJson = """{"id":1001,"type":"ORDER_PLACED"}"""
+   *   val eventJson = """{"id":1000,"type":"ORDER_PLACED"}"""
    *
    *   log.info {
    *     rawJsonField("event", eventJson)
@@ -275,7 +275,7 @@ internal constructor(
    * ```json
    * {
    *   "message": "Processing event",
-   *   "event": {"id":1001,"type":"ORDER_PLACED"},
+   *   "event": {"id":1000,"type":"ORDER_PLACED"},
    *   // ...timestamp etc.
    * }
    * ```

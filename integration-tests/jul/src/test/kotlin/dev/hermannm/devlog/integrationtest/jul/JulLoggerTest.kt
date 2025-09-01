@@ -20,7 +20,7 @@ class JulLoggerTest {
   fun log() {
     @Serializable data class Event(val id: Long, val type: String)
 
-    val event = Event(id = 1001, type = "ORDER_UPDATED")
+    val event = Event(id = 1000, type = "ORDER_UPDATED")
 
     // java.util.logging logger outputs to stderr by default
     val output = captureStderr {
@@ -44,7 +44,7 @@ class JulLoggerTest {
     output.substring(indexOfPackageName).removeSuffix("\n") shouldBe
         """
           dev.hermannm.devlog.integrationtest.jul.JulLoggerTest log
-          INFO: Test [event={"id":1001,"type":"ORDER_UPDATED"}]
+          INFO: Test [event={"id":1000,"type":"ORDER_UPDATED"}]
         """
             .trimIndent()
   }

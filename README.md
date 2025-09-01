@@ -61,7 +61,7 @@ import kotlinx.serialization.Serializable
 data class Event(val id: Long, val type: String)
 
 fun example() {
-  val event = Event(id = 1001, type = "ORDER_UPDATED")
+  val event = Event(id = 1000, type = "ORDER_UPDATED")
 
   log.info {
     field("event", event)
@@ -80,7 +80,7 @@ a more structured manner than if you were to just use string concatenation.
 {
   "message": "Processing event",
   "event": {
-    "id": 1001,
+    "id": 1000,
     "type": "ORDER_UPDATED"
   },
   // ...timestamp etc.

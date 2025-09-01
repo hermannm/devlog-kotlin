@@ -17,7 +17,7 @@ class Log4jLoggerTest {
   fun log() {
     @Serializable data class Event(val id: Long, val type: String)
 
-    val event = Event(id = 1001, type = "ORDER_UPDATED")
+    val event = Event(id = 1000, type = "ORDER_UPDATED")
 
     val output = captureStdout {
       withLoggingContext(rawJsonField("contextField", """{"test":true}""")) {
@@ -29,7 +29,7 @@ class Log4jLoggerTest {
     }
 
     output shouldContain """"log.level":"INFO""""
-    output shouldContain """"message":"Test [event={\"id\":1001,\"type\":\"ORDER_UPDATED\"}]""""
+    output shouldContain """"message":"Test [event={\"id\":1000,\"type\":\"ORDER_UPDATED\"}]""""
 
     // When using Logback with logstash-logback-encoder, we provide a JsonContextFieldWriter
     // for writing objects in withLoggingContext as actual JSON. But we don't have any equivalent

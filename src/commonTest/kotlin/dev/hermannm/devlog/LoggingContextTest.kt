@@ -54,7 +54,7 @@ internal class LoggingContextTest {
   fun `rawJsonField works with logging context`() {
     val output = captureLogOutput {
       withLoggingContext(
-          rawJsonField("event", """{"id":1001,"type":"ORDER_UPDATED"}"""),
+          rawJsonField("event", """{"id":1000,"type":"ORDER_UPDATED"}"""),
       ) {
         log.info { "Test" }
       }
@@ -65,7 +65,7 @@ internal class LoggingContextTest {
             "event" to
                 JsonObject(
                     mapOf(
-                        "id" to JsonPrimitive(1001),
+                        "id" to JsonPrimitive(1000),
                         "type" to JsonPrimitive("ORDER_UPDATED"),
                     ),
                 ),
@@ -310,8 +310,8 @@ internal class LoggingContextTest {
 
   @Test
   fun `nested logging context restores previous context fields on exit`() {
-    val event1 = Event(id = 1001, type = EventType.ORDER_PLACED)
-    val event2 = Event(id = 1002, type = EventType.ORDER_UPDATED)
+    val event1 = Event(id = 1000, type = EventType.ORDER_PLACED)
+    val event2 = Event(id = 1001, type = EventType.ORDER_UPDATED)
 
     withLoggingContext(
         field("event", event1),
@@ -321,7 +321,7 @@ internal class LoggingContextTest {
     ) {
       val parentContext =
           mapOf(
-              "event" to """{"id":1001,"type":"ORDER_PLACED"}""",
+              "event" to """{"id":1000,"type":"ORDER_PLACED"}""",
               "stringField" to "parentValue",
               "parentOnlyField" to "value1",
               "fieldThatIsStringInParentButJsonInChild" to "stringValue",
@@ -336,7 +336,7 @@ internal class LoggingContextTest {
       ) {
         loggingContextShouldContainExactly(
             mapOf(
-                "event" to """{"id":1002,"type":"ORDER_UPDATED"}""",
+                "event" to """{"id":1001,"type":"ORDER_UPDATED"}""",
                 "stringField" to "childValue",
                 "parentOnlyField" to "value1",
                 "childOnlyField" to "value2",

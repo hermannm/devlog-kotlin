@@ -36,14 +36,14 @@ internal actual val loggerTestCases =
             "Location-aware SLF4J logger",
             logger = Logger(LocationAwareSlf4jLogger(LoggerJvmTest.logbackLogger)),
             expectedMessage =
-                """Test message [key1=value1, key2={"id":1001,"type":"ORDER_PLACED"}]""",
+                """Test message [key1=value1, key2={"id":1000,"type":"ORDER_PLACED"}]""",
             expectedFields = emptyList(),
         ),
         LoggerTestCase(
             "Plain SLF4J logger",
             logger = Logger(PlainSlf4jLogger(LoggerJvmTest.logbackLogger)),
             expectedMessage =
-                """Test message [key1=value1, key2={"id":1001,"type":"ORDER_PLACED"}]""",
+                """Test message [key1=value1, key2={"id":1000,"type":"ORDER_PLACED"}]""",
             expectedFields = emptyList(),
             // The plain SLF4J logger does not implement location-aware logging, so we don't
             // expect it to have correct file location
