@@ -35,9 +35,8 @@ import kotlinx.serialization.serializer
  */
 @kotlin.jvm.JvmInline // Inline value class, to wrap the underlying log event without overhead
 public value class LogBuilder
-@PublishedApi
 internal constructor(
-    @PublishedApi internal val logEvent: LogEvent,
+    internal val logEvent: LogEvent,
 ) {
   /**
    * Adds a [log field][LogField] (structured key-value data) to the log.
@@ -336,7 +335,6 @@ internal constructor(
    * Checks if the log cause exception (or any of its own cause exceptions) implements the
    * [HasLoggingContext] interface, and if so, adds those fields to the log.
    */
-  @PublishedApi
   internal fun setCause(cause: Throwable, logger: PlatformLogger) {
     logEvent.setCause(cause, logger, this)
 
@@ -367,4 +365,9 @@ internal constructor(
       }
     }
   }
+}
+
+@PublishedApi
+internal fun createLogBuilder(level: LogLevel, logger: Logger): LogBuilder {
+  return LogBuilder(createLogEvent(level, logger.underlyingLogger))
 }

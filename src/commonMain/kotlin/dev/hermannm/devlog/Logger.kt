@@ -53,7 +53,7 @@ import kotlin.reflect.KClass
 @kotlin.jvm.JvmInline // Inline value class, to wrap the underlying platform logger without overhead
 public value class Logger
 internal constructor(
-    @PublishedApi internal val underlyingLogger: PlatformLogger,
+    internal val underlyingLogger: PlatformLogger,
 ) {
   /**
    * Calls the given lambda to build a log message, and logs it at [LogLevel.INFO], if enabled.
@@ -96,8 +96,10 @@ internal constructor(
       cause: Throwable? = null,
       buildLog: LogBuilder.() -> String,
   ) {
-    if (underlyingLogger.isInfoEnabled()) {
-      log(LogLevel.INFO, cause, buildLog)
+    if (isInfoEnabled) {
+      val builder = createLogBuilder(LogLevel.INFO, this)
+      val message = builder.buildLog()
+      log(builder, message, cause)
     }
   }
 
@@ -146,8 +148,10 @@ internal constructor(
       cause: Throwable? = null,
       buildLog: LogBuilder.() -> String,
   ) {
-    if (underlyingLogger.isWarnEnabled()) {
-      log(LogLevel.WARN, cause, buildLog)
+    if (isWarnEnabled) {
+      val builder = createLogBuilder(LogLevel.WARN, this)
+      val message = builder.buildLog()
+      log(builder, message, cause)
     }
   }
 
@@ -196,8 +200,10 @@ internal constructor(
       cause: Throwable? = null,
       buildLog: LogBuilder.() -> String,
   ) {
-    if (underlyingLogger.isErrorEnabled()) {
-      log(LogLevel.ERROR, cause, buildLog)
+    if (isErrorEnabled) {
+      val builder = createLogBuilder(LogLevel.ERROR, this)
+      val message = builder.buildLog()
+      log(builder, message, cause)
     }
   }
 
@@ -242,8 +248,10 @@ internal constructor(
       cause: Throwable? = null,
       buildLog: LogBuilder.() -> String,
   ) {
-    if (underlyingLogger.isDebugEnabled()) {
-      log(LogLevel.DEBUG, cause, buildLog)
+    if (isDebugEnabled) {
+      val builder = createLogBuilder(LogLevel.DEBUG, this)
+      val message = builder.buildLog()
+      log(builder, message, cause)
     }
   }
 
@@ -288,8 +296,10 @@ internal constructor(
       cause: Throwable? = null,
       buildLog: LogBuilder.() -> String,
   ) {
-    if (underlyingLogger.isTraceEnabled()) {
-      log(LogLevel.TRACE, cause, buildLog)
+    if (isTraceEnabled) {
+      val builder = createLogBuilder(LogLevel.TRACE, this)
+      val message = builder.buildLog()
+      log(builder, message, cause)
     }
   }
 
@@ -344,24 +354,23 @@ internal constructor(
       buildLog: LogBuilder.() -> String,
   ) {
     if (isEnabledFor(level)) {
-      log(level, cause, buildLog)
+      val builder = createLogBuilder(level, this)
+      val message = builder.buildLog()
+      log(builder, message, cause)
     }
   }
 
   @PublishedApi
-  internal inline fun log(
-      level: LogLevel,
+  internal fun log(
+      logBuilder: LogBuilder,
+      message: String,
       cause: Throwable?,
-      buildLog: LogBuilder.() -> String,
   ) {
-    val builder = LogBuilder(createLogEvent(level, underlyingLogger))
-    val message = builder.buildLog()
     if (cause != null) {
-      // Call this after buildLog(), so cause exception fields don't overwrite LogBuilder fields
-      builder.setCause(cause, underlyingLogger)
+      logBuilder.setCause(cause, underlyingLogger)
     }
 
-    builder.logEvent.log(message, underlyingLogger)
+    logBuilder.logEvent.log(message, underlyingLogger)
   }
 
   /**
@@ -372,7 +381,7 @@ internal constructor(
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   public val isErrorEnabled: Boolean
-    inline get() = underlyingLogger.isErrorEnabled()
+    get() = underlyingLogger.isErrorEnabled()
 
   /**
    * Returns true if [LogLevel.WARN] is enabled for this logger.
@@ -382,7 +391,7 @@ internal constructor(
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   public val isWarnEnabled: Boolean
-    inline get() = underlyingLogger.isWarnEnabled()
+    get() = underlyingLogger.isWarnEnabled()
 
   /**
    * Returns true if [LogLevel.INFO] is enabled for this logger.
@@ -392,7 +401,7 @@ internal constructor(
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   public val isInfoEnabled: Boolean
-    inline get() = underlyingLogger.isInfoEnabled()
+    get() = underlyingLogger.isInfoEnabled()
 
   /**
    * Returns true if [LogLevel.DEBUG] is enabled for this logger.
@@ -402,7 +411,7 @@ internal constructor(
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   public val isDebugEnabled: Boolean
-    inline get() = underlyingLogger.isDebugEnabled()
+    get() = underlyingLogger.isDebugEnabled()
 
   /**
    * Returns true if [LogLevel.TRACE] is enabled for this logger.
@@ -412,7 +421,7 @@ internal constructor(
    * [Logback configuration docs](https://logback.qos.ch/manual/configuration.html#loggerElement)).
    */
   public val isTraceEnabled: Boolean
-    inline get() = underlyingLogger.isTraceEnabled()
+    get() = underlyingLogger.isTraceEnabled()
 
   /**
    * Returns true if the given log level is enabled for this logger.
@@ -525,7 +534,6 @@ public expect fun getLogger(name: String): Logger
  *
  * On the JVM, we use SLF4J as the underlying logger.
  */
-@PublishedApi
 internal expect interface PlatformLogger {
   fun getName(): String
 
@@ -561,3 +569,13 @@ internal fun normalizeLoggerName(name: String?): String {
     else -> name
   }
 }
+
+/**
+ * SLF4J has the concept of a "caller boundary": the fully qualified class name of the logger class
+ * that made the log. This is used by logger implementations, such as Logback, when the user enables
+ * "caller info": showing the location in the source code where the log was made. Logback then knows
+ * to exclude stack trace elements up to this caller boundary, since the user wants to see where in
+ * _their_ code the log was made, not the location in the logging library. In our case, our boundary
+ * is the [Logger] class.
+ */
+internal const val LOGGER_CLASS_NAME = "dev.hermannm.devlog.Logger"

@@ -145,12 +145,6 @@ internal class LoggerJvmTest {
   }
 
   @Test
-  fun `log event caller boundaries have expected values`() {
-    LogbackLogEvent.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.LogbackLogEvent"
-    Slf4jLogEvent.FULLY_QUALIFIED_CLASS_NAME shouldBe "dev.hermannm.devlog.Slf4jLogEvent"
-  }
-
-  @Test
   fun `Logback is loaded in tests`() {
     LOGBACK_IS_ON_CLASSPATH shouldBe true
   }

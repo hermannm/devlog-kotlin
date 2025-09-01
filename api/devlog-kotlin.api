@@ -20,7 +20,6 @@ public final class dev/hermannm/devlog/LogBuilder {
 	public static final fun addLogFieldOfType-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/String;Ljava/lang/Object;Lkotlin/reflect/KType;)V
 	public static final fun addStringLogField-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/String;Ljava/lang/Object;)V
 	public static final synthetic fun box-impl (Ldev/hermannm/devlog/LogEvent;)Ldev/hermannm/devlog/LogBuilder;
-	public static fun constructor-impl (Ldev/hermannm/devlog/LogEvent;)Ldev/hermannm/devlog/LogEvent;
 	public fun equals (Ljava/lang/Object;)Z
 	public static fun equals-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/Object;)Z
 	public static final fun equals-impl0 (Ldev/hermannm/devlog/LogEvent;Ldev/hermannm/devlog/LogEvent;)Z
@@ -29,22 +28,13 @@ public final class dev/hermannm/devlog/LogBuilder {
 	public static fun hashCode-impl (Ldev/hermannm/devlog/LogEvent;)I
 	public static final fun rawJsonField-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/String;Ljava/lang/String;Z)V
 	public static synthetic fun rawJsonField-impl$default (Ldev/hermannm/devlog/LogEvent;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)V
-	public static final fun setCause-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/Throwable;Lorg/slf4j/Logger;)V
 	public fun toString ()Ljava/lang/String;
 	public static fun toString-impl (Ldev/hermannm/devlog/LogEvent;)Ljava/lang/String;
 	public final synthetic fun unbox-impl ()Ldev/hermannm/devlog/LogEvent;
 }
 
-public abstract interface class dev/hermannm/devlog/LogEvent {
-	public abstract fun addJsonField (Ljava/lang/String;Ljava/lang/String;)V
-	public abstract fun addStringField (Ljava/lang/String;Ljava/lang/String;)V
-	public abstract fun handlesExceptionTreeTraversal ()Z
-	public abstract fun log (Ljava/lang/String;Lorg/slf4j/Logger;)V
-	public abstract fun setCause-ARkn0dU (Ljava/lang/Throwable;Lorg/slf4j/Logger;Ldev/hermannm/devlog/LogEvent;)V
-}
-
-public final class dev/hermannm/devlog/LogEventJvm {
-	public static final fun createLogEvent (Ldev/hermannm/devlog/LogLevel;Lorg/slf4j/Logger;)Ldev/hermannm/devlog/LogEvent;
+public final class dev/hermannm/devlog/LogBuilderKt {
+	public static final fun createLogBuilder-kpOQkOI (Ldev/hermannm/devlog/LogLevel;Lorg/slf4j/Logger;)Ldev/hermannm/devlog/LogEvent;
 }
 
 public final class dev/hermannm/devlog/LogField {
@@ -97,7 +87,7 @@ public final class dev/hermannm/devlog/Logger {
 	public static final fun isInfoEnabled-impl (Lorg/slf4j/Logger;)Z
 	public static final fun isTraceEnabled-impl (Lorg/slf4j/Logger;)Z
 	public static final fun isWarnEnabled-impl (Lorg/slf4j/Logger;)Z
-	public static final fun log-impl (Lorg/slf4j/Logger;Ldev/hermannm/devlog/LogLevel;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;)V
+	public static final fun log-aaf-xeU (Lorg/slf4j/Logger;Ldev/hermannm/devlog/LogEvent;Ljava/lang/String;Ljava/lang/Throwable;)V
 	public fun toString ()Ljava/lang/String;
 	public static fun toString-impl (Lorg/slf4j/Logger;)Ljava/lang/String;
 	public static final fun trace-impl (Lorg/slf4j/Logger;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function1;)V

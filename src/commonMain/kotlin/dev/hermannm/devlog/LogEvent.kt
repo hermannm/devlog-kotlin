@@ -19,7 +19,6 @@ package dev.hermannm.devlog
  * `Slf4jLogEvent`. [LogEvent] is the common interface between the two, so that [LogBuilder] can
  * call this interface without having to care about the underlying implementation.
  */
-@PublishedApi
 internal interface LogEvent {
   /**
    * @param logger We pass the logger so that the implementation has access to it if necessary (our
@@ -36,11 +35,11 @@ internal interface LogEvent {
   fun log(message: String, logger: PlatformLogger)
 
   /**
-   * Normally, [LogBuilder.setCause] would traverse the tree of exceptions from a cause exception,
-   * checking for [ExceptionWithLoggingContext] and [LoggingContextProvider]. But some `LogEvent`
-   * implementations, namely our `LogbackLogEvent`, does its own exception traversal already.
-   * Instead of traversing exceptions twice, we let the log event implementation set this flag to
-   * true if it takes care of it itself.
+   * Normally, [LogBuilder.traverseExceptionTreeForLogFields] would traverse the tree of exceptions
+   * from a cause exception, checking for [ExceptionWithLoggingContext] and
+   * [LoggingContextProvider]. But some `LogEvent` implementations, namely our `LogbackLogEvent`,
+   * does its own exception traversal already. Instead of traversing exceptions twice, we let the
+   * log event implementation set this flag to true if it takes care of it itself.
    */
   fun handlesExceptionTreeTraversal(): Boolean
 }
@@ -51,4 +50,4 @@ internal interface LogEvent {
  * On the JVM, this returns an SLF4J `LoggingEvent`, or a specialized optimized version for Logback
  * if Logback is used as the logging backend.
  */
-@PublishedApi internal expect fun createLogEvent(level: LogLevel, logger: PlatformLogger): LogEvent
+internal expect fun createLogEvent(level: LogLevel, logger: PlatformLogger): LogEvent

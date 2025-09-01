@@ -9,6 +9,7 @@ import dev.hermannm.devlog.testutils.loggerInOtherFile
 import dev.hermannm.devlog.testutils.parameterizedTest
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -340,6 +341,12 @@ internal class LoggerTest {
     log.trace {
       return
     }
+  }
+
+  @Test
+  fun `LOGGER_CLASS_NAME has expected value`() {
+    val expectedName: String = Logger::class.qualifiedName.shouldNotBeNull()
+    LOGGER_CLASS_NAME shouldBe expectedName
   }
 }
 

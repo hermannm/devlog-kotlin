@@ -22,7 +22,6 @@ import org.slf4j.event.Level as Slf4jLevel
 import org.slf4j.spi.LocationAwareLogger
 import org.slf4j.spi.LoggingEventAware
 
-@PublishedApi
 internal actual fun createLogEvent(level: LogLevel, logger: Slf4jLogger): LogEvent {
   if (LOGBACK_IS_ON_CLASSPATH && logger is LogbackLogger) {
     return LogbackLogEvent(level, logger)
@@ -55,7 +54,7 @@ internal class Slf4jLogEvent(
     logger: Slf4jLogger,
 ) : LogEvent, BaseSlf4jEvent(level.toSlf4j(), logger) {
   init {
-    this.callerBoundary = FULLY_QUALIFIED_CLASS_NAME
+    this.callerBoundary = LOGGER_CLASS_NAME
     this.timeStamp = System.currentTimeMillis()
   }
 
@@ -152,11 +151,6 @@ internal class Slf4jLogEvent(
 
   /** We don't traverse the cause exception tree in this log event implementation. */
   override fun handlesExceptionTreeTraversal(): Boolean = false
-
-  internal companion object {
-    /** See [LogbackLogEvent.FULLY_QUALIFIED_CLASS_NAME]. */
-    @JvmField internal val FULLY_QUALIFIED_CLASS_NAME = Slf4jLogEvent::class.java.name
-  }
 }
 
 internal fun LogLevel.toSlf4j(): Slf4jLevel {
@@ -173,7 +167,7 @@ internal fun LogLevel.toSlf4j(): Slf4jLevel {
 internal class LogbackLogEvent(level: LogLevel, logger: LogbackLogger) :
     LogEvent,
     BaseLogbackEvent(
-        FULLY_QUALIFIED_CLASS_NAME,
+        LOGGER_CLASS_NAME,
         logger,
         level.toLogback(),
         null, // message (we set this when finalizing the log)
@@ -223,33 +217,16 @@ internal class LogbackLogEvent(level: LogLevel, logger: LogbackLogger) :
    * [setCause].
    */
   override fun handlesExceptionTreeTraversal(): Boolean = true
+}
 
-  internal companion object {
-    /**
-     * When a [LogbackLogEvent] is constructed, we know the `logger` is a [LogbackLogger]. So when
-     * we receive the logger again in [setCause] and [log], we can safely cast it. It's fast to cast
-     * to a concrete class, so we'd rather do that than increase the allocated size of the event by
-     * adding a field.
-     */
-    @JvmStatic
-    private fun PlatformLogger.asLogbackLogger(): LogbackLogger {
-      return this as LogbackLogger
-    }
-
-    /**
-     * SLF4J has the concept of a "caller boundary": the fully qualified class name of the logger
-     * class that made the log. This is used by logger implementations, such as Logback, when the
-     * user enables "caller info": showing the location in the source code where the log was made.
-     * Logback then knows to exclude stack trace elements up to this caller boundary, since the user
-     * wants to see where in _their_ code the log was made, not the location in the logging library.
-     *
-     * In our case, the caller boundary is in fact not [dev.hermannm.devlog.Logger], but our
-     * [LogEvent] implementations. This is because all the methods on `Logger` are `inline` - so the
-     * logger method actually called by user code at runtime is [LogbackLogEvent.log] /
-     * [Slf4jLogEvent.log].
-     */
-    @JvmField internal val FULLY_QUALIFIED_CLASS_NAME = LogbackLogEvent::class.java.name
-  }
+/**
+ * When a [LogbackLogEvent] is constructed, we know the `logger` is a [LogbackLogger]. So when we
+ * receive the logger again in [LogbackLogEvent.log], we can safely cast it. It's fast to cast to a
+ * concrete class, so we'd rather do that than increase the allocated size of the event by adding a
+ * field.
+ */
+private fun PlatformLogger.asLogbackLogger(): LogbackLogger {
+  return this as LogbackLogger
 }
 
 internal fun LogLevel.toLogback(): LogbackLevel {
