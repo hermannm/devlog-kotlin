@@ -3,12 +3,14 @@
 Structured logging library for Kotlin, that aims to provide a developer-friendly API with minimal
 runtime overhead. Currently only supports the JVM platform, wrapping SLF4J.
 
-- Docs: [devlog-kotlin.hermannm.dev](https://devlog-kotlin.hermannm.dev)
-- Published on:
-  - klibs.io:
-    [klibs.io/project/hermannm/devlog-kotlin](https://klibs.io/project/hermannm/devlog-kotlin)
-  - Maven Central:
-    [central.sonatype.com/artifact/dev.hermannm/devlog-kotlin](https://central.sonatype.com/artifact/dev.hermannm/devlog-kotlin)
+**Docs:** [devlog-kotlin.hermannm.dev](https://devlog-kotlin.hermannm.dev)
+
+**Published on:**
+
+- klibs.io:
+  [klibs.io/project/hermannm/devlog-kotlin](https://klibs.io/project/hermannm/devlog-kotlin)
+- Maven Central:
+  [central.sonatype.com/artifact/dev.hermannm/devlog-kotlin](https://central.sonatype.com/artifact/dev.hermannm/devlog-kotlin)
 
 **Contents:**
 
@@ -20,7 +22,7 @@ runtime overhead. Currently only supports the JVM platform, wrapping SLF4J.
   - [Automatic logger names](#automatic-logger-names)
 - [Project Structure](#project-structure)
 - [Why another logging library?](#why-another-logging-library)
-- [Developer's guide](#developers-guide)
+- [Maintainer's guide](#maintainers-guide)
 - [Credits](#credits)
 
 ## Usage
@@ -372,9 +374,9 @@ improve with this library:
     provide `JsonContextFieldWriter` for interoperability with `MDC` when using Logback +
     `logstash-logback-encoder`.
 
-## Developer's guide
+## Maintainer's guide
 
-Updating dependencies:
+### Updating dependencies
 
 - Run:
   ```
@@ -383,18 +385,18 @@ Updating dependencies:
 - Also check for new versions of [`ktfmt`](https://github.com/facebook/ktfmt), and update the
   `ktfmt` entry under `spotless` in `build.gradle.kts`
 
-Checking binary compatibility:
+### Checking binary compatibility
 
 - We use the Kotlin
   [Binary Compatibility Validator](https://github.com/Kotlin/binary-compatibility-validator) to
   avoid accidental breaking changes
-  - This plugin generates an `api/devlog-kotlin.api` file that contains all the public APIs of the
-    library. When making changes to the library, any changes to the library's public API will be
-    checked against this file (in the `apiCheck` Gradle task), to detect possible breaking changes
-  - When _adding_ new APIs (which should not be a breaking change), you must update this `.api` file
-    by running the `apiDump` Gradle task
+- This plugin generates an `api/devlog-kotlin.api` file that contains all the public APIs of the
+  library. When making changes to the library, any changes to the library's public API will be
+  checked against this file (in the `apiCheck` Gradle task), to detect possible breaking changes
+- When _adding_ new APIs (which should not be a breaking change), you must update this `.api` file
+  by running the `apiDump` Gradle task
 
-Publishing a new release:
+### Publishing a new release
 
 - Run tests:
   ```
