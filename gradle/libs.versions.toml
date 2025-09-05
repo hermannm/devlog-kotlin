@@ -15,7 +15,7 @@ logback = "1.5.18"
 logstashLogbackEncoder = "8.1"
 jackson = "2.20.0"
 # Test libraries
-kotest = "6.0.1"
+kotest = "6.0.2"
 log4j = "2.25.1"
 
 [plugins]
