@@ -2,7 +2,7 @@
 
 package dev.hermannm.devlog
 
-// See docstring on the `expect` declaration of this class under `commonMain`
+// See docstring on the `expect` declaration in `ExceptionWithLoggingContext.kt` under `commonMain`.
 internal actual class LoggingContextProvider
 actual constructor(
     @kotlin.concurrent.Volatile private var loggingContext: Array<out LogField>,

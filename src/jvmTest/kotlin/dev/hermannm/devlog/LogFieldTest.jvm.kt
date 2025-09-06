@@ -1,8 +1,11 @@
 package dev.hermannm.devlog
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import dev.hermannm.devlog.testutils.captureLogOutput
 import dev.hermannm.devlog.testutils.parameterizedTest
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.types.shouldBeInstanceOf
 import java.math.BigDecimal
 import java.net.URI
 import java.net.URL
@@ -33,5 +36,30 @@ internal class LogFieldJvmTest {
       output.logFields shouldContain """"uuid":"3638dd04-d196-41ad-8b15-5188a22a6ba4""""
       output.logFields shouldContain """"bigDecimal":"100.0""""
     }
+  }
+
+  private val jacksonObjectMapper = ObjectMapper()
+
+  @Test
+  fun `ValidRawJson is serializable with Jackson`() {
+    val validRawJson = rawJson("""{"test":true}""")
+    validRawJson.shouldBeInstanceOf<ValidRawJson>()
+
+    val serializedValue = jacksonObjectMapper.writeValueAsString(validRawJson)
+    serializedValue.shouldBe("""{"test":true}""")
+  }
+
+  @Test
+  fun `NotValidJson is serializable with Jackson`() {
+    val invalidJson = rawJson("""{"key":valueWithoutQuotes}""")
+    invalidJson.shouldBeInstanceOf<NotValidJson>()
+
+    val serializedValue = jacksonObjectMapper.writeValueAsString(invalidJson)
+    serializedValue.shouldBe(
+        """
+          "{\"key\":valueWithoutQuotes}"
+        """
+            .trimIndent(),
+    )
   }
 }

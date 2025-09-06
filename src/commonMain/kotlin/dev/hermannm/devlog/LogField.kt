@@ -6,9 +6,15 @@ package dev.hermannm.devlog
 import kotlin.reflect.KType
 import kotlin.reflect.typeOf
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -247,15 +253,15 @@ public fun rawJsonField(key: String, json: String, validJson: Boolean = false): 
 }
 
 /**
- * Turns the given pre-serialized JSON string into a [JsonElement] (from `kotlinx.serialization`),
- * using the same validation logic as [rawJsonField].
+ * Wraps the given pre-serialized JSON string in a serializable object, that will serialize the JSON
+ * string inline (without escaping). Uses the same validation logic as [rawJsonField].
  *
  * By default, this function checks that the given JSON string is actually valid JSON. The reason
  * for this is that giving raw JSON to our log encoder when it is not in fact valid JSON can break
- * our logs. If the JSON is valid, we can use [JsonUnquotedLiteral] to avoid having to re-encode it
- * when serializing into another object. But if it's not valid JSON, we escape it as a string
- * (returning a [JsonPrimitive]). If you are 100% sure that the given JSON string is valid and you
- * want to skip this check, you can set [validJson] to true.
+ * our logs. If the JSON is valid, we can use [kotlinx.serialization.json.JsonUnquotedLiteral] to
+ * avoid having to re-encode it when serializing into another object. But if it's not valid JSON, we
+ * escape it as a normal JSON string. If you are 100% sure that the given JSON string is valid and
+ * you want to skip this check, you can set [validJson] to true.
  *
  * This is useful when you want to include a raw JSON field on a log. If it's a top-level field, you
  * can use [rawJsonField] - but if you want the field to be in a nested object, then you can use
@@ -264,10 +270,10 @@ public fun rawJsonField(key: String, json: String, validJson: Boolean = false): 
  * ### Example
  *
  * ```
+ * import dev.hermannm.devlog.RawJson
  * import dev.hermannm.devlog.getLogger
  * import dev.hermannm.devlog.rawJson
  * import kotlinx.serialization.Serializable
- * import kotlinx.serialization.json.JsonElement
  *
  * private val log = getLogger()
  *
@@ -279,37 +285,112 @@ public fun rawJsonField(key: String, json: String, validJson: Boolean = false): 
  *
  *   if (!response.status.isSuccessful()) {
  *     // We want to log a "response" log field with an object of "status" and "body". So we create
- *     // a serializable class with the fields we want, and make "body" a JsonElement from rawJson.
- *     @Serializable data class ResponseLog(val status: Int, val body: JsonElement)
+ *     // a serializable class with the fields we want, using the `rawJson` return type for "body".
+ *     @Serializable data class ResponseLog(val status: Int, val body: RawJson)
  *
  *     log.error {
- *       field("response", ResponseLog(response.status.code, rawJson(response.body)))
+ *       field("response", ResponseLog(response.status.code, rawJson(response.bodyString())))
  *       "External service returned error response"
  *     }
  *   }
  * }
  * ```
  *
- * @param validJson Set this true if you are 100% sure that [json] is valid JSON, and you want to
+ * @param validJson Set this to true if you are 100% sure that [json] is valid JSON, and you want to
  *   save the performance cost of validating it.
  */
-// `JsonUnquotedLiteral` is experimental, but will likely be stabilized as-is:
-// https://github.com/Kotlin/kotlinx.serialization/issues/2900
-@OptIn(ExperimentalSerializationApi::class)
-public fun rawJson(json: String, validJson: Boolean = false): JsonElement {
+public fun rawJson(json: String, validJson: Boolean = false): RawJson {
   return validateRawJson(
       json,
       isValid = validJson,
-      onValidJson = { jsonValue ->
-        when (jsonValue) {
-          // JsonUnquotedLiteral prohibits creating a value from "null", so we have to check for
-          // that here and instead return JsonNull
-          "null" -> JsonNull
-          else -> JsonUnquotedLiteral(jsonValue)
-        }
-      },
-      onInvalidJson = { jsonValue -> JsonPrimitive(jsonValue) },
+      onValidJson = { jsonValue -> ValidRawJson(jsonValue) },
+      onInvalidJson = { jsonValue -> NotValidJson(jsonValue) },
   )
+}
+
+/**
+ * [rawJson] returns this wrapper around a given raw JSON string, controlling how the JSON string is
+ * serialized:
+ * - If the JSON string was valid, it will be serialized inline without escaping it (using
+ *   [kotlinx.serialization.json.JsonUnquotedLiteral])
+ * - If it was not valid, then it will be serialized as an escaped string
+ *
+ * In the JVM implementation, this class is also serializable with Jackson, with the same
+ * serialization behavior.
+ */
+@Serializable(with = RawJsonSerializer::class) public expect sealed interface RawJson
+
+/**
+ * [RawJson] implementation for when the JSON string given to [rawJson] is valid.
+ *
+ * We declare this as an `expect` class, so that we can implement `JsonSerializable` from Jackson in
+ * the JVM implementation.
+ */
+internal expect class ValidRawJson : RawJson {
+  internal constructor(json: String)
+
+  internal val json: String
+}
+
+/**
+ * [RawJson] implementation for when the JSON string given to [rawJson] is not valid.
+ *
+ * We declare this as an `expect` class, so that we can implement `JsonSerializable` from Jackson in
+ * the JVM implementation.
+ */
+internal expect class NotValidJson : RawJson {
+  internal constructor(value: String)
+
+  internal val value: String
+}
+
+/**
+ * `kotlinx.serialization` serializer for [RawJson]. Serializes [ValidRawJson] using
+ * [JsonUnquotedLiteral], and [NotValidJson] as an escaped string.
+ */
+internal object RawJsonSerializer : KSerializer<RawJson> {
+  private val primitiveSerializer = JsonPrimitive.serializer()
+
+  override val descriptor: SerialDescriptor
+    get() = primitiveSerializer.descriptor
+
+  // `JsonUnquotedLiteral` is experimental, but will likely be stabilized as-is:
+  // https://github.com/Kotlin/kotlinx.serialization/issues/2900
+  @OptIn(ExperimentalSerializationApi::class)
+  override fun serialize(encoder: Encoder, value: RawJson) {
+    when (value) {
+      is ValidRawJson -> {
+        // It's not valid to pass "null" to JsonUnquotedLiteral
+        if (value.json == "null") {
+          primitiveSerializer.serialize(encoder, JsonNull)
+        } else {
+          primitiveSerializer.serialize(encoder, JsonUnquotedLiteral(value.json))
+        }
+      }
+      is NotValidJson -> encoder.encodeString(value.value)
+      else -> {}
+    }
+  }
+
+  /** @throws IllegalStateException If the given decoder is not a [JsonDecoder]. */
+  override fun deserialize(decoder: Decoder): RawJson {
+    if (decoder !is JsonDecoder) {
+      // Same exception that koltinx.serialization throws when given a non-JSON decoder
+      throw IllegalStateException(
+          "This serializer can be used only with Json format. Expected Decoder to be JsonDecoder, got ${decoder::class}",
+      )
+    }
+
+    val jsonElement = decoder.decodeJsonElement()
+    val jsonString = jsonElement.toString()
+
+    /** See [isValidJson] for why we have to check this. */
+    return if (isValidJson(jsonElement)) {
+      ValidRawJson(jsonString)
+    } else {
+      NotValidJson(jsonString)
+    }
+  }
 }
 
 /**

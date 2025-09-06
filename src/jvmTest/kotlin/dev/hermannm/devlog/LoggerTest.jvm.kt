@@ -86,7 +86,7 @@ internal actual fun LoggerTestCase.verifyLogOutput(expectedLogLevel: LogLevel, b
         this.expectedFields.map { field ->
           val expectedValue =
               if (field.isJson) {
-                RawJson(field.value)
+                ValidRawJson(field.value)
               } else {
                 field.value
               }

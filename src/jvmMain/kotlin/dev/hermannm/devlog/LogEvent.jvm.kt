@@ -9,10 +9,6 @@ import ch.qos.logback.classic.spi.LoggingEvent as BaseLogbackEvent
 import ch.qos.logback.classic.spi.PackagingDataCalculator
 import ch.qos.logback.classic.spi.StackTraceElementProxy
 import ch.qos.logback.classic.spi.ThrowableProxy
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.JsonSerializable
-import com.fasterxml.jackson.databind.SerializerProvider
-import com.fasterxml.jackson.databind.jsontype.TypeSerializer
 import java.util.Collections
 import java.util.IdentityHashMap
 import org.slf4j.Logger as Slf4jLogger
@@ -70,7 +66,12 @@ internal class Slf4jLogEvent(
 
   override fun addJsonField(key: String, json: String) {
     if (!isFieldKeyAdded(keyValuePairs, key)) {
-      addKeyValue(key, RawJson(json))
+      // When outputting logs as JSON, the SLF4J provider will typically use Jackson to serialize
+      // key-value pairs. Since we serialize JSON values before passing them to the provider (so
+      // that we can use `kotlinx.serialization` and better control the serialization behavior), we
+      // have to wrap it in this Jackson-serializable object that will serialize the raw JSON string
+      // inline.
+      addKeyValue(key, ValidRawJson(json))
     }
   }
 
@@ -177,6 +178,7 @@ internal class LogbackLogEvent(level: LogLevel, logger: LogbackLogger) :
   private var cause: CustomLogbackThrowableProxy? = null
 
   override fun setCause(cause: Throwable, logger: PlatformLogger, logBuilder: LogBuilder) {
+    /** See docstring on [LoggingContextProvider] for why we use this custom proxy. */
     val cause = CustomLogbackThrowableProxy(cause, logBuilder)
     if (logger.asLogbackLogger().loggerContext.isPackagingDataEnabled) {
       cause.calculatePackageData()
@@ -192,7 +194,12 @@ internal class LogbackLogEvent(level: LogLevel, logger: LogbackLogger) :
 
   override fun addJsonField(key: String, json: String) {
     if (!isFieldKeyAdded(keyValuePairs, key)) {
-      addKeyValuePair(KeyValuePair(key, RawJson(json)))
+      // When outputting logs as JSON, the Logback encoder will typically use Jackson to serialize
+      // key-value pairs. Since we serialize JSON values before passing them to the provider (so
+      // that we can use `kotlinx.serialization` and better control the serialization behavior), we
+      // have to wrap it in this Jackson-serializable object that will serialize the raw JSON string
+      // inline.
+      addKeyValuePair(KeyValuePair(key, ValidRawJson(json)))
     }
   }
 
@@ -415,33 +422,4 @@ internal class CustomLogbackThrowableProxy : IThrowableProxy {
       return commonFrames
     }
   }
-}
-
-/**
- * Wrapper class for a pre-serialized JSON string. It implements [JsonSerializable] from Jackson,
- * because most JSON-outputting logger implementations will use that library to encode the logs (at
- * least `logstash-logback-encoder` for Logback does this).
- *
- * Since we use this to wrap a value that has already been serialized with `kotlinx.serialization`,
- * we simply call [JsonGenerator.writeRawValue] in [serialize] to write the JSON string as-is.
- */
-internal class RawJson(private val json: String) : JsonSerializable {
-  override fun toString() = json
-
-  override fun serialize(generator: JsonGenerator, serializers: SerializerProvider) {
-    generator.writeRawValue(json)
-  }
-
-  override fun serializeWithType(
-      generator: JsonGenerator,
-      serializers: SerializerProvider,
-      typeSerializer: TypeSerializer
-  ) {
-    // Since we don't know what type the raw JSON is, we can only redirect to normal serialization
-    serialize(generator, serializers)
-  }
-
-  override fun equals(other: Any?) = other is RawJson && other.json == this.json
-
-  override fun hashCode() = json.hashCode()
 }

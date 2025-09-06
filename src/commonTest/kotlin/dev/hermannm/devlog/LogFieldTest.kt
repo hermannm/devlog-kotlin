@@ -13,6 +13,7 @@ import kotlin.test.Test
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 
 private val log = getLogger()
@@ -453,9 +454,10 @@ internal class LogFieldTest {
    * case - we want to test that this works.
    */
   @Test
-  fun `passing a JSON literal null to rawJson works`() {
-    val value = rawJson("null")
-    value shouldBe JsonNull
+  fun `passing a JSON null literal to rawJson works`() {
+    val rawJsonNull = rawJson("null")
+    val serializedValue = Json.encodeToString(rawJsonNull)
+    serializedValue.shouldBe("null")
   }
 
   val validJsonTestCases =
