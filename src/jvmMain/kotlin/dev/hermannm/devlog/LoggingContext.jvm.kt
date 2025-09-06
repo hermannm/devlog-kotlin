@@ -85,10 +85,6 @@ internal actual fun addFieldsToLoggingContext(fields: Array<out LogField>) {
   contextState.saveAfterAddingFields()
 }
 
-/**
- * Takes the array of overwritten field values returned by [addFieldsToLoggingContext], to restore
- * the previous context values after the current context exits.
- */
 @PublishedApi
 internal actual fun removeFieldsFromLoggingContext(fields: Array<out LogField>) {
   val contextState = LoggingContextState.get()
