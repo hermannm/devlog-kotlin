@@ -1,5 +1,54 @@
 # Changelog
 
+## [Unreleased]
+
+- Attach logging context to exceptions when they would escape the scope of
+  `withLoggingContext`
+  - Previously, when an exception was thrown inside a logging context scope, one would lose that
+    logging context if the exception was logged further up the stack (which is typical). But
+    unexpected exceptions is when we need this context the most! So now, `withLoggingContext`
+    attaches its context fields to any encountered exception before re-throwing it up the stack, and
+    `Logger` includes these fields when the exception is logged.
+- Allow log fields to overwrite logging context fields for a single log
+  - Previously, duplicate keys could appear in the log output if the same key was used on a
+    single-log field as on a logging context field.
+- Use
+  [Kotlin Contracts](https://github.com/Kotlin/KEEP/blob/2b887d02fbf4cbf8b520cb2fbca11f4a807a353e/proposals/KEEP-0139-kotlin-contracts.md)
+  in `withLoggingContext`
+  - This gives users more flexibility in what they can do in the given lambda.
+- **Breaking:** Rename `ExceptionWithLogFields` to `ExceptionWithLoggingContext`, and `HasLogFields`
+  to `HasLoggingContext`
+  - This makes the naming of these classes more consistent with the `withLoggingContext` function.
+- **Breaking:** `ExceptionWithLoggingContext` no longer implements the `HasLoggingContext` interface
+  - When it implemented this interface, it needlessly had to expose its `logFields` property, which
+    should be an implementation detail.
+- **Breaking:** Rename `getLoggingContext` to `getCopyOfLoggingContext`, change its return value to
+  an opaque `LoggingContext` wrapper class, and add new `withLoggingContext` overload that accepts
+  this new `LoggingContext` type
+  - This new name is more explicit about what the function does, and also avoids competing with
+    `getLogger` for autocomplete.
+  - The `LoggingContext` wrapper class enables some performance optimizations, since we no longer
+    need to turn the logging context into a `List`.
+- **Breaking:** Use `Collection` instead of `List` in public APIs that accept or provide multiple
+  log fields
+  - `Collection` is a more flexible interface than `List`.
+- **Breaking:** Change return type of `rawJson` function from
+  `kotlinx.serialization.json.JsonElement` to custom `RawJson` wrapper type
+  - This reduces the coupling of the library's API to `kotlinx.serialization`, while keeping the
+    same serialization behavior. In the future, we may want to support e.g. Jackson serialization on
+    the JVM, so this gives us more flexibility.
+- Change how JSON fields in `withLoggingContext` are handled, to avoid internal implementation
+  details leaking out
+  - In the previous implementation, a key suffix was used to identify logging context fields with
+    JSON values. But in certain log output configurations, this implementation detail could leak
+    out. This implementation has now been reworked, both to avoid leaking implementation details and
+    also to improve performance (by avoiding allocations).
+- Minimize the amount of code in `inline` functions
+  - Having a lot of code in `inline` functions increases code size (since that code is replicated
+    wherever the `inline` function is called), which can negatively affect perforamnce. The library
+    now only includes the most necessary code in `inline` blocks, delegating to normal functions
+    where possible.
+
 ## [v0.7.0] - 2025-06-12
 
 - Move `LoggingContextJsonFieldWriter` to `output.logback` subpackage, and rename to the more
