@@ -3,7 +3,7 @@ package dev.hermannm.devlog
 import dev.hermannm.devlog.testutils.Event
 import dev.hermannm.devlog.testutils.EventType
 import dev.hermannm.devlog.testutils.captureLogOutput
-import dev.hermannm.devlog.testutils.parameterizedTest
+import dev.hermannm.devlog.testutils.runTestCases
 import io.kotest.assertions.withClue
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -24,8 +24,8 @@ private val log = getLogger()
  * - The [LogBuilder.field] method, which constructs the field in-place on the log event
  *
  * We want to test both of these, with a variety of different inputs. To do this systematically, we
- * make each log field test a parameterized test (see [parameterizedTest]), so every test runs with
- * both ways of creating log fields.
+ * make each log field test a parameterized test (see [runTestCases]), so every test runs with both
+ * ways of creating log fields.
  */
 internal enum class LogFieldTestCase {
   LOGBUILDER_METHOD,
@@ -86,7 +86,7 @@ internal enum class RawJsonTestCase {
 internal class LogFieldTest {
   @Test
   fun `basic log field test`() {
-    parameterizedTest(LogFieldTestCase.entries) { test ->
+    runTestCases(LogFieldTestCase.entries) { test ->
       val output = captureLogOutput {
         log.info {
           test.addField(this, "key", "value")
@@ -104,7 +104,7 @@ internal class LogFieldTest {
 
   @Test
   fun `log field with Serializable object`() {
-    parameterizedTest(LogFieldTestCase.entries) { test ->
+    runTestCases(LogFieldTestCase.entries) { test ->
       val event = Event(id = 1000, type = EventType.ORDER_PLACED)
 
       val output = captureLogOutput {
@@ -124,7 +124,7 @@ internal class LogFieldTest {
 
   @Test
   fun `multiple log fields`() {
-    parameterizedTest(LogFieldTestCase.entries) { test ->
+    runTestCases(LogFieldTestCase.entries) { test ->
       val output = captureLogOutput {
         log.info {
           test.addField(this, "first", true)
@@ -144,7 +144,7 @@ internal class LogFieldTest {
 
   @Test
   fun `explicit serializer`() {
-    parameterizedTest(LogFieldTestCase.entries) { test ->
+    runTestCases(LogFieldTestCase.entries) { test ->
       val prefixSerializer =
           object : SerializationStrategy<String> {
             override val descriptor = String.serializer().descriptor
@@ -177,7 +177,7 @@ internal class LogFieldTest {
    */
   @Test
   fun `explicit serializer with nullable value`() {
-    parameterizedTest(LogFieldTestCase.entries) { test ->
+    runTestCases(LogFieldTestCase.entries) { test ->
       val event: Event? = null
 
       val output = captureLogOutput {
@@ -197,7 +197,7 @@ internal class LogFieldTest {
 
   @Test
   fun `explicit serializer falls back to toString on exception`() {
-    parameterizedTest(LogFieldTestCase.entries) { test ->
+    runTestCases(LogFieldTestCase.entries) { test ->
       val alwaysFailingSerializer =
           object : SerializationStrategy<Event> {
             override val descriptor = Event.serializer().descriptor
@@ -231,7 +231,7 @@ internal class LogFieldTest {
    */
   @Test
   fun `explicit serializer with nullable value does not call serializer`() {
-    parameterizedTest(LogFieldTestCase.entries) { test ->
+    runTestCases(LogFieldTestCase.entries) { test ->
       val alwaysFailingSerializer =
           object : SerializationStrategy<String> {
             override val descriptor = String.serializer().descriptor
@@ -269,7 +269,7 @@ internal class LogFieldTest {
    */
   @Test
   fun `custom serializer without reified type parameter`() {
-    parameterizedTest(LogFieldTestCase.entries) { test ->
+    runTestCases(LogFieldTestCase.entries) { test ->
       fun <T> genericLogFunction(obj: T, serializer: SerializationStrategy<T>) {
         log.info {
           test.addFieldWithSerializer(this, "object", obj, serializer)
@@ -291,7 +291,7 @@ internal class LogFieldTest {
 
   @Test
   fun `non-serializable object falls back to toString`() {
-    parameterizedTest(LogFieldTestCase.entries) { test ->
+    runTestCases(LogFieldTestCase.entries) { test ->
       data class NonSerializableEvent(val id: Long, val type: String)
 
       val event = NonSerializableEvent(id = 1000, type = "ORDER_UPDATED")
@@ -313,7 +313,7 @@ internal class LogFieldTest {
 
   @Test
   fun `duplicate field keys only includes the first field`() {
-    parameterizedTest(LogFieldTestCase.entries) { test ->
+    runTestCases(LogFieldTestCase.entries) { test ->
       val output = captureLogOutput {
         log.info {
           test.addField(this, "duplicateKey", "value1")
@@ -333,7 +333,7 @@ internal class LogFieldTest {
 
   @Test
   fun `null field value is allowed`() {
-    parameterizedTest(LogFieldTestCase.entries) { test ->
+    runTestCases(LogFieldTestCase.entries) { test ->
       val nullValue: String? = null
 
       val output = captureLogOutput {
@@ -353,7 +353,7 @@ internal class LogFieldTest {
 
   @Test
   fun `raw JSON field works for valid JSON`() {
-    parameterizedTest(RawJsonTestCase.entries) { test ->
+    runTestCases(RawJsonTestCase.entries) { test ->
       val eventJson = """{"id":1000,"type":"ORDER_UPDATED"}"""
 
       // The above JSON should work both for validJson = true and validJson = false
@@ -378,7 +378,7 @@ internal class LogFieldTest {
 
   @Test
   fun `raw JSON field escapes invalid JSON by default`() {
-    parameterizedTest(RawJsonTestCase.entries) { test ->
+    runTestCases(RawJsonTestCase.entries) { test ->
       val invalidJson = """{"id":1"""
 
       val output = captureLogOutput {
@@ -403,7 +403,7 @@ internal class LogFieldTest {
    */
   @Test
   fun `raw JSON field does not escape invalid JSON when validJson is set to true`() {
-    parameterizedTest(RawJsonTestCase.entries) { test ->
+    runTestCases(RawJsonTestCase.entries) { test ->
       val invalidJson = """{"id":1"""
 
       val output = captureLogOutput {
@@ -423,7 +423,7 @@ internal class LogFieldTest {
 
   @Test
   fun `raw JSON field re-encodes JSON when it contains newlines`() {
-    parameterizedTest(RawJsonTestCase.entries) { test ->
+    runTestCases(RawJsonTestCase.entries) { test ->
       val jsonWithNewlines =
           """
             {
@@ -486,7 +486,7 @@ internal class LogFieldTest {
 
   @Test
   fun `validateRawJson accepts valid JSON`() {
-    parameterizedTest(validJsonTestCases) { validJson ->
+    runTestCases(validJsonTestCases) { validJson ->
       val isValid: Boolean =
           validateRawJson(
               validJson,
@@ -514,7 +514,7 @@ internal class LogFieldTest {
 
   @Test
   fun `validateRawJson rejects invalid JSON`() {
-    parameterizedTest(invalidJsonTestCases) { invalidJson ->
+    runTestCases(invalidJsonTestCases) { invalidJson ->
       val isValid: Boolean =
           validateRawJson(
               invalidJson,

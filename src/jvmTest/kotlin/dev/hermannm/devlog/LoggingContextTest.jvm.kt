@@ -6,7 +6,7 @@ import dev.hermannm.devlog.testutils.TestCase
 import dev.hermannm.devlog.testutils.captureLogOutput
 import dev.hermannm.devlog.testutils.loggingContextShouldBeEmpty
 import dev.hermannm.devlog.testutils.loggingContextShouldContainExactly
-import dev.hermannm.devlog.testutils.parameterizedTest
+import dev.hermannm.devlog.testutils.runTestCases
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.maps.shouldContainExactly
 import java.util.concurrent.Callable
@@ -74,7 +74,7 @@ internal class LoggingContextJvmTest {
   /**
    * [inheritLoggingContext] wraps an [ExecutorService], forwarding calls to the wrapped executor.
    * We want to verify that all these methods forward appropriately, so we make a test case for each
-   * executor method, and run [parameterizedTest] in our executor tests to run each test on every
+   * executor method, and run [runTestCases] in our executor tests to run each test on every
    * executor method.
    */
   class ExecutorTestCase(
@@ -115,7 +115,7 @@ internal class LoggingContextJvmTest {
 
   @Test
   fun `ExecutorService with inheritLoggingContext allows passing logging context between threads`() {
-    parameterizedTest(executorTestCases) { test ->
+    runTestCases(executorTestCases) { test ->
       val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
       val lock = ReentrantLock()
       val latch = CountDownLatch(1) // Used to wait for the child thread to complete its log
@@ -149,7 +149,7 @@ internal class LoggingContextJvmTest {
    */
   @Test
   fun `ExecutorService with inheritLoggingContext works when there are no fields in the context`() {
-    parameterizedTest(executorTestCases) { test ->
+    runTestCases(executorTestCases) { test ->
       val executor = Executors.newSingleThreadExecutor().inheritLoggingContext()
 
       // Verify that there are no fields in parent thread context

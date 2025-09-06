@@ -6,7 +6,7 @@ import dev.hermannm.devlog.testutils.Event
 import dev.hermannm.devlog.testutils.EventType
 import dev.hermannm.devlog.testutils.TestCase
 import dev.hermannm.devlog.testutils.loggerInOtherFile
-import dev.hermannm.devlog.testutils.parameterizedTest
+import dev.hermannm.devlog.testutils.runTestCases
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -83,7 +83,7 @@ internal class LoggerTest {
 
   @Test
   fun `info log`() {
-    parameterizedTest(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
+    runTestCases(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
       test.verifyLogOutput(expectedLogLevel = LogLevel.INFO) {
         test.logger.info(cause = TestInput.CAUSE) {
           field(TestInput.FIELD_KEY_1, TestInput.FIELD_VALUE_1)
@@ -96,7 +96,7 @@ internal class LoggerTest {
 
   @Test
   fun `warn log`() {
-    parameterizedTest(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
+    runTestCases(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
       test.verifyLogOutput(expectedLogLevel = LogLevel.WARN) {
         test.logger.warn(cause = TestInput.CAUSE) {
           field(TestInput.FIELD_KEY_1, TestInput.FIELD_VALUE_1)
@@ -109,7 +109,7 @@ internal class LoggerTest {
 
   @Test
   fun `error log`() {
-    parameterizedTest(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
+    runTestCases(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
       test.verifyLogOutput(expectedLogLevel = LogLevel.ERROR) {
         test.logger.error(cause = TestInput.CAUSE) {
           field(TestInput.FIELD_KEY_1, TestInput.FIELD_VALUE_1)
@@ -122,7 +122,7 @@ internal class LoggerTest {
 
   @Test
   fun `debug log`() {
-    parameterizedTest(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
+    runTestCases(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
       test.verifyLogOutput(expectedLogLevel = LogLevel.DEBUG) {
         test.logger.debug(cause = TestInput.CAUSE) {
           field(TestInput.FIELD_KEY_1, TestInput.FIELD_VALUE_1)
@@ -135,7 +135,7 @@ internal class LoggerTest {
 
   @Test
   fun `trace log`() {
-    parameterizedTest(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
+    runTestCases(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
       test.verifyLogOutput(expectedLogLevel = LogLevel.TRACE) {
         test.logger.trace(cause = TestInput.CAUSE) {
           field(TestInput.FIELD_KEY_1, TestInput.FIELD_VALUE_1)
@@ -148,7 +148,7 @@ internal class LoggerTest {
 
   @Test
   fun `info log using 'at' method`() {
-    parameterizedTest(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
+    runTestCases(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
       test.verifyLogOutput(expectedLogLevel = LogLevel.INFO) {
         test.logger.at(LogLevel.INFO, cause = TestInput.CAUSE) {
           field(TestInput.FIELD_KEY_1, TestInput.FIELD_VALUE_1)
@@ -161,7 +161,7 @@ internal class LoggerTest {
 
   @Test
   fun `warn log using 'at' method`() {
-    parameterizedTest(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
+    runTestCases(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
       test.verifyLogOutput(expectedLogLevel = LogLevel.WARN) {
         test.logger.at(LogLevel.WARN, cause = TestInput.CAUSE) {
           field(TestInput.FIELD_KEY_1, TestInput.FIELD_VALUE_1)
@@ -174,7 +174,7 @@ internal class LoggerTest {
 
   @Test
   fun `error log using 'at' method`() {
-    parameterizedTest(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
+    runTestCases(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
       test.verifyLogOutput(expectedLogLevel = LogLevel.ERROR) {
         test.logger.at(LogLevel.ERROR, cause = TestInput.CAUSE) {
           field(TestInput.FIELD_KEY_1, TestInput.FIELD_VALUE_1)
@@ -187,7 +187,7 @@ internal class LoggerTest {
 
   @Test
   fun `debug log using 'at' method`() {
-    parameterizedTest(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
+    runTestCases(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
       test.verifyLogOutput(expectedLogLevel = LogLevel.DEBUG) {
         test.logger.at(LogLevel.DEBUG, cause = TestInput.CAUSE) {
           field(TestInput.FIELD_KEY_1, TestInput.FIELD_VALUE_1)
@@ -200,7 +200,7 @@ internal class LoggerTest {
 
   @Test
   fun `trace log using 'at' method`() {
-    parameterizedTest(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
+    runTestCases(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
       test.verifyLogOutput(expectedLogLevel = LogLevel.TRACE) {
         test.logger.at(LogLevel.TRACE, cause = TestInput.CAUSE) {
           field(TestInput.FIELD_KEY_1, TestInput.FIELD_VALUE_1)
@@ -217,7 +217,7 @@ internal class LoggerTest {
    */
   @Test
   fun `log with no fields or exceptions`() {
-    parameterizedTest(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
+    runTestCases(loggerTestCases, afterEach = ::resetLoggerTest) { test ->
       val updatedTest =
           test.copy(
               expectedMessage = "Test",

@@ -8,7 +8,7 @@ import ch.qos.logback.core.read.ListAppender
 import dev.hermannm.devlog.testutils.EventAwareSlf4jLogger
 import dev.hermannm.devlog.testutils.LocationAwareSlf4jLogger
 import dev.hermannm.devlog.testutils.PlainSlf4jLogger
-import dev.hermannm.devlog.testutils.parameterizedTest
+import dev.hermannm.devlog.testutils.runTestCases
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
@@ -124,7 +124,7 @@ internal class LoggerJvmTest {
 
   @Test
   fun `log has expected file location`() {
-    parameterizedTest(loggerTestCases, afterEach = ::reset) { test ->
+    runTestCases(loggerTestCases, afterEach = ::reset) { test ->
       test.logger.info { "Test" }
 
       logAppender.list shouldHaveSize 1

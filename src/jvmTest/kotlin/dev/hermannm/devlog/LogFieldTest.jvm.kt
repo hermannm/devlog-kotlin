@@ -2,7 +2,7 @@ package dev.hermannm.devlog
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import dev.hermannm.devlog.testutils.captureLogOutput
-import dev.hermannm.devlog.testutils.parameterizedTest
+import dev.hermannm.devlog.testutils.runTestCases
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -18,7 +18,7 @@ private val log = getLogger()
 internal class LogFieldJvmTest {
   @Test
   fun `special-case types`() {
-    parameterizedTest(LogFieldTestCase.entries) { test ->
+    runTestCases(LogFieldTestCase.entries) { test ->
       val output = captureLogOutput {
         log.info {
           test.addField(this, "instant", Instant.parse("2024-12-09T16:38:23Z"))
