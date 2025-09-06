@@ -28,9 +28,9 @@ import kotlin.contracts.contract
  *
  * ### Field value encoding with SLF4J
  *
- * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. We
- * want to encode object values in the logging context as actual JSON (not escaped strings), so that
- * log analysis tools can parse the fields. If you're using Logback and
+ * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. But
+ * we want to encode object values in the logging context as actual JSON (not escaped strings), so
+ * that log analysis tools can parse the fields. If you're using Logback and
  * [`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder) for JSON
  * output, you can add support for this by configuring
  * `dev.hermannm.devlog.output.logback.JsonContextFieldWriter` as an `mdcEntryWriter`:
@@ -121,9 +121,9 @@ public inline fun <ReturnT> withLoggingContext(
  *
  * ### Field value encoding with SLF4J
  *
- * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. We
- * want to encode object values in the logging context as actual JSON (not escaped strings), so that
- * log analysis tools can parse the fields. If you're using Logback and
+ * The JVM implementation uses `MDC` from SLF4J, which only supports String values by default. But
+ * we want to encode object values in the logging context as actual JSON (not escaped strings), so
+ * that log analysis tools can parse the fields. If you're using Logback and
  * [`logstash-logback-encoder`](https://github.com/logfellow/logstash-logback-encoder) for JSON
  * output, you can add support for this by configuring
  * `dev.hermannm.devlog.output.logback.JsonContextFieldWriter` as an `mdcEntryWriter`:

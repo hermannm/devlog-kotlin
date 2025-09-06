@@ -526,9 +526,9 @@ internal class LoggingContextTest {
 
   /**
    * The exception message for [LoggingContextProvider] shouldn't normally show up in the logs
-   * (since we exclude it in our `CustomThrowableProxy`, see `LogEvent.jvm.kt`). But it may still
-   * show up when an exception is logged outside of our library (e.g. by JUnit), and in that case,
-   * we want to verify that the exception message is as we expect.
+   * (since we exclude it in our `CustomLogbackThrowableProxy`, see `LogEvent.jvm.kt` under
+   * `jvmMain`). But it may still show up when an exception is logged outside of our library (e.g.
+   * by JUnit), and in that case, we want to verify that the exception message is as we expect.
    *
    * If the fields from [LoggingContextProvider] have not been added to a log, then the fields
    * should be included in the exception message (see [getLoggingContextProviderMessage] for more on
