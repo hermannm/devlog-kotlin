@@ -9,6 +9,7 @@ import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlin.test.Test
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.builtins.serializer
@@ -448,18 +449,6 @@ internal class LogFieldTest {
     }
   }
 
-  /**
-   * [kotlinx.serialization.json.JsonUnquotedLiteral], which we use in [rawJson], throws if given a
-   * literal "null" string. So we have to check for "null" and instead return [JsonNull] in that
-   * case - we want to test that this works.
-   */
-  @Test
-  fun `passing a JSON null literal to rawJson works`() {
-    val rawJsonNull = rawJson("null")
-    val serializedValue = Json.encodeToString(rawJsonNull)
-    serializedValue.shouldBe("null")
-  }
-
   val validJsonTestCases =
       listOf(
           // Valid literals
@@ -524,6 +513,29 @@ internal class LogFieldTest {
           )
       isValid.shouldBeFalse()
     }
+  }
+
+  /**
+   * [kotlinx.serialization.json.JsonUnquotedLiteral], which we use in [rawJson], throws if given a
+   * literal "null" string. So we have to check for "null" and instead return [JsonNull] in that
+   * case - we want to test that this works.
+   */
+  @Test
+  fun `passing a JSON null literal to rawJson works`() {
+    val rawJsonNull = rawJson("null")
+    val serializedValue = Json.encodeToString(rawJsonNull)
+    serializedValue.shouldBe("null")
+  }
+
+  @Test
+  fun `RawJson toString implementations work as expected`() {
+    val validRawJson = rawJson("""["value1","value2","value3"]""")
+    validRawJson.shouldBeInstanceOf<ValidRawJson>()
+    validRawJson.toString().shouldBe("""["value1","value2","value3"]""")
+
+    val invalidJson = rawJson("""["missing closing bracket",""")
+    invalidJson.shouldBeInstanceOf<NotValidJson>()
+    invalidJson.toString().shouldBe("""["missing closing bracket",""")
   }
 
   @Test
