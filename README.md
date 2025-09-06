@@ -398,11 +398,15 @@ improve with this library:
 
 ### Publishing a new release
 
+- Bump version in `build.gradle.kts`
 - Run tests:
   ```
   ./gradlew check
   ```
-- Bump version in `build.gradle.kts`
+- Check that documentation is generated as expected:
+  ```
+  ./gradlew dokkaGeneratePublicationHtml
+  ```
 - Add an entry to `CHANGELOG.md` (with the current date)
   - Remember to update the link section, and bump the version for the `[Unreleased]` link
 - Create commit and tag for the release (update `TAG` variable in below command):
