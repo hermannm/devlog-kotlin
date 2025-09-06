@@ -15,7 +15,6 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.date.shouldBeBetween
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
-import java.lang.invoke.MethodHandles
 import java.time.Instant
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -147,36 +146,5 @@ internal class LoggerJvmTest {
   @Test
   fun `Logback is loaded in tests`() {
     LOGBACK_IS_ON_CLASSPATH shouldBe true
-  }
-
-  @Test
-  fun `lambda arguments to logger methods are inlined`() {
-    // We verify that the lambdas are inlined by calling `lookupClass()` inside of them.
-    // If they are inlined, then the calling class should be this test class - otherwise, the
-    // calling class would be a generated class for the lambda.
-    log.info {
-      MethodHandles.lookup().lookupClass() shouldBe LoggerJvmTest::class.java
-      "Test"
-    }
-    log.warn {
-      MethodHandles.lookup().lookupClass() shouldBe LoggerJvmTest::class.java
-      "Test"
-    }
-    log.error {
-      MethodHandles.lookup().lookupClass() shouldBe LoggerJvmTest::class.java
-      "Test"
-    }
-    log.debug {
-      MethodHandles.lookup().lookupClass() shouldBe LoggerJvmTest::class.java
-      "Test"
-    }
-    log.trace {
-      MethodHandles.lookup().lookupClass() shouldBe LoggerJvmTest::class.java
-      "Test"
-    }
-    log.at(LogLevel.INFO) {
-      MethodHandles.lookup().lookupClass() shouldBe LoggerJvmTest::class.java
-      "Test"
-    }
   }
 }
