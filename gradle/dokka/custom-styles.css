@@ -1,3 +1,21 @@
 .navigation-controls--btn_homepage {
   background-image: url("../images/github-icon.svg")
 }
+
+/*
+By default, scrollbars in Dokka have a light background even when in dark-mode. So we override that
+here to set the scrollbar background color to dark when in dark-mode (using the `theme-dark` class
+that Dokka sets on the `html` element when in dark-mode).
+*/
+.theme-dark {
+  /* Scrollbar customization in Firefox - Chrome/Safari use -webkit-scrollbar below */
+  scrollbar-color: #525257 #262628;
+}
+
+.theme-dark::-webkit-scrollbar-thumb {
+  background: #525257;
+}
+
+.theme-dark::-webkit-scrollbar-track {
+  background: #262628;
+}
