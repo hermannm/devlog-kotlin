@@ -151,7 +151,7 @@ spotless {
   kotlin {
     toggleOffOn()
     // Check for new versions here here: https://github.com/facebook/ktfmt
-    ktfmt("0.56")
+    ktfmt("0.58")
   }
 }
 
