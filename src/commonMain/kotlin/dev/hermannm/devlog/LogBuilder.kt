@@ -137,7 +137,8 @@ internal constructor(
       fieldValueShouldUseToString(value) -> {
         logEvent.addStringField(key, value.toString())
       }
-      // Try to serialize with kotlinx.serialization - if it fails, we fall back to toString below
+      // Try to serialize with kotlinx.serialization - if it throws an exception, the `field` method
+      // will catch it and fall back to `createStringLogField`
       else -> {
         val serializer = LOG_FIELD_JSON_FORMAT.serializersModule.serializer(valueType)
         val serializedValue = LOG_FIELD_JSON_FORMAT.encodeToString(serializer, value)
