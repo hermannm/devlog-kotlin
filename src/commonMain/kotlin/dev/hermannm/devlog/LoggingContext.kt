@@ -6,7 +6,6 @@
 
 package dev.hermannm.devlog
 
-import dev.hermannm.devlog.LoggingContextState.Companion.JSON_FIELD_SENTINEL
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -468,7 +467,7 @@ internal fun addExistingLoggingContextToException(
  * context takes up 4 elements in the array, as follows:
  * 1. Key
  * 2. Value
- * 3. Marker for whether the field is JSON (see [JSON_FIELD_SENTINEL])
+ * 3. Marker for whether the field is JSON (see [LoggingContextState.JSON_FIELD_SENTINEL])
  * 4. Overwritten value from previous logging context, to be restored (`null` if there was none)
  *
  * This lets us store the context state as compactly as possible.
@@ -697,7 +696,10 @@ private constructor(private val stateArray: Array<String?>?) {
     }
 
     internal fun isJson(index: StateKeyIndex): Boolean {
-      /** See [JSON_FIELD_SENTINEL] for why we use referential equality (`===`) here. */
+      /**
+       * See [LoggingContextState.JSON_FIELD_SENTINEL] for why we use referential equality (`===`)
+       * here.
+       */
       return stateArray[index + 2] === JSON_FIELD_SENTINEL
     }
 
