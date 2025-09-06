@@ -5,7 +5,7 @@ package dev.hermannm.devlog
 // See docstring on the `expect` declaration in `ExceptionWithLoggingContext.kt` under `commonMain`.
 internal actual class LoggingContextProvider
 actual constructor(
-    @kotlin.concurrent.Volatile private var loggingContext: Array<out LogField>,
+    @kotlin.concurrent.Volatile private var contextFields: Array<out LogField>,
 ) : RuntimeException() {
   /**
    * We set this to true when [addFieldsToLog] is called.
@@ -14,21 +14,21 @@ actual constructor(
    */
   @kotlin.concurrent.Volatile private var fieldsAddedToLog = false
 
-  actual fun addLoggingContext(logFields: Array<out LogField>) {
+  actual fun addLoggingContext(newContextFields: Array<out LogField>) {
     // We need to cast to `Array<LogField>` in order to use the `+` operator here (which we want to
     // use, since it uses optimized `System.arraycopy` on JVM).
     // We can safely cast from `Array<out LogField>` to `Array<LogField>`, since `LogField` has no
     // subclasses, so this doesn't break covariance.
-    this.loggingContext = (this.loggingContext as Array<LogField>) + logFields
+    this.contextFields = (this.contextFields as Array<LogField>) + newContextFields
   }
 
   actual fun addFieldsToLog(logBuilder: LogBuilder) {
-    logBuilder.addFields(loggingContext)
+    logBuilder.addFields(contextFields)
     this.fieldsAddedToLog = true
   }
 
   override val message: String?
-    get() = getLoggingContextProviderMessage(loggingContext, fieldsAddedToLog)
+    get() = getLoggingContextProviderMessage(contextFields, fieldsAddedToLog)
 
   override fun fillInStackTrace(): Throwable {
     return this

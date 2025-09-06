@@ -184,9 +184,9 @@ public open class ExceptionWithLoggingContext : RuntimeException {
       }
     }
 
-    val loggingContext = this.loggingContext
-    if (loggingContext != null) {
-      logBuilder.addFields(loggingContext)
+    val contextFields = this.contextFields
+    if (contextFields != null) {
+      logBuilder.addFields(contextFields)
     }
   }
 
@@ -194,12 +194,12 @@ public open class ExceptionWithLoggingContext : RuntimeException {
    * Used by [withLoggingContext] to attach logging context if this exception escapes a context
    * scope.
    */
-  @kotlin.concurrent.Volatile private var loggingContext: Array<out LogField>? = null
+  @kotlin.concurrent.Volatile private var contextFields: Array<out LogField>? = null
 
-  internal fun addLoggingContext(logFields: Array<out LogField>) {
-    val existingContext = this.loggingContext
-    if (existingContext == null) {
-      this.loggingContext = logFields
+  internal fun addLoggingContext(newContextFields: Array<out LogField>) {
+    val existingContextFields = this.contextFields
+    if (existingContextFields == null) {
+      this.contextFields = newContextFields
       return
     }
 
@@ -207,7 +207,7 @@ public open class ExceptionWithLoggingContext : RuntimeException {
     // use, since it uses optimized `System.arraycopy` on JVM).
     // We can safely cast from  `Array<out LogField>` to `Array<LogField>`, since `LogField` has no
     // subclasses, so this doesn't break covariance.
-    this.loggingContext = (existingContext as Array<LogField>) + logFields
+    this.contextFields = (existingContextFields as Array<LogField>) + newContextFields
   }
 }
 
@@ -323,9 +323,9 @@ public interface HasLoggingContext {
  *           an exception.
  */
 internal expect class LoggingContextProvider : RuntimeException {
-  constructor(loggingContext: Array<out LogField>)
+  constructor(contextFields: Array<out LogField>)
 
-  fun addLoggingContext(logFields: Array<out LogField>)
+  fun addLoggingContext(newContextFields: Array<out LogField>)
 
   fun addFieldsToLog(logBuilder: LogBuilder)
 }
@@ -341,7 +341,7 @@ internal expect class LoggingContextProvider : RuntimeException {
  * logging context fields in the exception message, so we don't lose context.
  */
 internal fun getLoggingContextProviderMessage(
-    loggingContext: Array<out LogField>,
+    contextFields: Array<out LogField>,
     fieldsAddedToLog: Boolean,
 ): String {
   if (fieldsAddedToLog) {
@@ -353,24 +353,24 @@ internal fun getLoggingContextProviderMessage(
   // Pre-calculate capacity, so that StringBuilder only has to allocate once
   val capacity =
       messagePrefix.length +
-          loggingContext.sumOf { logField ->
+          contextFields.sumOf { field ->
             // +5 chars for "\n\t\t" before each field and ": " between key and value
-            logField.key.length + logField.value.length + 5
+            field.key.length + field.value.length + 5
           }
 
   val message = StringBuilder(capacity)
   message.append(messagePrefix)
 
-  for (logField in loggingContext) {
+  for (field in contextFields) {
     // Use double tabs here, since we want the fields to be indented, and suppressed exceptions
     // (which we use for `LoggingContextProvider`) are already indented by one tab
     message.append('\n')
     message.append('\t')
     message.append('\t')
-    message.append(logField.key)
+    message.append(field.key)
     message.append(':')
     message.append(' ')
-    message.append(logField.value)
+    message.append(field.value)
   }
 
   return message.toString()

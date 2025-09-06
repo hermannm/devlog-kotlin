@@ -538,7 +538,7 @@ internal class LoggingContextTest {
   fun `LoggingContextProvider has expected exception message and empty stack trace`() {
     val loggingContextProvider =
         LoggingContextProvider(
-            loggingContext =
+            contextFields =
                 arrayOf(
                     field("key1", "value"),
                     field("key2", Event(id = 1, type = EventType.ORDER_PLACED)),

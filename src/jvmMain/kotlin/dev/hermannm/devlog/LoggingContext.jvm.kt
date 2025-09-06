@@ -29,23 +29,23 @@ internal constructor(
     return map.isNullOrEmpty()
   }
 
-  internal actual fun toLogFields(): Array<out LogField>? {
-    if (map == null) {
+  internal actual fun getFields(): Array<out LogField>? {
+    if (map.isNullOrEmpty()) {
       return null
     }
 
-    val logFields: Array<LogField?> = arrayOfNulls(map.size)
+    val contextFields: Array<LogField?> = arrayOfNulls(map.size)
     var index = 0
     for ((key, value) in map) {
-      val logField: LogField =
+      val field: LogField =
           if (value == null) {
-            LogField(key, value = JSON_NULL_VALUE, isJson = true)
+            LogField(key, JSON_NULL_VALUE, isJson = true)
           } else {
             val isJson = state.isJsonField(key, value)
             LogField(key, value, isJson)
           }
 
-      logFields[index] = logField
+      contextFields[index] = field
 
       index++
     }
@@ -53,7 +53,7 @@ internal constructor(
     // Safe to cast here: We initialize `logFields` with `map.size`, and then add a log field for
     // every entry in the map, so all elements in the array will be initialized
     @Suppress("UNCHECKED_CAST")
-    return logFields as Array<LogField>
+    return contextFields as Array<LogField>
   }
 }
 

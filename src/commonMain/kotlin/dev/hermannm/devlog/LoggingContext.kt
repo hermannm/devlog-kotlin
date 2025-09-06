@@ -352,7 +352,7 @@ public expect fun getCopyOfLoggingContext(): LoggingContext
  * [withLoggingContext] overloads in order to copy logging context between threads.
  */
 public expect class LoggingContext {
-  internal fun toLogFields(): Array<out LogField>?
+  internal fun getFields(): Array<out LogField>?
 }
 
 /** Static field for the empty logging context, to avoid redundant re-instantiations. */
@@ -370,8 +370,11 @@ internal expect fun addExistingContextFieldsToLoggingContext(existingContext: Lo
 internal expect fun removeExistingContextFieldsFromLoggingContext(existingContext: LoggingContext)
 
 @PublishedApi
-internal fun addLoggingContextToException(exception: Throwable, logFields: Array<out LogField>) {
-  if (logFields.isEmpty()) {
+internal fun addLoggingContextToException(
+    exception: Throwable,
+    contextFields: Array<out LogField>,
+) {
+  if (contextFields.isEmpty()) {
     return
   }
 
@@ -383,11 +386,11 @@ internal fun addLoggingContextToException(exception: Throwable, logFields: Array
   traverseExceptionTree(root = exception) { exception ->
     when (exception) {
       is ExceptionWithLoggingContext -> {
-        exception.addLoggingContext(logFields)
+        exception.addLoggingContext(contextFields)
         return
       }
       is LoggingContextProvider -> {
-        exception.addLoggingContext(logFields)
+        exception.addLoggingContext(contextFields)
         return
       }
     }
@@ -397,7 +400,7 @@ internal fun addLoggingContextToException(exception: Throwable, logFields: Array
    * If there were no eligible exception to add the context to, we add a suppressed
    * [LoggingContextProvider] - see its docstring for more on how this mechanism works.
    */
-  exception.addSuppressed(LoggingContextProvider(logFields))
+  exception.addSuppressed(LoggingContextProvider(contextFields))
 }
 
 @PublishedApi
@@ -405,9 +408,9 @@ internal fun addExistingLoggingContextToException(
     exception: Throwable,
     existingContext: LoggingContext
 ) {
-  val logFields = existingContext.toLogFields()
-  if (logFields != null) {
-    addLoggingContextToException(exception, logFields)
+  val contextFields = existingContext.getFields()
+  if (contextFields != null) {
+    addLoggingContextToException(exception, contextFields)
   }
 }
 
