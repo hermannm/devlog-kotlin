@@ -591,8 +591,8 @@ private constructor(private val stateArray: Array<String?>?) {
   }
 
   /**
-   * See `overwriteDuplicateContextFields` in `LoggingContext.jvm.kt` under `jvmMain` for why we use
-   * this.
+   * See `overwriteDuplicateContextFieldsForLog` in `LoggingContext.jvm.kt` under `jvmMain` for why
+   * we use this.
    *
    * If the context field array has not been initialized yet, we initialize it before setting the
    * key/value, and return the new array. It is an error not to use the return value (unfortunately,
@@ -614,8 +614,8 @@ private constructor(private val stateArray: Array<String?>?) {
   }
 
   /**
-   * See `restoreOverwrittenContextFields` in `LoggingContext.jvm.kt` under `jvmMain` for why we use
-   * this.
+   * See `restoreContextFieldsOverwrittenForLog` in `LoggingContext.jvm.kt` under `jvmMain` for why
+   * we use this.
    *
    * Remember to call [saveAfterRemovingFields] after this to persist changes.
    */

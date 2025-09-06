@@ -171,6 +171,21 @@ internal actual fun removeExistingContextFieldsFromLoggingContext(existingContex
   currentContextState.saveAfterRemovingFields()
 }
 
+/**
+ * We want to avoid duplicate field keys in the log output, and for newer fields to overwrite older
+ * fields if they have the same key. We already do this for context fields and for log fields, but
+ * separately - so if a log field and a context field have the same key, then they would both appear
+ * in the log output. A log field is always more recent than a context field, so in this case, we
+ * want the log field to overwrite the context field.
+ *
+ * This function handles this case: it goes through the given fields on a log event, and checks if
+ * any of their keys are already in the logging context. If there's a match, we remove that context
+ * field, saving it in [LoggingContextState] to be restored after the log with
+ * [restoreContextFieldsOverwrittenForLog].
+ *
+ * Users of this function should call this before the log, and wrap the log in a try/finally block,
+ * calling [restoreContextFieldsOverwrittenForLog] in the `finally` block.
+ */
 internal fun overwriteDuplicateContextFieldsForLog(logFields: MutableList<KeyValuePair>?) {
   if (logFields == null) {
     return
@@ -208,6 +223,7 @@ internal fun overwriteDuplicateContextFieldsForLog(logFields: MutableList<KeyVal
   contextState.saveAfterAddingFields()
 }
 
+/** See [overwriteDuplicateContextFieldsForLog]. */
 internal fun restoreContextFieldsOverwrittenForLog() {
   val contextState = LoggingContextState.get()
 
