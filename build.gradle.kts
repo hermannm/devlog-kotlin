@@ -107,13 +107,20 @@ kotlin {
     jvmMain.dependencies {
       implementation(libs.slf4j)
       implementation(libs.jackson)
+      // Optional dependency: This library works for any SLF4J logger implementation, but makes some
+      // optimizations for Logback. If the user chooses Logback as their logger implementation, we
+      // can apply these optimizations, but if they don't, then we don't want to load Logback, as
+      // that can interfere with other SLF4J logger implementations on the classpath.
       compileOnly(libs.logback)
+      // Optional dependency - we only need this if the user:
+      // - Has chosen Logback as their logger implementation
+      // - Uses logstash-logback-encoder for encoding logs as JSON
+      // - Wants to use our JsonContextFieldWriter
       compileOnly(libs.logstashLogbackEncoder)
     }
     jvmTest.dependencies {
       runtimeOnly(libs.logback)
       runtimeOnly(libs.logstashLogbackEncoder)
-      runtimeOnly(libs.jackson)
     }
   }
 
