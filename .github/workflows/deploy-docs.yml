@@ -1,9 +1,10 @@
 # Generates library docs with Dokka and deploys it to devlog-kotlin.hermannm.dev
 name: Deploy documentation
 on:
-  # Trigger deployment when a new release is published
-  release:
-    types: [ published ]
+  # Trigger release when a new semantic version tag (vX.Y.Z) is pushed
+  push:
+    tags:
+      - v[0-9]+\.[0-9]+\.[0-9]+
   # Allow deployment to be triggered manually
   workflow_dispatch:
     inputs:
