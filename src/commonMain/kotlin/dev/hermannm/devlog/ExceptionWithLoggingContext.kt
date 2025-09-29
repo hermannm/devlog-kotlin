@@ -86,7 +86,7 @@ public open class ExceptionWithLoggingContext : RuntimeException {
       logFields: Collection<LogField> = emptyList(),
       cause: Throwable? = null,
   ) : super(cause) {
-    this.messageField = message
+    this._message = message
     this.logFields = logFields
   }
 
@@ -95,7 +95,7 @@ public open class ExceptionWithLoggingContext : RuntimeException {
       vararg logFields: LogField,
       cause: Throwable? = null,
   ) : super(cause) {
-    this.messageField = message
+    this._message = message
     this.logFields = logFields
   }
 
@@ -103,7 +103,7 @@ public open class ExceptionWithLoggingContext : RuntimeException {
       logFields: Collection<LogField> = emptyList(),
       cause: Throwable? = null,
   ) : super(cause) {
-    this.messageField = null
+    this._message = null
     this.logFields = logFields
   }
 
@@ -111,19 +111,26 @@ public open class ExceptionWithLoggingContext : RuntimeException {
       vararg logFields: LogField,
       cause: Throwable? = null,
   ) : super(cause) {
-    this.messageField = null
+    this._message = null
     this.logFields = logFields
   }
 
-  @kotlin.concurrent.Volatile private var messageField: String?
+  /**
+   * Backing field for [message]. Uses leading underscore as per
+   * [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html#names-for-backing-properties).
+   *
+   * Marked as volatile, because if this is not set in the constructor, then we set it in
+   * [buildMessageFromCauseException], and we want that to be thread-safe.
+   */
+  @kotlin.concurrent.Volatile private var _message: String?
 
   /** The exception message. */
   override val message: String?
     get() {
-      val messageField = this.messageField
-      if (messageField != null) {
+      val message = this._message
+      if (message != null) {
         // If an exception message was provided in the constructor, return that
-        return messageField
+        return message
       } else {
         // Otherwise, use message from cause exception (if any)
         return buildMessageFromCauseException()
@@ -138,7 +145,7 @@ public open class ExceptionWithLoggingContext : RuntimeException {
    * CauseExceptionClassName: Cause exception message
    * ```
    *
-   * The built message is stored in [messageField], so we don't have to rebuild it.
+   * The built message is stored in [_message], so we don't have to rebuild it.
    */
   private fun buildMessageFromCauseException(): String? {
     val cause = this.cause
@@ -155,7 +162,7 @@ public open class ExceptionWithLoggingContext : RuntimeException {
           causeClass != null && causeMessage == null -> causeClass
           else -> return null
         }
-    this.messageField = message
+    this._message = message
     return message
   }
 
