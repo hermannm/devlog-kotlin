@@ -15,7 +15,7 @@ public actual fun getCopyOfLoggingContext(): LoggingContext {
     return EMPTY_LOGGING_CONTEXT
   }
 
-  val contextState = LoggingContextState.get().copy()
+  val contextState = getLoggingContextState().copy()
 
   return LoggingContext(contextMap, contextState)
 }
@@ -58,11 +58,11 @@ internal constructor(
 }
 
 internal actual val EMPTY_LOGGING_CONTEXT =
-    LoggingContext(map = null, state = LoggingContextState.empty())
+    LoggingContext(map = null, state = getEmptyLoggingContextState())
 
 @PublishedApi
 internal actual fun addFieldsToLoggingContext(fields: Array<out LogField>) {
-  var contextState = LoggingContextState.get()
+  var contextState = getLoggingContextState()
   val newFieldCount = fields.size
 
   for (index in fields.indices) {
@@ -87,7 +87,7 @@ internal actual fun addFieldsToLoggingContext(fields: Array<out LogField>) {
 
 @PublishedApi
 internal actual fun removeFieldsFromLoggingContext(fields: Array<out LogField>) {
-  val contextState = LoggingContextState.get()
+  val contextState = getLoggingContextState()
 
   for (index in fields.indices) {
     val field = fields[index]
@@ -126,7 +126,7 @@ internal actual fun addExistingContextFieldsToLoggingContext(existingContext: Lo
   }
   val existingContextSize = existingContextMap.size
 
-  var currentState = LoggingContextState.get()
+  var currentState = getLoggingContextState()
 
   for ((key, value) in existingContextMap) {
     if (value == null) {
@@ -152,7 +152,7 @@ internal actual fun removeExistingContextFieldsFromLoggingContext(existingContex
     return
   }
 
-  val currentContextState = LoggingContextState.get()
+  val currentContextState = getLoggingContextState()
 
   for ((key, value) in existingContextMap) {
     // To match `addExistingContextFieldsToLoggingContext`
@@ -196,7 +196,7 @@ internal fun overwriteDuplicateContextFieldsForLog(logFields: MutableList<KeyVal
     return
   }
 
-  var contextState = LoggingContextState.get()
+  var contextState = getLoggingContextState()
 
   var removedFieldCount = 0
   for (index in 0..(totalFieldCount - 1)) {
@@ -225,7 +225,7 @@ internal fun overwriteDuplicateContextFieldsForLog(logFields: MutableList<KeyVal
 
 /** See [overwriteDuplicateContextFieldsForLog]. */
 internal fun restoreContextFieldsOverwrittenForLog() {
-  val contextState = LoggingContextState.get()
+  val contextState = getLoggingContextState()
 
   contextState.restoreFieldsOverwrittenForLog { key, overwrittenValue ->
     MDC.put(key, overwrittenValue)
@@ -246,15 +246,15 @@ internal fun restoreContextFieldsOverwrittenForLog() {
  */
 private val THREAD_LOGGING_CONTEXT_STATE = ThreadLocal<Array<String?>?>()
 
-internal actual fun getThreadLoggingContextState(): Array<String?>? {
-  return THREAD_LOGGING_CONTEXT_STATE.get()
+internal actual fun getLoggingContextState(): LoggingContextState {
+  return LoggingContextState(THREAD_LOGGING_CONTEXT_STATE.get())
 }
 
-internal actual fun setThreadLoggingContextState(stateArray: Array<String?>) {
+internal actual fun saveLoggingContextStateArray(stateArray: Array<String?>) {
   THREAD_LOGGING_CONTEXT_STATE.set(stateArray)
 }
 
-internal actual fun clearThreadLoggingContextState() {
+internal actual fun clearLoggingContextState() {
   THREAD_LOGGING_CONTEXT_STATE.remove()
 }
 
@@ -377,7 +377,7 @@ internal value class ExecutorServiceWithInheritedLoggingContext(
   override fun <T : Any?> invokeAll(
       tasks: MutableCollection<out Callable<T>>,
       timeout: Long,
-      unit: TimeUnit
+      unit: TimeUnit,
   ): MutableList<Future<T>> {
     return wrappedExecutor.invokeAll(tasks.map { wrapCallable(it) }, timeout, unit)
   }
@@ -389,7 +389,7 @@ internal value class ExecutorServiceWithInheritedLoggingContext(
   override fun <T : Any?> invokeAny(
       tasks: MutableCollection<out Callable<T>>,
       timeout: Long,
-      unit: TimeUnit
+      unit: TimeUnit,
   ): T {
     return wrappedExecutor.invokeAny(tasks.map { wrapCallable(it) }, timeout, unit)
   }

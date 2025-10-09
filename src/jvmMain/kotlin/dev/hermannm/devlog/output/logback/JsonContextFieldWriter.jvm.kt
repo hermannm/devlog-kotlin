@@ -4,6 +4,7 @@ package dev.hermannm.devlog.output.logback
 
 import com.fasterxml.jackson.core.JsonGenerator
 import dev.hermannm.devlog.LoggingContextState
+import dev.hermannm.devlog.getLoggingContextState
 import net.logstash.logback.composite.loggingevent.mdc.MdcEntryWriter
 
 /**
@@ -38,10 +39,10 @@ public class JsonContextFieldWriter : MdcEntryWriter {
       generator: JsonGenerator,
       fieldName: String,
       mdcKey: String,
-      value: String
+      value: String,
   ): Boolean {
     /** See [LoggingContextState]. */
-    if (LoggingContextState.get().isJsonField(mdcKey, value)) {
+    if (getLoggingContextState().isJsonField(mdcKey, value)) {
       generator.writeFieldName(fieldName)
       generator.writeRawValue(value)
       return true

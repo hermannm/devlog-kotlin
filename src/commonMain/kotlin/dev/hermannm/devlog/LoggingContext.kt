@@ -180,7 +180,7 @@ public inline fun <ReturnT> withLoggingContext(
  */
 public inline fun <ReturnT> withLoggingContext(
     logFields: Collection<LogField>,
-    block: () -> ReturnT
+    block: () -> ReturnT,
 ): ReturnT {
   // Allows callers to use `block` as if it were in-place
   contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
@@ -269,7 +269,7 @@ public inline fun <ReturnT> withLoggingContext(
  */
 public inline fun <ReturnT> withLoggingContext(
     context: LoggingContext,
-    block: () -> ReturnT
+    block: () -> ReturnT,
 ): ReturnT {
   // Allows callers to use `block` as if it were in-place
   contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
@@ -406,7 +406,7 @@ internal fun addLoggingContextToException(
 @PublishedApi
 internal fun addExistingLoggingContextToException(
     exception: Throwable,
-    existingContext: LoggingContext
+    existingContext: LoggingContext,
 ) {
   val contextFields = existingContext.getFields()
   if (contextFields != null) {
@@ -477,7 +477,7 @@ internal fun addExistingLoggingContextToException(
  */
 @kotlin.jvm.JvmInline
 internal value class LoggingContextState
-private constructor(private val stateArray: Array<String?>?) {
+internal constructor(private val stateArray: Array<String?>?) {
   /**
    * Adds a field to the logging context state.
    *
@@ -550,7 +550,7 @@ private constructor(private val stateArray: Array<String?>?) {
    */
   internal fun saveAfterAddingFields() {
     if (stateArray != null) {
-      setThreadLoggingContextState(stateArray)
+      saveLoggingContextStateArray(stateArray)
     }
   }
 
@@ -570,9 +570,9 @@ private constructor(private val stateArray: Array<String?>?) {
    */
   internal fun saveAfterRemovingFields() {
     if (stateArray == null || InitializedState(stateArray).isEmpty()) {
-      clearThreadLoggingContextState()
+      clearLoggingContextState()
     } else {
-      setThreadLoggingContextState(stateArray)
+      saveLoggingContextStateArray(stateArray)
     }
   }
 
@@ -605,7 +605,7 @@ private constructor(private val stateArray: Array<String?>?) {
    */
   internal fun storeFieldOverwrittenForLog(
       key: String,
-      overwrittenValue: String
+      overwrittenValue: String,
   ): LoggingContextState {
     return add(
         key = key,
@@ -655,7 +655,7 @@ private constructor(private val stateArray: Array<String?>?) {
 
     val emptyFields = InitializedState(stateArray).countEmptyFields()
 
-    val newSize = stateArray.size - emptyFields * ELEMENTS_PER_FIELD
+    val newSize = stateArray.size - emptyFields * LOGGING_CONTEXT_STATE_ELEMENTS_PER_FIELD
     return LoggingContextState(stateArray.copyOf(newSize = newSize))
   }
 
@@ -663,7 +663,9 @@ private constructor(private val stateArray: Array<String?>?) {
     return if (stateArray != null) {
       InitializedState(stateArray)
     } else {
-      InitializedState(arrayOfNulls(size = newFieldCount * ELEMENTS_PER_FIELD))
+      InitializedState(
+          arrayOfNulls(size = newFieldCount * LOGGING_CONTEXT_STATE_ELEMENTS_PER_FIELD)
+      )
     }
   }
 
@@ -683,7 +685,7 @@ private constructor(private val stateArray: Array<String?>?) {
         isJson: Boolean,
         overwrittenValue: String?,
     ) {
-      val isJsonValue = if (isJson) JSON_FIELD_SENTINEL else null
+      val isJsonValue = if (isJson) LOGGING_CONTEXT_STATE_JSON_FIELD_SENTINEL else null
       stateArray[index] = key
       stateArray[index + 1] = value
       stateArray[index + 2] = isJsonValue
@@ -700,10 +702,10 @@ private constructor(private val stateArray: Array<String?>?) {
 
     internal fun isJson(index: StateKeyIndex): Boolean {
       /**
-       * See [LoggingContextState.JSON_FIELD_SENTINEL] for why we use referential equality (`===`)
+       * See [LOGGING_CONTEXT_STATE_JSON_FIELD_SENTINEL] for why we use referential equality (`===`)
        * here.
        */
-      return stateArray[index + 2] === JSON_FIELD_SENTINEL
+      return stateArray[index + 2] === LOGGING_CONTEXT_STATE_JSON_FIELD_SENTINEL
     }
 
     internal fun getOverwrittenValue(index: StateKeyIndex): String? {
@@ -728,7 +730,10 @@ private constructor(private val stateArray: Array<String?>?) {
     }
 
     internal fun resize(newFieldCount: Int): InitializedState {
-      val newState = arrayOfNulls<String?>(stateArray.size + newFieldCount * ELEMENTS_PER_FIELD)
+      val newState =
+          arrayOfNulls<String?>(
+              stateArray.size + newFieldCount * LOGGING_CONTEXT_STATE_ELEMENTS_PER_FIELD
+          )
 
       stateArray.copyInto(newState)
 
@@ -767,57 +772,48 @@ private constructor(private val stateArray: Array<String?>?) {
 
     internal inline fun forEachKeyIndexReversed(action: (index: StateKeyIndex) -> Unit) {
       val size = stateArray.size
-      if (size < ELEMENTS_PER_FIELD) {
+      if (size < LOGGING_CONTEXT_STATE_ELEMENTS_PER_FIELD) {
         return
       }
 
-      var index = size - ELEMENTS_PER_FIELD
+      var index = size - LOGGING_CONTEXT_STATE_ELEMENTS_PER_FIELD
       while (index >= 0) {
         action(index)
 
-        index -= ELEMENTS_PER_FIELD
+        index -= LOGGING_CONTEXT_STATE_ELEMENTS_PER_FIELD
       }
     }
-  }
-
-  internal companion object {
-    @kotlin.jvm.JvmStatic
-    internal fun get(): LoggingContextState {
-      return LoggingContextState(getThreadLoggingContextState())
-    }
-
-    @kotlin.jvm.JvmStatic
-    internal fun empty(): LoggingContextState {
-      return LoggingContextState(null)
-    }
-
-    /** See [LoggingContextState]. */
-    private const val ELEMENTS_PER_FIELD = 4
-
-    /**
-     * A sentinel value to mark whether a logging context field is JSON. We use a sentinel String
-     * object for this instead of a boolean, because we want the [LoggingContextState] array to be
-     * an array of Strings (since all the other values in the context state are Strings, and we
-     * don't want to do casting).
-     *
-     * We don't use `const` here, since we want to be 100% sure that we use the same string
-     * reference when inserting into the state array as when we check for this value, so we can use
-     * faster reference equality (`===`) instead of structural equality (`==`).
-     */
-    @Suppress("MayBeConstant") private val JSON_FIELD_SENTINEL: String = "JSON"
   }
 }
 
 /**
  * Unfortunately, Kotlin does not at the moment offer a multi-platform `ThreadLocal` abstraction. So
- * we have to define `expect` functions ourselves for getting the thread-local context state for
- * [LoggingContextState].
+ * we have to define `expect` functions for getting the thread-local [LoggingContextState].
  */
-internal expect fun getThreadLoggingContextState(): Array<String?>?
+internal expect fun getLoggingContextState(): LoggingContextState
 
-internal expect fun setThreadLoggingContextState(stateArray: Array<String?>)
+internal expect fun saveLoggingContextStateArray(stateArray: Array<String?>)
 
-internal expect fun clearThreadLoggingContextState()
+internal expect fun clearLoggingContextState()
+
+internal fun getEmptyLoggingContextState(): LoggingContextState {
+  return LoggingContextState(null)
+}
+
+/** See [LoggingContextState]. */
+private const val LOGGING_CONTEXT_STATE_ELEMENTS_PER_FIELD = 4
+
+/**
+ * A sentinel value to mark whether a logging context field is JSON. We use a sentinel String object
+ * for this instead of a boolean, because we want the [LoggingContextState] array to be an array of
+ * Strings (since all the other values in the context state are Strings, and we don't want to do
+ * casting).
+ *
+ * We don't use `const` here, since we want to be 100% sure that we use the same string reference
+ * when inserting into the state array as when we check for this value, so we can use faster
+ * reference equality (`===`) instead of structural equality (`==`).
+ */
+@Suppress("MayBeConstant") private val LOGGING_CONTEXT_STATE_JSON_FIELD_SENTINEL: String = "JSON"
 
 /** A valid index for a key in the [LoggingContextState] array. */
 private typealias StateKeyIndex = Int

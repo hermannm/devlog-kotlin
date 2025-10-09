@@ -1,15 +1,15 @@
 package dev.hermannm.devlog.testutils
 
 import dev.hermannm.devlog.LoggingContext
-import dev.hermannm.devlog.LoggingContextState
 import dev.hermannm.devlog.getCopyOfLoggingContext
+import dev.hermannm.devlog.getEmptyLoggingContextState
 import io.kotest.assertions.withClue
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 
 internal actual fun createLoggingContext(fields: Map<String, String>): LoggingContext {
-  return LoggingContext(map = fields, state = LoggingContextState.empty())
+  return LoggingContext(map = fields, state = getEmptyLoggingContextState())
 }
 
 internal actual fun loggingContextShouldContainExactly(expectedFields: Map<String, String>) {
