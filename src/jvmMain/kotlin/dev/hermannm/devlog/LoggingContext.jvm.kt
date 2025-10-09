@@ -247,7 +247,9 @@ internal fun restoreContextFieldsOverwrittenForLog() {
 private val THREAD_LOGGING_CONTEXT_STATE = ThreadLocal<Array<String?>?>()
 
 internal actual fun getLoggingContextState(): LoggingContextState {
-  return LoggingContextState(THREAD_LOGGING_CONTEXT_STATE.get())
+  return LoggingContextState(
+      THREAD_LOGGING_CONTEXT_STATE.get() ?: EMPTY_LOGGING_CONTEXT_STATE_ARRAY,
+  )
 }
 
 internal actual fun saveLoggingContextStateArray(stateArray: Array<String?>) {
