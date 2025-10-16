@@ -481,7 +481,7 @@ internal class ExceptionWithLoggingContextTest {
   }
 
   @Test
-  fun `withLoggingContext extension function works`() {
+  fun `Throwable withLoggingContext extension function works`() {
     val originalException = IllegalArgumentException("Something went wrong")
     val exceptionWithLoggingContext =
         originalException.withLoggingContext(
@@ -503,7 +503,7 @@ internal class ExceptionWithLoggingContextTest {
   }
 
   @Test
-  fun `withLoggingContext extension function overload with Collection works`() {
+  fun `Throwable withLoggingContext extension function overload with Collection works`() {
     val originalException = Throwable("Something went wrong")
     val logFields: Collection<LogField> =
         listOf(
@@ -526,7 +526,7 @@ internal class ExceptionWithLoggingContextTest {
   }
 
   @Test
-  fun `calling withLoggingContext on ExceptionWithLoggingContext does not add suppressed LoggingContextProvider`() {
+  fun `calling Throwable withLoggingContext on ExceptionWithLoggingContext does not add suppressed LoggingContextProvider`() {
     val exception =
         ExceptionWithLoggingContext("Something went wrong", field("key1", "value1"))
             .withLoggingContext(field("key2", "value2"))
