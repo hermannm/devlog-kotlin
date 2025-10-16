@@ -289,7 +289,7 @@ public interface HasLoggingContext {
  *
  * Use the [field]/[rawJsonField] functions to construct log fields.
  *
- * This function returns the exception as-is, without wrapping it. If you _want_ to wrap your
+ * This function returns the given exception, without wrapping it. If you _want_ to wrap your
  * exception, you should instead construct an [ExceptionWithLoggingContext], and pass your exception
  * as the `cause`.
  */
@@ -306,7 +306,7 @@ public fun <T : Throwable> T.withLoggingContext(vararg logFields: LogField): T {
  *
  * Use the [field]/[rawJsonField] functions to construct log fields.
  *
- * This function returns the exception as-is, without wrapping it. If you _want_ to wrap your
+ * This function returns the given exception, without wrapping it. If you _want_ to wrap your
  * exception, you should instead construct an [ExceptionWithLoggingContext], and pass your exception
  * as the `cause`.
  */
