@@ -5,7 +5,7 @@ package dev.hermannm.devlog
 
 /**
  * Exception that carries [log fields][LogField], to provide structured logging context when the
- * exception is logged. When passing an exception to one of [Logger]'s method, it will check if the
+ * exception is logged. When passing an exception to one of [Logger]'s methods, it will check if the
  * given exception is an instance of this class, and if it is, these fields will be added to the
  * log.
  *
