@@ -36,7 +36,7 @@ internal actual constructor(
   override fun serializeWithType(
       generator: JsonGenerator,
       serializers: SerializerProvider,
-      typeSerializer: TypeSerializer
+      typeSerializer: TypeSerializer,
   ) {
     // Since we don't know what type the raw JSON is, we can only redirect to normal serialization
     serialize(generator, serializers)
@@ -60,7 +60,7 @@ internal actual constructor(
   override fun serializeWithType(
       generator: JsonGenerator,
       serializers: SerializerProvider,
-      typeSerializer: TypeSerializer
+      typeSerializer: TypeSerializer,
   ) {
     serialize(generator, serializers)
   }

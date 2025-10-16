@@ -144,10 +144,12 @@ kotlin {
 
   // Workaround to support single-target multiplatform projects in Dokka:
   // https://github.com/Kotlin/dokka/issues/3122
-  if (gradle.startParameter.taskNames.any { taskName ->
-    // To match both dokkaGeneratePublicationHtml and :dokkaGeneratePublicationHtml, both valid
-    taskName.endsWith("dokkaGeneratePublicationHtml")
-  }) {
+  if (
+      // To match both dokkaGeneratePublicationHtml and :dokkaGeneratePublicationHtml, both valid
+      gradle.startParameter.taskNames.any { taskName ->
+        taskName.endsWith("dokkaGeneratePublicationHtml")
+      }
+  ) {
     linuxX64()
   }
 }
@@ -156,9 +158,10 @@ repositories { mavenCentral() }
 
 spotless {
   kotlin {
-    toggleOffOn()
+    target("src/**/*.kt", "integration-tests/**/*.kt")
     // Check for new versions here here: https://github.com/facebook/ktfmt
     ktfmt("0.58")
+    toggleOffOn()
   }
 }
 
