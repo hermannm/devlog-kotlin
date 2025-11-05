@@ -10,11 +10,6 @@ public class dev/hermannm/devlog/ExceptionWithLoggingContext : java/lang/Runtime
 	public fun getMessage ()Ljava/lang/String;
 }
 
-public final class dev/hermannm/devlog/ExceptionWithLoggingContextKt {
-	public static final fun withLoggingContext (Ljava/lang/Throwable;Ljava/util/Collection;)Ljava/lang/Throwable;
-	public static final fun withLoggingContext (Ljava/lang/Throwable;[Ldev/hermannm/devlog/LogField;)Ljava/lang/Throwable;
-}
-
 public abstract interface class dev/hermannm/devlog/HasLoggingContext {
 	public abstract fun getLogFields ()Ljava/util/Collection;
 }
@@ -125,6 +120,8 @@ public final class dev/hermannm/devlog/LoggingContextKt {
 	public static final fun addExistingLoggingContextToException (Ljava/lang/Throwable;Ldev/hermannm/devlog/LoggingContext;)V
 	public static final fun addLoggingContextToException (Ljava/lang/Throwable;[Ldev/hermannm/devlog/LogField;)V
 	public static final fun withLoggingContext (Ldev/hermannm/devlog/LoggingContext;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+	public static final fun withLoggingContext (Ljava/lang/Throwable;Ljava/util/Collection;)Ljava/lang/Throwable;
+	public static final fun withLoggingContext (Ljava/lang/Throwable;[Ldev/hermannm/devlog/LogField;)Ljava/lang/Throwable;
 	public static final fun withLoggingContext (Ljava/util/Collection;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
 	public static final fun withLoggingContext ([Ldev/hermannm/devlog/LogField;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
 }

@@ -283,38 +283,6 @@ public interface HasLoggingContext {
 }
 
 /**
- * Attaches the given [log fields][LogField] to the exception, to provide structured logging context
- * when the exception is logged. When the exception is passed to one of [Logger]'s methods, these
- * fields will be added to the log.
- *
- * Use the [field]/[rawJsonField] functions to construct log fields.
- *
- * This function returns the given exception, without wrapping it. If you _want_ to wrap your
- * exception, you should instead construct an [ExceptionWithLoggingContext], and pass your exception
- * as the `cause`.
- */
-public fun <T : Throwable> T.withLoggingContext(vararg logFields: LogField): T {
-  addLoggingContextToException(this, logFields)
-  return this
-}
-
-/**
- * Attaches the given [log fields][LogField] to the exception, to provide structured logging context
- * when the exception is logged. When the exception is passed to one of [Logger]'s methods, these
- * fields will be added to the log.
- *
- * Use the [field]/[rawJsonField] functions to construct log fields.
- *
- * This function returns the given exception, without wrapping it. If you _want_ to wrap your
- * exception, you should instead construct an [ExceptionWithLoggingContext], and pass your exception
- * as the `cause`.
- */
-public fun <T : Throwable> T.withLoggingContext(logFields: Collection<LogField>): T {
-  addLoggingContextToException(this, logFields.toTypedArray())
-  return this
-}
-
-/**
  * In [withLoggingContext], we want the ability to attach log fields to exceptions, so that we don't
  * lose context when an exception escapes the context scope (which is when we need it most!).
  *
