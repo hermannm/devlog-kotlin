@@ -97,7 +97,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "key":"value"
+          "key":"value"
           """
               .trimIndent()
     }
@@ -117,7 +117,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "event":{"id":1000,"type":"ORDER_PLACED"}
+          "event":{"id":1000,"type":"ORDER_PLACED"}
           """
               .trimIndent()
     }
@@ -137,7 +137,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "first":true,"second":["value1","value2"],"third":10
+          "first":true,"second":["value1","value2"],"third":10
           """
               .trimIndent()
     }
@@ -164,7 +164,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "key":"Prefix: value"
+          "key":"Prefix: value"
           """
               .trimIndent()
     }
@@ -190,7 +190,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "event":null
+          "event":null
           """
               .trimIndent()
     }
@@ -219,7 +219,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "event":"Event(id=1234, type=ORDER_PLACED)"
+          "event":"Event(id=1234, type=ORDER_PLACED)"
           """
               .trimIndent()
     }
@@ -254,7 +254,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "key":null
+          "key":null
           """
               .trimIndent()
     }
@@ -284,7 +284,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "object":{"id":1000,"type":"ORDER_PLACED"}
+          "object":{"id":1000,"type":"ORDER_PLACED"}
           """
               .trimIndent()
     }
@@ -306,7 +306,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "event":"NonSerializableEvent(id=1000, type=ORDER_UPDATED)"
+          "event":"NonSerializableEvent(id=1000, type=ORDER_UPDATED)"
           """
               .trimIndent()
     }
@@ -326,7 +326,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "duplicateKey":"value1"
+          "duplicateKey":"value1"
           """
               .trimIndent()
     }
@@ -346,7 +346,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "key":null
+          "key":null
           """
               .trimIndent()
     }
@@ -391,7 +391,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "event":"{\"id\":1"
+          "event":"{\"id\":1"
           """
               .trimIndent()
     }
@@ -427,10 +427,10 @@ internal class LogFieldTest {
     runTestCases(RawJsonTestCase.entries) { test ->
       val jsonWithNewlines =
           """
-            {
-              "id": 1000,
-              "type": "ORDER_UPDATED"
-            }
+          {
+            "id": 1000,
+            "type": "ORDER_UPDATED"
+          }
           """
               .trimIndent()
 
@@ -443,7 +443,7 @@ internal class LogFieldTest {
 
       output.logFields shouldBe
           """
-            "event":{"id":1000,"type":"ORDER_UPDATED"}
+          "event":{"id":1000,"type":"ORDER_UPDATED"}
           """
               .trimIndent()
     }
@@ -555,7 +555,7 @@ internal class LogFieldTest {
 
     output.logFields shouldBe
         """
-          "key1":"value1","key2":"value2"
+        "key1":"value1","key2":"value2"
         """
             .trimIndent()
   }

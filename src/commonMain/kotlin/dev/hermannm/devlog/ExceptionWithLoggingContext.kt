@@ -151,10 +151,7 @@ public open class ExceptionWithLoggingContext : RuntimeException {
    * The built message is stored in [_message], so we don't have to rebuild it.
    */
   private fun buildMessageFromCauseException(): String? {
-    val cause = this.cause
-    if (cause == null) {
-      return null
-    }
+    val cause = this.cause ?: return null
 
     val causeClass = cause::class.simpleName
     val causeMessage = cause.message
@@ -217,6 +214,7 @@ public open class ExceptionWithLoggingContext : RuntimeException {
     // use, since it uses optimized `System.arraycopy` on JVM).
     // We can safely cast from  `Array<out LogField>` to `Array<LogField>`, since `LogField` has no
     // subclasses, so this doesn't break covariance.
+    @Suppress("UNCHECKED_CAST")
     this.contextFields = (existingContextFields as Array<LogField>) + newContextFields
   }
 }
@@ -364,6 +362,7 @@ public fun <T : Throwable> T.withLoggingContext(logFields: Collection<LogField>)
  *           why it shows up, and still gives the significant benefit of providing more context to
  *           an exception.
  */
+@Suppress("unused") // IntelliJ incorrectly reports unused parameters
 internal expect class LoggingContextProvider : RuntimeException {
   constructor(contextFields: Array<out LogField>)
 

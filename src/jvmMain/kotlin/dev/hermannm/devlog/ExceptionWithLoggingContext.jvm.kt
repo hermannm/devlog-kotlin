@@ -19,6 +19,7 @@ actual constructor(
     // use, since it uses optimized `System.arraycopy` on JVM).
     // We can safely cast from `Array<out LogField>` to `Array<LogField>`, since `LogField` has no
     // subclasses, so this doesn't break covariance.
+    @Suppress("UNCHECKED_CAST")
     this.contextFields = (this.contextFields as Array<LogField>) + newContextFields
   }
 
@@ -27,6 +28,7 @@ actual constructor(
     this.fieldsAddedToLog = true
   }
 
+  @Suppress("RedundantNullableReturnType") // Must have same signature as `expect` declaration
   override val message: String?
     get() = getLoggingContextProviderMessage(contextFields, fieldsAddedToLog)
 

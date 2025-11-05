@@ -120,10 +120,7 @@ private fun isDuplicateField(key: String, index: Int, fields: Array<out LogField
 
 @PublishedApi
 internal actual fun addExistingContextFieldsToLoggingContext(existingContext: LoggingContext) {
-  val existingContextMap = existingContext.map
-  if (existingContextMap == null) {
-    return
-  }
+  val existingContextMap = existingContext.map ?: return
   val existingContextSize = existingContextMap.size
 
   var currentState = getLoggingContextState()
@@ -147,10 +144,7 @@ internal actual fun addExistingContextFieldsToLoggingContext(existingContext: Lo
 
 @PublishedApi
 internal actual fun removeExistingContextFieldsFromLoggingContext(existingContext: LoggingContext) {
-  val existingContextMap = existingContext.map
-  if (existingContextMap == null) {
-    return
-  }
+  val existingContextMap = existingContext.map ?: return
 
   val currentContextState = getLoggingContextState()
 
@@ -199,14 +193,11 @@ internal fun overwriteDuplicateContextFieldsForLog(logFields: MutableList<KeyVal
   var contextState = getLoggingContextState()
 
   var removedFieldCount = 0
-  for (index in 0..(totalFieldCount - 1)) {
+  for (index in 0..<totalFieldCount) {
     val field = logFields[index - removedFieldCount]
     val key = field.key
 
-    val contextValue: String? = MDC.get(key)
-    if (contextValue == null) {
-      continue
-    }
+    val contextValue: String = MDC.get(key) ?: continue
 
     // We use `toString()` here, since the field value when using this library will either be a
     // `String` or a `RawJson` (whose `toString` returns the serialized JSON)
@@ -326,7 +317,8 @@ internal value class ExecutorServiceWithInheritedLoggingContext(
     private val wrappedExecutor: ExecutorService,
 ) :
     // Use interface delegation here, so we only override the methods we're interested in.
-    ExecutorService by wrappedExecutor {
+    ExecutorService by wrappedExecutor,
+    AutoCloseable {
 
   private fun <T> wrapCallable(callable: Callable<T>): Callable<T> {
     // Copy context fields here, to get the logging context of the parent thread.
@@ -394,5 +386,16 @@ internal value class ExecutorServiceWithInheritedLoggingContext(
       unit: TimeUnit,
   ): T {
     return wrappedExecutor.invokeAny(tasks.map { wrapCallable(it) }, timeout, unit)
+  }
+
+  /**
+   * As of Java 19, [ExecutorService] implements [AutoCloseable] with a default method. Kotlin's
+   * interface delegation can't delegate to Java default methods, so we have to manually override it
+   * here. And since we want this library to be compatible with Java versions prior to 19 (for now),
+   * we manually implement `AutoCloseable` here and delegate to the wrapped executor if that
+   * implements `AutoCloseable`.
+   */
+  override fun close() {
+    (wrappedExecutor as? AutoCloseable)?.close()
   }
 }

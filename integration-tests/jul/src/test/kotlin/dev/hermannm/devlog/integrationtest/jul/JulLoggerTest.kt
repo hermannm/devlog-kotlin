@@ -43,8 +43,8 @@ class JulLoggerTest {
     // from the package name (included in log output) up to the trailing newline
     output.substring(indexOfPackageName).removeSuffix("\n") shouldBe
         """
-          dev.hermannm.devlog.integrationtest.jul.JulLoggerTest log
-          INFO: Test [event={"id":1000,"type":"ORDER_UPDATED"}]
+        dev.hermannm.devlog.integrationtest.jul.JulLoggerTest log
+        INFO: Test [event={"id":1000,"type":"ORDER_UPDATED"}]
         """
             .trimIndent()
   }

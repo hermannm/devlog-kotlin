@@ -110,7 +110,6 @@ internal class LoggerJvmTest {
     /** We use a ListAppender from Logback here so we can inspect log events after logging. */
     val logAppender = ListAppender<ILoggingEvent>()
     val logbackLogger = Slf4jLoggerFactory.getLogger("LoggerTest") as LogbackLogger
-    val log = Logger(logbackLogger)
 
     init {
       logAppender.start()
