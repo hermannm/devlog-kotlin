@@ -1,6 +1,5 @@
 package dev.hermannm.devlog
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import dev.hermannm.devlog.testutils.captureLogOutput
 import dev.hermannm.devlog.testutils.runTestCases
 import io.kotest.matchers.shouldBe
@@ -12,6 +11,7 @@ import java.net.URL
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
+import tools.jackson.databind.ObjectMapper
 
 private val log = getLogger()
 
@@ -57,7 +57,7 @@ internal class LogFieldJvmTest {
     val serializedValue = jacksonObjectMapper.writeValueAsString(invalidJson)
     serializedValue.shouldBe(
         """
-          "{\"key\":valueWithoutQuotes}"
+        "{\"key\":valueWithoutQuotes}"
         """
             .trimIndent(),
     )

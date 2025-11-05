@@ -160,7 +160,7 @@ spotless {
   kotlin {
     target("src/**/*.kt", "integration-tests/**/*.kt")
     // Check for new versions here here: https://github.com/facebook/ktfmt
-    ktfmt("0.58")
+    ktfmt("0.59")
     toggleOffOn()
   }
 }
