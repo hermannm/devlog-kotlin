@@ -36,7 +36,7 @@ import kotlinx.serialization.serializer
 @kotlin.jvm.JvmInline // Inline value class, to wrap the underlying log event without overhead
 public value class LogBuilder
 internal constructor(
-    internal val logEvent: LogEvent,
+    @kotlin.jvm.JvmField internal val logEvent: LogEvent,
 ) {
   /**
    * Adds a [log field][LogField] (structured key-value data) to the log.
