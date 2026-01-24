@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.9.1] - 2026-01-24
+
+- Update dependencies
+  - This includes updating `kotlinx.serialization` to v1.10.0, which lets us drop the opt-in on
+    `ExperimentalSerializationApi`, since
+    [
+    `JsonUnquotedLiteral` has now been stabilized](https://github.com/Kotlin/kotlinx.serialization/releases/tag/v1.10.0)
+
 ## [v0.9.0] - 2025-11-05
 
 - **Breaking**: Update major versions of Jackson (v3) and `logstash-logback-encoder` (v9)
@@ -143,7 +151,9 @@
 
 - Initial release
 
-[Unreleased]: https://github.com/hermannm/devlog-kotlin/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/hermannm/devlog-kotlin/compare/v0.9.1...HEAD
+
+[v0.9.1]: https://github.com/hermannm/devlog-kotlin/compare/v0.9.0...v0.9.1
 
 [v0.9.0]: https://github.com/hermannm/devlog-kotlin/compare/v0.8.0...v0.9.0
 
