@@ -2,21 +2,21 @@
 # Plugins/libraries declared in this file become available on the `libs` object in build.gradle.kts
 [versions]
 # Plugin versions
-kotlin = "2.2.21"
-spotless = "8.0.0"
-gradleMavenPublish = "0.34.0"
+kotlin = "2.3.0"
+spotless = "8.2.0"
+gradleMavenPublish = "0.36.0"
 binaryCompatibilityValidator = "0.18.1"
 dokka = "2.1.0"
 versionCatalogUpdate = "1.0.1"
 # Library versions
-kotlinxSerialization = "1.9.0"
+kotlinxSerialization = "1.10.0"
 slf4j = "2.0.17"
-logback = "1.5.20"
+logback = "1.5.25"
 logstashLogbackEncoder = "9.0"
-jackson = "3.0.1"
+jackson = "3.0.4"
 # Test libraries
-kotest = "6.0.4"
-log4j = "2.25.2"
+kotest = "6.1.1"
+log4j = "2.25.3"
 
 [plugins]
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
