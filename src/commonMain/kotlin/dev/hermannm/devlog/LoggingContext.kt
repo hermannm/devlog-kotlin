@@ -493,7 +493,7 @@ internal fun addExistingLoggingContextToException(
  *                   values to be restored when the context scope exits, so that we don't lose outer
  *                   context just because we entered an inner context.
  *                 - To achieve this, we check for previous context values before adding a new field
- *                   in `withLoggingContext`, and we find a previous value, we add it to this
+ *                   in `withLoggingContext`, and if we find a previous value, we add it to this
  *                   context state, so that we can restore it after the context scope.
  *
  * Because a logging context scope can live for a while, we want this context state to be as
