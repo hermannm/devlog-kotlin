@@ -1,5 +1,6 @@
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
+import com.vanniktech.maven.publish.SourcesJar
 import java.net.URI
 import nl.littlerobots.vcu.plugin.versionSelector
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -44,8 +45,8 @@ mavenPublishing {
 
   configure(
       KotlinMultiplatform(
-          javadocJar = JavadocJar.Dokka("dokkaGeneratePublicationJavadoc"),
-          sourcesJar = true,
+          javadocJar = JavadocJar.Dokka(taskName = "dokkaGeneratePublicationJavadoc"),
+          sourcesJar = SourcesJar.Sources(),
       ),
   )
   signAllPublications()
