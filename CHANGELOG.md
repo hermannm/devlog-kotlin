@@ -1,5 +1,12 @@
 # Changelog
 
+## [v0.9.2] - 2026-01-27
+
+- Improve performance of the `field()` function overload that infers the serializer from its type
+  parameter
+  - The new implementation avoids the cost of an exception being constructed in the case where the
+    type is not serializable
+
 ## [v0.9.1] - 2026-01-24
 
 - Update dependencies
@@ -151,7 +158,9 @@
 
 - Initial release
 
-[Unreleased]: https://github.com/hermannm/devlog-kotlin/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/hermannm/devlog-kotlin/compare/v0.9.2...HEAD
+
+[v0.9.2]: https://github.com/hermannm/devlog-kotlin/compare/v0.9.1...v0.9.2
 
 [v0.9.1]: https://github.com/hermannm/devlog-kotlin/compare/v0.9.0...v0.9.1
 
