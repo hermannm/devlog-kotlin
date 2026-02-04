@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.10.0] - 2026-02-04
+
+- **Breaking:** Bump minimum JVM target version from 8 -> 11
+- **Breaking:** Prevent users from passing `LogBuilder` as a log field value to the `field` function
+  - Although this is technically a breaking change, this behavior was always a bug, which now causes
+    a compilation failure to prevent users from accidentally passing the wrong log field value
+  - See
+    [this docstring](https://github.com/hermannm/devlog-kotlin/blob/v0.10.0/src/commonMain/kotlin/dev/hermannm/devlog/LogBuilder.kt#L370-L384)
+    for more on this
+- Update Logback version
+
 ## [v0.9.2] - 2026-01-27
 
 - Improve performance of the `field()` function overload that infers the serializer from its type
@@ -158,7 +169,9 @@
 
 - Initial release
 
-[Unreleased]: https://github.com/hermannm/devlog-kotlin/compare/v0.9.2...HEAD
+[Unreleased]: https://github.com/hermannm/devlog-kotlin/compare/v0.10.0...HEAD
+
+[v0.10.0]: https://github.com/hermannm/devlog-kotlin/compare/v0.9.2...v0.10.0
 
 [v0.9.2]: https://github.com/hermannm/devlog-kotlin/compare/v0.9.1...v0.9.2
 
