@@ -4,7 +4,6 @@ import com.vanniktech.maven.publish.SourcesJar
 import java.net.URI
 import nl.littlerobots.vcu.plugin.versionSelector
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 group = "dev.hermannm"
 
@@ -83,11 +82,11 @@ kotlin {
       }
       jvm {
         compilerOptions {
-          jvmTarget = JvmTarget.JVM_1_8
+          jvmTarget = JvmTarget.JVM_11
           // We set this in addition to jvmTarget, as it gives us some additional verification that
           // we don't use more modern JDK features:
           // https://kotlinlang.org/docs/compiler-reference.html#xjdk-release-version
-          freeCompilerArgs.add("-Xjdk-release=1.8")
+          freeCompilerArgs.add("-Xjdk-release=11")
         }
       }
     }
@@ -95,13 +94,6 @@ kotlin {
       dependencies {
         implementation(libs.kotlinTest)
         implementation(libs.kotest)
-      }
-      // kotest 6 requires JDK 11
-      jvm {
-        compilerOptions {
-          jvmTarget = JvmTarget.JVM_11
-          freeCompilerArgs.add("-Xjdk-release=11")
-        }
       }
     }
 
@@ -132,9 +124,6 @@ kotlin {
   }
 
   compilerOptions {
-    apiVersion.set(KotlinVersion.KOTLIN_2_0)
-    languageVersion.set(KotlinVersion.KOTLIN_2_0)
-
     // Expected-actual classes are in beta (though almost stable):
     // https://kotlinlang.org/docs/multiplatform-expect-actual.html#expected-and-actual-classes
     freeCompilerArgs.add("-Xexpect-actual-classes")
