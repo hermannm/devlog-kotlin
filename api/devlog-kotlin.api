@@ -23,6 +23,7 @@ public final class dev/hermannm/devlog/LogBuilder {
 	public fun equals (Ljava/lang/Object;)Z
 	public static fun equals-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/Object;)Z
 	public static final fun equals-impl0 (Ldev/hermannm/devlog/LogEvent;Ldev/hermannm/devlog/LogEvent;)Z
+	public static final fun field-eH3j8SQ (Ldev/hermannm/devlog/LogEvent;Ljava/lang/String;Ldev/hermannm/devlog/LogEvent;)V
 	public static final fun field-impl (Ldev/hermannm/devlog/LogEvent;Ljava/lang/String;Ljava/lang/Object;Lkotlinx/serialization/SerializationStrategy;)V
 	public fun hashCode ()I
 	public static fun hashCode-impl (Ldev/hermannm/devlog/LogEvent;)I
