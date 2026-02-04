@@ -212,6 +212,9 @@ dokka {
 
     // Require docstrings for all public APIs
     reportUndocumented = true
+
+    // Don't include deprecated APIs in generated site
+    skipDeprecated = true
   }
 
   pluginsConfiguration.html {
