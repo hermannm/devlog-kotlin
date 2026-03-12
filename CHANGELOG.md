@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.10.1] - 2026-03-12
+
+- Fix edge-case bug in handling of fields with duplicate keys, that could potentially cause an
+  `IndexOutOfBoundsException` (kudos to @henrikskog for this fix)
+- Update Logback and Jackson versions
+
 ## [v0.10.0] - 2026-02-04
 
 - **Breaking:** Bump minimum JVM target version from 8 -> 11
@@ -169,7 +175,9 @@
 
 - Initial release
 
-[Unreleased]: https://github.com/hermannm/devlog-kotlin/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/hermannm/devlog-kotlin/compare/v0.10.1...HEAD
+
+[v0.10.1]: https://github.com/hermannm/devlog-kotlin/compare/v0.10.0...v0.10.1
 
 [v0.10.0]: https://github.com/hermannm/devlog-kotlin/compare/v0.9.2...v0.10.0
 

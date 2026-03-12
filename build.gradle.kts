@@ -7,7 +7,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 group = "dev.hermannm"
 
-version = "0.10.0"
+version = "0.10.1"
 
 mavenPublishing {
   coordinates(group.toString(), artifactId = "devlog-kotlin", version.toString())
