@@ -22,16 +22,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # https://github.com/actions/checkout/releases
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.event.inputs.ref_to_deploy || github.ref }}
 
       - name: Build docs
         run: ./gradlew :dokkaGeneratePublicationHtml
 
+      # https://github.com/actions/upload-pages-artifact/releases
       - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: ./build/dokka/html
 
@@ -45,9 +47,10 @@ jobs:
       id-token: write
 
     steps:
+      # https://github.com/actions/deploy-pages/releases
       - name: Deploy to GitHub Pages
         id: deploy
-        uses: actions/deploy-pages@v4.0.5
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
 
     environment:
       name: devlog-kotlin.hermannm.dev
